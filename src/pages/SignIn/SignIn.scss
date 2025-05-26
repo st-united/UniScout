@@ -1,0 +1,21 @@
+.container-box-login {
+  height: 100vh;
+  .login-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f7ff;
+    @media only screen and (max-width: 768px) {
+      background-image: url('../../assets/images/tablet-background.svg');
+    }
+    .form-login {
+      padding: 0 96px;
+      width: 100%;
+      max-width: 559px;
+      @media only screen and (max-width: 768px) {
+        height: 64vh;
+        padding: 0;
+      }
+    }
+  }
+}

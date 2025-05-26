@@ -1,0 +1,48 @@
+.ant-breadcrumb {
+  padding: 15px 0;
+
+  ol {
+    display: flex;
+    align-items: center;
+
+    li:first-child {
+      &::after {
+        content: '|';
+        margin: 0 14px;
+      }
+
+      .ant-breadcrumb-separator {
+        display: none;
+      }
+    }
+  }
+
+  .ant-breadcrumb-separator {
+    span {
+      font-size: 8px;
+    }
+  }
+
+  .breadcrumb-item,
+  .breadcrumb-item a {
+    cursor: pointer;
+    color: $text-secondary;
+
+    & .home-icon {
+      margin-bottom: 2px;
+      width: 15px;
+    }
+
+    &:hover {
+      color: $text-primary;
+
+      & .home-icon {
+        content: url('../../../assets/images/icon-home-active.svg');
+      }
+    }
+  }
+
+  .ant-breadcrumb-link {
+    color: $text-primary;
+  }
+}

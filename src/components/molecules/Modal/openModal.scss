@@ -1,0 +1,259 @@
+.modal-open {
+  top: 0 !important;
+  margin-bottom: 0 !important;
+  .ant-modal {
+    display: flex;
+    justify-content: space-evenly;
+  }
+  .ant-modal-wrap {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: auto;
+    top: 100%;
+    transform: translateY(-50%);
+    outline: 0;
+    margin: auto;
+  }
+  .ant-modal-content {
+    border-radius: 12px;
+    min-height: 262px;
+    width: 360px;
+    text-align: center;
+  }
+  .ant-modal-body {
+    padding: 24px !important;
+  }
+  .ant-modal-confirm-body {
+    padding: 0 24px;
+  }
+  .ant-modal-confirm-btns {
+    display: flex;
+    justify-content: space-between;
+    column-gap: 12px;
+    .ant-btn {
+      border-radius: 12px;
+      width: 146px;
+      height: 48px;
+      border: none;
+      font-weight: 500;
+      &.ant-btn-default {
+        width: 100%;
+        background-color: #f7f7f7;
+        font-weight: 500;
+        &:hover {
+          background-color: #f0eefe;
+          color: #5646ff;
+          box-shadow: 0 6px 8px -6px #909090;
+          outline: none;
+          border: none;
+        }
+      }
+      &.ant-btn-primary {
+        width: 100%;
+        background: #5646ff;
+        &:hover {
+          background-color: #5143e9;
+          color: #fff;
+          box-shadow: 0 6px 8px -6px #909090;
+        }
+      }
+    }
+  }
+}
+
+.ant-modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.ant-modal-centered .ant-modal {
+  top: 0;
+  display: inline-flex !important;
+  padding-bottom: 0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.modal {
+  top: 0 !important;
+  margin-bottom: 0 !important;
+
+  .ant-modal-content {
+    width: 480px;
+    border-radius: 12px;
+  }
+
+  .ant-modal-title {
+    font-size: 18px;
+    color: $text-basic;
+  }
+
+  .ant-modal-header {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .ant-modal-footer {
+    border-top: 0 none;
+    padding: 0 24px 24px 0;
+  }
+
+  .ant-modal-close-x {
+    content: url('../../../assets/images/icon-close.svg');
+    cursor: pointer;
+    width: 32px;
+    margin-right: 16px;
+
+    &:hover {
+      content: url('../../../assets/images/icon-round-close.svg');
+    }
+  }
+}
+
+.expand-modal {
+  width: 550px !important;
+  top: 0 !important;
+  margin-bottom: 0 !important;
+
+  .ant-modal-content {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .ant-modal-title {
+    font-size: 18px;
+    color: $text-basic;
+  }
+
+  .ant-modal-header {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .ant-modal-footer {
+    border-top: 0 none;
+    padding: 0 24px 24px 0;
+  }
+
+  .ant-modal-close-x {
+    display: none !important;
+  }
+
+  .ant-btn-default {
+    color: #000;
+    background-color: #f7f7f7;
+    font-weight: 500;
+    &:hover {
+      background-color: #f0eefe;
+      color: #5646ff;
+      box-shadow: 0 6px 8px -6px #909090;
+      outline: none;
+      border: none;
+    }
+  }
+}
+
+.create-modal {
+  top: 0 !important;
+  margin-bottom: 0 !important;
+  .ant-modal-content {
+    border-radius: 12px;
+    width: 100%;
+  }
+  .ant-modal-header {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+  .ant-modal-footer {
+    border: none;
+  }
+}
+
+.vehicle-report-modal {
+  top: 0 !important;
+  margin-bottom: 0 !important;
+  .ant-modal-content {
+    border-radius: 12px;
+    width: 100%;
+  }
+  .ant-modal-header {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+  .ant-modal-body {
+    padding-bottom: 0;
+  }
+  .ant-modal-footer {
+    border: none;
+  }
+
+  .ant-btn {
+    &.ant-btn-primary {
+      margin-right: 10px;
+      width: 100%;
+      &:hover {
+        background-color: #5143e9;
+        color: #fff;
+        box-shadow: 0 6px 8px -6px #909090;
+      }
+    }
+  }
+}
+.assign-card-modal {
+  .ant-modal-title {
+    font-size: 18px !important;
+    color: $text-basic;
+    font-weight: 500 !important;
+  }
+}
+
+.emulator-create-modal {
+  top: 0 !important;
+  margin-bottom: 0 !important;
+
+  .ant-modal-content {
+    width: 480px;
+    border-radius: 12px;
+  }
+
+  .ant-modal-title {
+    font-size: 18px;
+    color: #121212;
+  }
+
+  .ant-modal-header {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .ant-modal-footer {
+    border-top: 0 none;
+    padding: 16px 24px 24px 16px;
+  }
+
+  .ant-modal-close-x {
+    content: url('../../../assets/images/icon-close.svg');
+    cursor: pointer;
+    width: 32px;
+    margin-right: 16px;
+
+    &:hover {
+      content: url('../../../assets/images/icon-round-close.svg');
+    }
+  }
+
+  .ant-modal-body {
+    height: calc(100vh - 300px);
+    overflow-y: auto;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .ant-typography {
+    color: #121212 !important;
+  }
+}

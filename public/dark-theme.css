@@ -1,0 +1,22 @@
+.site-layout .site-layout-background {
+  background: #141414 !important;
+}
+.ant-layout-sider-children {
+  background: #001529;
+}
+.ant-breadcrumb a,
+.ant-layout-content {
+  color: #575757;
+}
+.ant-breadcrumb a:hover,
+.ant-breadcrumb-separator,
+.breadcrumb-title,
+.trigger {
+  color: #fff;
+}
+.ant-layout-content .site-layout-background {
+  background: #141414;
+}
+.ant-layout {
+  background: #000;
+}
