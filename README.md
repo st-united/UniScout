@@ -64,12 +64,6 @@ What things you need to install the software and how to install them :
 
 1. Replace the values of the variables with your own
 
-1. Create Docker images and launch them
-
-   ```bash
-   docker-compose up -d --build
-   ```
-
 ---
 
 ## What's in the box ?
