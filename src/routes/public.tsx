@@ -12,6 +12,10 @@ const routes = [
         path: '',
         element: <div className='font-bold bg-[#121212] text-white p-2'>Hello guy</div>,
       },
+      {
+        path: '',
+        element: <div className='font-bold bg-[#121212] text-white p-2'>Hello guy</div>,
+      },
     ],
   },
 ];
