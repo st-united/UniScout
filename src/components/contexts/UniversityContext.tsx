@@ -39,6 +39,7 @@ interface UniversityContextType {
   error: string | null;
   getUniversity: (id: string) => University | undefined;
   searchUniversities: (query: string) => University[];
+
   filterUniversities: (filters: UniversityFilters) => University[];
 }
 
@@ -67,52 +68,53 @@ export const UniversityProvider = ({ children }: UniversityProviderProps) => {
   }, []);
 
   const getUniversity = (id: string) => {
-    return universities.find(uni => uni.id === id);
+    return universities.find((uni) => uni.id === id);
   };
 
   const searchUniversities = (query: string) => {
     if (!query) return universities;
     const lowercaseQuery = query.toLowerCase();
-    
-    return universities.filter(uni => 
-      uni.name.toLowerCase().includes(lowercaseQuery) ||
-      uni.country.toLowerCase().includes(lowercaseQuery) ||
-      uni.fields.some(field => field.toLowerCase().includes(lowercaseQuery))
+
+    return universities.filter(
+      (uni) =>
+        uni.name.toLowerCase().includes(lowercaseQuery) ||
+        uni.country.toLowerCase().includes(lowercaseQuery) ||
+        uni.fields.some((field) => field.toLowerCase().includes(lowercaseQuery)),
     );
   };
 
   const filterUniversities = (filters: UniversityFilters) => {
-    return universities.filter(uni => {
+    return universities.filter((uni) => {
       let matches = true;
-      
+
       if (filters.region && filters.region !== 'All') {
         matches = matches && uni.region === filters.region;
       }
-      
+
       if (filters.country && filters.country !== 'All') {
         matches = matches && uni.country === filters.country;
       }
-      
+
       if (filters.field && filters.field !== 'All') {
         matches = matches && uni.fields.includes(filters.field);
       }
-      
+
       if (filters.size) {
         matches = matches && uni.size === filters.size;
       }
-      
+
       if (filters.type) {
         matches = matches && uni.type === filters.type;
       }
-      
+
       if (filters.minRanking !== undefined) {
         matches = matches && uni.ranking >= filters.minRanking;
       }
-      
+
       if (filters.maxRanking !== undefined) {
         matches = matches && uni.ranking <= filters.maxRanking;
       }
-      
+
       return matches;
     });
   };
