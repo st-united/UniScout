@@ -1,30 +1,29 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Spin } from 'antd';
-import React, { Suspense } from 'react';
-import ReactDOM from 'react-dom/client';
-import { I18nextProvider } from 'react-i18next';
-import { Provider } from 'react-redux';
+import React, { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
-import 'antd/dist/antd.css';
-
-import store from './redux/store';
-import i18n from '@app/config/i18n';
-import router from '@app/router';
-import '@app/config/axios';
+import router from './router';
+import { AuthProvider } from '@app/contexts/AuthContext';
+import { UniversityProvider } from '@app/contexts/UniversityContext';
 import './main.scss';
+import { I18nextProvider } from 'react-i18next';
+import i18n from '@app/config/i18n';
 
-const queryClient = new QueryClient();
+const container = document.getElementById('root');
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
+if (container) {
+  const root = createRoot(container);
+
+  root.render(
+    <StrictMode>
       <I18nextProvider i18n={i18n}>
-        <Provider store={store}>
-          <Suspense fallback={<Spin />}>
+        <AuthProvider>
+          <UniversityProvider>
             <RouterProvider router={router} />
-          </Suspense>
-        </Provider>
+          </UniversityProvider>
+        </AuthProvider>
       </I18nextProvider>
-    </QueryClientProvider>
-  </React.StrictMode>,
-);
+    </StrictMode>
+  );
+} else {
+  console.error('Root element with ID \'root\' not found!');
+}

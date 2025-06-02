@@ -1,24 +1,18 @@
-import { Button, Result } from 'antd';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-const NotFound: React.FC = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-
+const NotFound = () => {
   return (
-    <Result
-      status='404'
-      title={t<string>('NOT_FOUND.TITLE')}
-      subTitle={t<string>('NOT_FOUND.SUB_TITLE')}
-      extra={
-        <Button type='primary' onClick={() => navigate('/')}>
-          {t<string>('NOT_FOUND.BACK_HOME')}
-        </Button>
-      }
-    />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-gray-900">404</h1>
+        <p className="text-xl text-gray-600 mt-4">Page not found</p>
+        <Link to="/" className="mt-6 inline-block text-blue-600 hover:text-blue-800">
+          Go back home
+        </Link>
+      </div>
+    </div>
   );
 };
 
-export default NotFound;
+export default NotFound; 

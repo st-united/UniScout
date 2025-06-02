@@ -1,22 +1,23 @@
-import { Row, Typography } from 'antd';
-import { t } from 'i18next';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Typography } from 'antd';
 
 import './EmptyData.scss';
 
-interface Props {
-  content?: string;
-  type?: 'large' | 'small';
+interface EmptyDataProps {
+  content?: React.ReactNode;
 }
 
-export const EmptyData = ({ content, type = 'large' }: Props) => {
-  const name = type === 'large' ? 'large-empty' : type === 'small' ? 'small-empty' : '';
+const EmptyData: React.FC<EmptyDataProps> = ({ content }) => {
+  const { t } = useTranslation();
+
   return (
-    <div className={name}>
-      <Row className='children-container'>
-        <Typography className='empty-text'>
-          {content ? content : t<string>('TABLE.EMPTY')}
-        </Typography>
-      </Row>
+    <div className="flex flex-col items-center justify-center py-8">
+      <Typography.Text type="secondary">
+        {content || t('TABLE.EMPTY')}
+      </Typography.Text>
     </div>
   );
 };
+
+export default EmptyData;

@@ -1,13 +1,13 @@
-export const fromStoredData = (storageData: any) => JSON.parse(storageData);
+export const fromStoredData = (storageData: string) => JSON.parse(storageData);
 
-export const toStoredData = (data: any) => JSON.stringify(data);
+export const toStoredData = (data: unknown) => JSON.stringify(data);
 
-export const getStorageData = (key: any) => {
+export const getStorageData = (key: string): unknown => {
   const storedData = localStorage.getItem(key);
   return storedData ? fromStoredData(storedData) : null;
 };
 
-export const setStorageData = (key: any, data: any) =>
+export const setStorageData = (key: string, data: unknown) =>
   localStorage.setItem(key, toStoredData(data));
 
-export const removeStorageData = (key: any) => localStorage.removeItem(key);
+export const removeStorageData = (key: string) => localStorage.removeItem(key);

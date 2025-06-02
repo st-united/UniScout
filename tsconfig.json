@@ -16,12 +16,17 @@
     "noEmit": true,
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": "./src",
     "paths": {
-      "@app/*": ["./*"]
+      "@app/*": ["./src/*"]
     }
   },
-  "include": ["vite.config.ts", "**/*.ts", "**/*.tsx"],
+  "include": [
+    "src",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "vite-env.d.ts",
+    "vite.config.ts"
+  ],
   "exclude": ["node_modules"],
   "references": [
     {

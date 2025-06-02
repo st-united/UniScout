@@ -2,23 +2,20 @@
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
-import pluginRewriteAll from 'vite-plugin-rewrite-all';
+import type { UserConfig } from 'vite';
 
-export default ({ mode }: any) => {
+export default ({ mode }: { mode: string }): UserConfig => {
   process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 
   return defineConfig({
-    plugins: [pluginRewriteAll(), react()],
+    plugins: [react()],
     resolve: {
       alias: { '@app': path.resolve('./src') },
     },
     css: {
       preprocessorOptions: {
         scss: {
-          additionalData: `
-                @import "@app/assets/styles/_variable.scss";
-                @import "@app/assets/styles/_fonts.scss";
-                @import "@app/assets/styles/_layout.scss";`,
+          // Removed additionalData injection here
         },
       },
     },
@@ -28,12 +25,13 @@ export default ({ mode }: any) => {
       },
       host: true,
       strictPort: true,
-      port: 5001,
+      port: 5002,
     },
     test: {
       globals: true,
       environment: 'jsdom',
       coverage: {
+        provider: 'v8',
         reporter: ['text', 'html'],
         exclude: ['node_modules/'],
       },

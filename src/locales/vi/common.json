@@ -1,0 +1,70 @@
+{
+  "HERO": {
+    "TITLE": "Khám Phá Các Trường Đại Học Hàng Đầu Thế Giới",
+    "SUBTITLE": "Tìm trường đại học phù hợp cho hành trình học tập của bạn",
+    "CTA": "Khám Phá Ngay"
+  },
+  "LOGIN": {
+    "TITLE": "Đăng nhập vào tài khoản",
+    "EMAIL": "Địa chỉ email",
+    "PASSWORD": "Mật khẩu",
+    "SUBMIT": "Đăng nhập",
+    "REGISTER": "Chưa có tài khoản? Đăng ký ngay"
+  },
+  "REGISTER": {
+    "TITLE": "Tạo tài khoản mới",
+    "NAME": "Họ và tên",
+    "EMAIL": "Địa chỉ email",
+    "PASSWORD": "Mật khẩu",
+    "SUBMIT": "Đăng ký",
+    "LOGIN": "Đã có tài khoản? Đăng nhập"
+  },
+  "NOT_FOUND": {
+    "TITLE": "Không Tìm Thấy Trang",
+    "DESCRIPTION": "Trang bạn đang tìm kiếm không tồn tại hoặc đã được di chuyển.",
+    "GO_HOME": "Về Trang Chủ"
+  },
+  "DASHBOARD": {
+    "WELCOME": "Chào mừng, {{name}}",
+    "QUICK_STATS": "Thống Kê Nhanh",
+    "SAVED_UNIVERSITIES": "Trường Đã Lưu",
+    "APPLICATIONS": "Đơn Đăng Ký",
+    "RECENT_ACTIVITY": "Hoạt Động Gần Đây",
+    "NO_ACTIVITY": "Chưa có hoạt động nào",
+    "QUICK_ACTIONS": "Thao Tác Nhanh",
+    "BROWSE_UNIVERSITIES": "Xem Danh Sách Trường",
+    "UPDATE_PROFILE": "Cập Nhật Hồ Sơ"
+  },
+  "PROFILE": {
+    "TITLE": "Cài Đặt Hồ Sơ",
+    "NAME": "Họ và tên",
+    "EMAIL": "Địa chỉ email",
+    "CURRENT_PASSWORD": "Mật khẩu hiện tại",
+    "NEW_PASSWORD": "Mật khẩu mới",
+    "CONFIRM_PASSWORD": "Xác nhận mật khẩu",
+    "SAVE": "Lưu Thay Đổi"
+  },
+  "UNIVERSITIES": {
+    "TITLE": "Danh Sách Trường",
+    "SEARCH_PLACEHOLDER": "Tìm kiếm trường hoặc quốc gia...",
+    "ALL_REGIONS": "Tất Cả Khu Vực",
+    "NO_RESULTS": "Không tìm thấy trường nào phù hợp với tiêu chí của bạn",
+    "FILTERS": "Bộ Lọc",
+    "REGION": "Khu Vực"
+  },
+  "UNIVERSITY_DETAILS": {
+    "NOT_FOUND": "Không tìm thấy thông tin trường",
+    "BACK_TO_LIST": "Quay Lại Danh Sách",
+    "BACK": "Quay Lại",
+    "ABOUT": "Giới Thiệu",
+    "FIELDS": "Ngành Học"
+  },
+  "BUTTON": {
+    "SAVE": "Lưu",
+    "CANCEL": "Hủy",
+    "EDIT": "Chỉnh Sửa"
+  },
+  "TABLE": {
+    "EMPTY": "Không có dữ liệu"
+  }
+} 

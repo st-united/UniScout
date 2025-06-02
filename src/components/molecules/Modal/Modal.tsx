@@ -1,22 +1,36 @@
-import { Modal as ModalAntd, ModalProps } from 'antd';
-import { FC } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Modal as AntModal } from 'antd';
 
-export const Modal: FC<ModalProps> = ({ children, ...props }) => {
-  const className = props.className ? props.className : '';
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  children
+}) => {
   const { t } = useTranslation();
 
   return (
-    <ModalAntd
-      className={`modal ${className}`}
-      centered={true}
-      okText={t<string>('BUTTON.SAVE')}
-      cancelText={t<string>('BUTTON.CANCEL')}
-      okButtonProps={{ className: 'button', type: 'primary' }}
-      cancelButtonProps={{ style: { display: 'none' } }}
-      {...props}
+    <AntModal
+      title={title}
+      open={isOpen}
+      onCancel={onClose}
+      onOk={onConfirm}
+      okText={t('BUTTON.SAVE')}
+      cancelText={t('BUTTON.CANCEL')}
     >
       {children}
-    </ModalAntd>
+    </AntModal>
   );
 };
+
+export default Modal;

@@ -1,3 +1,6 @@
+@use "@app/assets/styles/_variable.scss" as *;
+@use "@app/assets/styles/_fonts.scss" as *;
+@use "@app/assets/styles/_layout.scss" as *;
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

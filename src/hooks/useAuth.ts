@@ -5,54 +5,51 @@ import { useNavigate } from 'react-router-dom';
 import { removeStorageData, setStorageData } from '@app/config';
 import { ACCESS_TOKEN, NAVIGATE_URL, REFRESH_TOKEN, USER_PROFILE } from '@app/constants';
 import { Credentials } from '@app/interface/user.interface';
-import { logout, login } from '@app/redux/features/auth/authSlice';
+import { login as loginAction, logout as logoutAction } from '@app/redux/features/auth/authSlice';
 import { RootState } from '@app/redux/store';
 import { loginApi, getLogout } from '@app/services';
 
-export const useLogin = () => {
+export const useAuth = () => {
   const navigate = useNavigate();
-  const dispatchAuth = useDispatch();
+  const dispatch = useDispatch();
 
-  return useMutation(
-    async (credentials: Credentials) => {
+  const login = useMutation({
+    mutationFn: async (credentials: Credentials) => {
       const { data } = await loginApi(credentials);
       return data;
     },
-    {
-      onSuccess: ({ data, message }) => {
-        dispatchAuth(login());
+    onSuccess: ({ data }) => {
+      dispatch(loginAction(data.user));
 
-        setStorageData(ACCESS_TOKEN, data.accessToken);
-        setStorageData(REFRESH_TOKEN, data.refreshToken);
+      setStorageData(ACCESS_TOKEN, data.accessToken);
+      setStorageData(REFRESH_TOKEN, data.refreshToken);
 
-        navigate('/');
-      },
-      onError({ response }) {
-        //
-      },
+      navigate('/');
     },
-  );
-};
+    onError: (error) => {
+      console.error('Login failed:', error);
+    }
+  });
 
-export const useLogout = () => {
-  const navigate = useNavigate();
-  const dispatchAuth = useDispatch();
-
-  return useMutation(
-    async () => {
+  const logout = useMutation({
+    mutationFn: async () => {
       const { data } = await getLogout();
       return data;
     },
-    {
-      onSuccess: ({ message }) => {
-        removeStorageData(ACCESS_TOKEN);
-        removeStorageData(REFRESH_TOKEN);
-        removeStorageData(USER_PROFILE);
+    onSuccess: () => {
+      removeStorageData(ACCESS_TOKEN);
+      removeStorageData(REFRESH_TOKEN);
+      removeStorageData(USER_PROFILE);
 
-        dispatchAuth(logout());
+      dispatch(logoutAction());
 
-        navigate(NAVIGATE_URL.SIGN_IN);
-      },
-    },
-  );
+      navigate(NAVIGATE_URL.SIGN_IN);
+    }
+  });
+
+  return {
+    login: login.mutate,
+    logout: logout.mutate,
+    isLoading: login.isPending || logout.isPending
+  };
 };

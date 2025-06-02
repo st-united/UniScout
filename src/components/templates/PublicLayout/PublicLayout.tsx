@@ -14,7 +14,7 @@ const PublicLayout: React.FC = () => {
     if (getStorageData(ACCESS_TOKEN) && isAuth) {
       navigate('/');
     }
-  }, [isAuth, getStorageData(ACCESS_TOKEN)]);
+  }, [isAuth, navigate]);
 
   return <Outlet />;
 };

@@ -12,87 +12,138 @@ import {
   updateProfileApi,
   uploadAvatarApi,
 } from '@app/services';
+import { api } from '@app/services/api';
 
 export const useGetProfile = () => {
   const dispatch = useDispatch();
 
-  return useQuery(
-    [QUERY_KEY.PROFILE],
-    async () => {
+  return useQuery({
+    queryKey: [QUERY_KEY.PROFILE],
+    queryFn: async () => {
       const { data } = await getProfileApi();
+      dispatch(setAuth(data.data));
       return data.data;
-    },
-    {
-      onSuccess(data) {
-        dispatch(setAuth(data));
-      },
-    },
-  );
+    }
+  });
 };
 
 export const useChangePassword = () => {
   const navigate = useNavigate();
 
-  return useMutation(
-    async (password: ChangePassword) => {
+  return useMutation({
+    mutationFn: async (password: ChangePassword) => {
       const response = await changePassword(password);
       return response.data;
     },
-    {
-      onSuccess({ message }) {
-        navigate(NAVIGATE_URL.PROFILE);
-      },
-      onError({ response }) {
-        console.log(response);
-      },
+    onSuccess: () => {
+      navigate(NAVIGATE_URL.PROFILE);
     },
-  );
+    onError: (error: Error) => {
+      console.log(error);
+    },
+  });
 };
 
 export const useUpdateProfile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  return useMutation(
-    async (user: UserProfile) => {
+  return useMutation({
+    mutationFn: async (user: UserProfile) => {
       const response = await updateProfileApi(user);
       return response.data;
     },
-    {
-      onSuccess({ message }) {
-        queryClient.refetchQueries([QUERY_KEY.PROFILE]);
-        navigate(NAVIGATE_URL.PROFILE);
-      },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY.PROFILE] });
+      navigate(NAVIGATE_URL.PROFILE);
     },
-  );
+  });
 };
 
 export const useUploadAvatar = () => {
   const queryClient = useQueryClient();
-  return useMutation(
-    async (data: { identityId: string; formData: FormData }) => {
+  return useMutation({
+    mutationFn: async (data: { identityId: string; formData: FormData }) => {
       const response = await uploadAvatarApi(data.identityId, data.formData);
       return response.data;
     },
-    {
-      onSuccess({ message }) {
-        queryClient.refetchQueries([QUERY_KEY.PROFILE]);
-      },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY.PROFILE] });
     },
-  );
+  });
 };
 
 export const useRemoveAvatar = () => {
   const queryClient = useQueryClient();
-  return useMutation(
-    async (data: { identityId: string }) => {
+  return useMutation({
+    mutationFn: async (data: { identityId: string }) => {
       const response = await removeAvatarApi(data.identityId);
       return response.data;
     },
-    {
-      onSuccess({ message }) {
-        queryClient.refetchQueries([QUERY_KEY.PROFILE]);
-      },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY.PROFILE] });
     },
-  );
+  });
+};
+
+export const useProfile = () => {
+  const queryClient = useQueryClient();
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: [QUERY_KEY.PROFILE],
+    queryFn: async () => {
+      const response = await api.get<UserProfile>('/users/profile');
+      return response.data;
+    }
+  });
+
+  const updateProfile = useMutation({
+    mutationFn: async (user: UserProfile) => {
+      const response = await api.put('/users/profile', user);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY.PROFILE] });
+    }
+  });
+
+  const changePassword = useMutation({
+    mutationFn: async (password: ChangePassword) => {
+      const response = await api.put('/users/change-password', password);
+      return response.data;
+    }
+  });
+
+  const uploadAvatar = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await api.post('/users/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY.PROFILE] });
+    }
+  });
+
+  const deleteAvatar = useMutation({
+    mutationFn: async () => {
+      const response = await api.delete('/users/avatar');
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY.PROFILE] });
+    }
+  });
+
+  return {
+    profile,
+    isLoading,
+    updateProfile,
+    changePassword,
+    uploadAvatar,
+    deleteAvatar
+  };
 };

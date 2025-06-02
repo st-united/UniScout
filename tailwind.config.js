@@ -27,24 +27,43 @@ export default {
     },
     extend: {
       colors: {
-        primaryColor: '#003087',
-        secondaryColor: '#13C296',
-        greenLight6: '#DAF8E6',
-        greenDark: '#1A8245',
-        tableHeadColor: '#E6F0FA',
-        blueLight5: '#E1E8FF',
-        blueDark: '#1C3FB7',
-        dark8: '#E5E7EB',
-        dark3: '#374151',
-        redDark: '#E10E0E',
-        primaryTextColor: '#637381',
-        stroke: '#DFE4EA',
-        gray: '#F9FAFB',
+        primary: {
+          DEFAULT: '#E67E22',
+          light: '#F39C12',
+          dark: '#D35400',
+        },
+        secondary: {
+          DEFAULT: '#34495E',
+          light: '#2C3E50',
+        },
+        accent: '#1ABC9C',
+        success: '#2ECC71',
+        warning: '#F1C40F',
+        error: '#E74C3C',
+        background: '#F5F7FA',
+        text: '#2C3E50',
+        'text-light': '#7F8C8D',
+        border: '#BDC3C7',
+      },
+      boxShadow: {
+        card: '0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1)',
+        'card-hover': '0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.3s ease-in-out',
+        'slide-in': 'slideIn 0.3s ease-in-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideIn: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
       },
     },
   },
   plugins: [],
-  corePlugins: {
-    preflight: false,
-  },
 };

@@ -1,0 +1,70 @@
+{
+  "HERO": {
+    "TITLE": "Discover Top Universities Worldwide",
+    "SUBTITLE": "Find the perfect university for your academic journey",
+    "CTA": "Explore Universities"
+  },
+  "LOGIN": {
+    "TITLE": "Sign in to your account",
+    "EMAIL": "Email address",
+    "PASSWORD": "Password",
+    "SUBMIT": "Sign in",
+    "REGISTER": "Don't have an account? Sign up"
+  },
+  "REGISTER": {
+    "TITLE": "Create your account",
+    "NAME": "Full name",
+    "EMAIL": "Email address",
+    "PASSWORD": "Password",
+    "SUBMIT": "Sign up",
+    "LOGIN": "Already have an account? Sign in"
+  },
+  "NOT_FOUND": {
+    "TITLE": "Page Not Found",
+    "DESCRIPTION": "The page you're looking for doesn't exist or has been moved.",
+    "GO_HOME": "Back to Home"
+  },
+  "DASHBOARD": {
+    "WELCOME": "Welcome, {{name}}",
+    "QUICK_STATS": "Quick Stats",
+    "SAVED_UNIVERSITIES": "Saved Universities",
+    "APPLICATIONS": "Applications",
+    "RECENT_ACTIVITY": "Recent Activity",
+    "NO_ACTIVITY": "No recent activity",
+    "QUICK_ACTIONS": "Quick Actions",
+    "BROWSE_UNIVERSITIES": "Browse Universities",
+    "UPDATE_PROFILE": "Update Profile"
+  },
+  "PROFILE": {
+    "TITLE": "Profile Settings",
+    "NAME": "Full name",
+    "EMAIL": "Email address",
+    "CURRENT_PASSWORD": "Current password",
+    "NEW_PASSWORD": "New password",
+    "CONFIRM_PASSWORD": "Confirm password",
+    "SAVE": "Save Changes"
+  },
+  "UNIVERSITIES": {
+    "TITLE": "Universities",
+    "SEARCH_PLACEHOLDER": "Search universities or countries...",
+    "ALL_REGIONS": "All Regions",
+    "NO_RESULTS": "No universities found matching your criteria",
+    "FILTERS": "Filters",
+    "REGION": "Region"
+  },
+  "UNIVERSITY_DETAILS": {
+    "NOT_FOUND": "University not found",
+    "BACK_TO_LIST": "Back to Universities List",
+    "BACK": "Back to List",
+    "ABOUT": "About",
+    "FIELDS": "Fields of Study"
+  },
+  "BUTTON": {
+    "SAVE": "Save",
+    "CANCEL": "Cancel",
+    "EDIT": "Edit"
+  },
+  "TABLE": {
+    "EMPTY": "No data available"
+  }
+} 

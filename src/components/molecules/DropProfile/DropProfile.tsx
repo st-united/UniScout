@@ -4,6 +4,7 @@ import { FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../hooks/useAuth';
 
 // import { iconLogout, iconProfile, logoAvatarDefault } from '@app/assets/images';
 import { removeStorageData } from '@app/config';
@@ -16,6 +17,7 @@ export const DropProfile: FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatchAuth = useDispatch();
+  const { logout: useAuthLogout } = useAuth();
 
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeItem, setActiveItem] = useState<boolean>(false);
@@ -24,34 +26,41 @@ export const DropProfile: FC = () => {
     if (key == 'profile') {
       navigate(NAVIGATE_URL.PROFILE);
     }
-    if (key == NAVIGATE_URL.SIGN_OUT) {
-      removeStorageData(ACCESS_TOKEN);
-      dispatchAuth(logout());
-      navigate(NAVIGATE_URL.SIGN_IN);
-    }
+  };
+
+  // Define a separate handler for logout logic
+  const handleSignOut = () => {
+    removeStorageData(ACCESS_TOKEN);
+    dispatchAuth(logout());
+    useAuthLogout(); // Call the hook function here
+    navigate(NAVIGATE_URL.SIGN_IN);
   };
 
   const items: MenuProps['items'] = [
     {
       label: (
-        <Typography style={{ color: '#121212', fontWeight: 600 }}>
-          {t<string>('DROPDOWN_PROFILE.PROFILE')}
-        </Typography>
+        <Typography.Text>
+          {t('DROPDOWN_PROFILE.PROFILE')}
+        </Typography.Text>
       ),
       key: 'profile',
       // icon: <img src={iconProfile} alt='icon-profile' />,
       className: 'item-profile',
+      onClick: () => {
+        handleUser('profile');
+      }
     },
     {
       label: (
-        <Typography style={{ color: '#FB303E', fontWeight: 600 }}>
-          {t<string>('DROPDOWN_PROFILE.SIGN_OUT')}
-        </Typography>
+        <Typography.Text>
+          {t('DROPDOWN_PROFILE.SIGN_OUT')}
+        </Typography.Text>
       ),
       key: NAVIGATE_URL.SIGN_OUT,
       danger: true,
       // icon: <img src={iconLogout} alt='icon-logout' />,
       className: 'item-signout',
+      onClick: handleSignOut, // Reference the new handler here
     },
   ];
 
@@ -60,7 +69,8 @@ export const DropProfile: FC = () => {
       menu={{
         items,
         onClick: (item) => {
-          handleUser(item.key), setActiveItem(!activeItem);
+          handleUser(item.key);
+          setActiveItem(!activeItem);
         },
       }}
       trigger={['click']}
@@ -69,9 +79,9 @@ export const DropProfile: FC = () => {
       placement='bottom'
       onOpenChange={() => setActiveItem(!activeItem)}
     >
-      <div>
+      <div className="flex items-center cursor-pointer">
         <Avatar size={40} className='drop-avatar' src={user?.avatar ? user?.avatar : null} />
-        <span className='drop-name'>{user?.name}</span>
+        <span className='drop-name ml-2 mr-1'>{user?.name}</span>
         {activeItem === true ? (
           <CaretUpOutlined className='drop-name' />
         ) : (
