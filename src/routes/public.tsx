@@ -1,12 +1,11 @@
 import React from 'react';
 // import { Navigate, Route, Routes } from 'react-router-dom'; // These imports are no longer needed
 // import { useAuth } from '../contexts/AuthContext'; // This import is no longer needed
-import Loading from '../components/common/Loading';
 import HomePage from '../components/pages/HomePage';
 import LoginPage from '../components/pages/LoginPage';
 import RegisterPage from '../components/pages/RegisterPage';
 import NotFoundPage from '../components/pages/NotFoundPage';
-import ContactPage from '../components/pages/ContactPage';
+//import ContactPage from '../components/pages/ContactPage';
 
 // Remove unused lazy imports as the components are directly imported below
 // const HomePageComponent = React.lazy(() => import('../components/pages/HomePage'));
@@ -44,22 +43,23 @@ import ContactPage from '../components/pages/ContactPage';
 export const publicRoutes = [
   {
     path: '/',
-    element: <HomePage />
+    element: <HomePage />,
   },
   {
     path: '/login',
-    element: <LoginPage />
+    element: <LoginPage />,
   },
   {
     path: '/register',
-    element: <RegisterPage />
+    element: <RegisterPage />,
   },
-  {
-    path: '/contact',
-    element: <ContactPage />
-  },
+  // Temporarily disabled contact page
+  // {
+  //   path: '/contact',
+  //   element: <ContactPage />
+  // },
   {
     path: '*',
-    element: <NotFoundPage />
-  }
+    element: <NotFoundPage />,
+  },
 ];

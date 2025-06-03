@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import router from './router';
 import { AuthProvider } from '@app/contexts/AuthContext';
-import { UniversityProvider } from '@app/contexts/UniversityContext';
+import { UniversityProvider } from './components/contexts/UniversityContext';
 import './main.scss';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@app/config/i18n';
@@ -22,8 +22,8 @@ if (container) {
           </UniversityProvider>
         </AuthProvider>
       </I18nextProvider>
-    </StrictMode>
+    </StrictMode>,
   );
 } else {
-  console.error('Root element with ID \'root\' not found!');
+  console.error("Root element with ID 'root' not found!");
 }

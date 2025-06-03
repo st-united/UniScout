@@ -20,6 +20,7 @@ export interface University {
   };
   type: 'Public' | 'Private' | 'International';
   rating: number;
+  imageUrl?: string;
 }
 
 export interface UniversityFilters {
@@ -59,7 +60,11 @@ export const UniversityProvider = ({ children }: UniversityProviderProps) => {
     // In a real app, this would be an API call
     try {
       setUniversities(mockUniversities);
-      setFeaturedUniversities(mockUniversities.slice(0, 6));
+      setFeaturedUniversities(mockUniversities.slice(0, 12));
+      console.log(
+        'UniversityContext - featuredUniversities length:',
+        mockUniversities.slice(0, 12).length,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load university data');
     } finally {

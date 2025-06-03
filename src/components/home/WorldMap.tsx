@@ -1,9 +1,11 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { useUniversity } from '../../contexts/UniversityContext';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useUniversity } from '../contexts/UniversityContext';
 
 // Fix for default marker icon
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+delete (L.Icon.Default.prototype as any)._getIconUrl; // Revert to using any for workaround
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
