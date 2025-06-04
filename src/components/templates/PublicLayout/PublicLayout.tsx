@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Outlet, useNavigate } from 'react-router-dom';
 
+import { UniversityProvider } from '@app/components/molecules/mockdata/UniversityContext';
 import { getStorageData } from '@app/config';
 import { ACCESS_TOKEN } from '@app/constants';
 import { RootState } from '@app/redux/store';
@@ -16,7 +17,11 @@ const PublicLayout: React.FC = () => {
     }
   }, [isAuth, getStorageData(ACCESS_TOKEN)]);
 
-  return <Outlet />;
+  return (
+    <UniversityProvider>
+      <Outlet />
+    </UniversityProvider>
+  );
 };
 
 export default PublicLayout;
