@@ -9,12 +9,13 @@ import { RootState } from '@app/redux/store';
 const PublicLayout: React.FC = () => {
   const navigate = useNavigate();
   const { isAuth } = useSelector((state: RootState) => state.auth);
+  const token = getStorageData(ACCESS_TOKEN); // Cache token
 
   useEffect(() => {
-    if (getStorageData(ACCESS_TOKEN) && isAuth) {
+    if (token && isAuth) {
       navigate('/');
     }
-  }, [isAuth, getStorageData(ACCESS_TOKEN)]);
+  }, [isAuth, navigate, token]); // Include all stable dependencies
 
   return <Outlet />;
 };
