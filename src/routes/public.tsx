@@ -22,7 +22,7 @@ const routes = [
       },
       {
         path: 'universities/:id',
-        element: <ViewUniversity universities={mockUniversities} />,
+        element: <UniversityDetail universities={mockUniversities} />,
       },
     ],
   },
