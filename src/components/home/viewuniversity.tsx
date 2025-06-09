@@ -2,6 +2,7 @@ import { Building2, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import UniversityFilter from './universityfilter';
 import { University } from '../data/mockData';
 
 interface ViewUniversityProps {
@@ -49,55 +50,102 @@ const UniversityCard: React.FC<UniversityCardProps> = ({ university }) => (
 
 const ViewUniversity: React.FC<ViewUniversityProps> = ({ universities }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [filteredUniversities, setFilteredUniversities] = useState<University[]>(universities);
   const universitiesPerPage = 16;
+
+  const handleFilterChange = (filtered: University[]) => {
+    setFilteredUniversities(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
 
   const indexOfLastUniversity = currentPage * universitiesPerPage;
   const indexOfFirstUniversity = indexOfLastUniversity - universitiesPerPage;
-  const currentUniversities = universities.slice(indexOfFirstUniversity, indexOfLastUniversity);
+  const currentUniversities = filteredUniversities.slice(
+    indexOfFirstUniversity,
+    indexOfLastUniversity,
+  );
 
   const pageNumbers = Array.from(
-    { length: Math.ceil(universities.length / universitiesPerPage) },
+    { length: Math.ceil(filteredUniversities.length / universitiesPerPage) },
     (_, i) => i + 1,
   );
 
   return (
-    <div className='flex-1'>
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-        {currentUniversities.map((university) => (
-          <UniversityCard key={university.id} university={university} />
-        ))}
-      </div>
+    <div className='min-h-screen w-full px-4 py-6'>
+      <div className='mx-auto max-w-[1440px] relative'>
+        {/* Sidebar - Absolutely positioned within content container */}
+        <div className='hidden lg:block absolute left-0 top-0 w-80 z-10'>
+          <div className='sticky top-6'>
+            <UniversityFilter universities={universities} onFilterChange={handleFilterChange} />
+          </div>
+        </div>
 
-      <div className='flex justify-center mt-8 gap-2'>
-        <button
-          className='text-orange-500'
-          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-          disabled={currentPage === 1}
-        >
-          Previous
-        </button>
-        {pageNumbers.map((number) => (
-          <button
-            key={number}
-            className={`w-8 h-8 rounded-full ${
-              currentPage === number ? 'bg-orange-500 text-white' : 'text-gray-500'
-            }`}
-            onClick={() => setCurrentPage(number)}
-          >
-            {number}
-          </button>
-        ))}
-        <button
-          className='text-orange-500'
-          onClick={() =>
-            setCurrentPage((prev) =>
-              Math.min(Math.ceil(universities.length / universitiesPerPage), prev + 1),
-            )
-          }
-          disabled={currentPage === Math.ceil(universities.length / universitiesPerPage)}
-        >
-          Next
-        </button>
+        {/* Mobile sidebar */}
+        <div className='lg:hidden mb-6'>
+          <UniversityFilter universities={universities} onFilterChange={handleFilterChange} />
+        </div>
+
+        {/* Content area - With left margin to account for sidebar */}
+        <div className='lg:ml-[336px]'>
+          {filteredUniversities.length === 0 ? (
+            <div className='flex items-center justify-center h-64'>
+              <div className='text-center'>
+                <div className='text-gray-400 text-6xl mb-4'>🏫</div>
+                <p className='text-gray-500 text-lg'>
+                  No universities match the selected criteria.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6'>
+                {currentUniversities.map((university) => (
+                  <UniversityCard key={university.id} university={university} />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {pageNumbers.length > 1 && (
+                <div className='flex justify-center mt-8 gap-2 flex-wrap'>
+                  <button
+                    className='text-orange-500 disabled:text-gray-300'
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                  {pageNumbers.map((number) => (
+                    <button
+                      key={number}
+                      className={`w-8 h-8 rounded-full ${
+                        currentPage === number ? 'bg-orange-500 text-white' : 'text-gray-500'
+                      }`}
+                      onClick={() => setCurrentPage(number)}
+                    >
+                      {number}
+                    </button>
+                  ))}
+                  <button
+                    className='text-orange-500 disabled:text-gray-300'
+                    onClick={() =>
+                      setCurrentPage((prev) =>
+                        Math.min(
+                          Math.ceil(filteredUniversities.length / universitiesPerPage),
+                          prev + 1,
+                        ),
+                      )
+                    }
+                    disabled={
+                      currentPage === Math.ceil(filteredUniversities.length / universitiesPerPage)
+                    }
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
