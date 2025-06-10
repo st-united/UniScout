@@ -1,14 +1,13 @@
 import axios from 'axios';
 import {
   ArrowLeft,
-  ExternalLink,
   MapPin,
   Users,
   Building2,
   Star,
   Globe,
-  Phone,
-  Mail,
+  MailIcon,
+  PhoneIcon,
 } from 'lucide-react';
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -193,49 +192,46 @@ const UniversityDetail: React.FC = () => {
         <div className='bg-white rounded-lg shadow-sm p-6'>
           <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
           {/* Fields */}
-          <div className='bg-white rounded-lg shadow-sm p-6'>
-            <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
-            {(() => {
-              // Get all boolean fields that are true
-              const fieldArray = Object.entries(university)
-                .filter(([key, value]) => typeof value === 'boolean' && value)
-                .map(([key]) => key);
+          {(() => {
+            // Get all boolean fields that are true
+            const fieldArray = Object.entries(university)
+              .filter(([key, value]) => typeof value === 'boolean' && value)
+              .map(([key]) => key);
 
-              // Map to config, fallback if not found
-              const mappedFields = fieldArray.map((field) => {
-                const config = fieldConfigs[field] || {
-                  name: field,
-                  icon: '📚',
-                  description: 'General Studies',
-                };
-                return config;
-              });
+            // Map to config, fallback if not found
+            const mappedFields = fieldArray.map((field) => {
+              const config = fieldConfigs[field] || {
+                name: field,
+                icon: '📚',
+                description: 'General Studies',
+              };
+              return config;
+            });
 
-              if (mappedFields.length === 0) {
-                return <div className='text-gray-500'>No fields listed.</div>;
-              }
+            if (mappedFields.length === 0) {
+              return <div className='text-gray-500'>No fields listed.</div>;
+            }
 
-              return (
-                <div
-                  className={`grid gap-4 ${
-                    mappedFields.length < 5
-                      ? `grid-cols-1 sm:grid-cols-${Math.min(mappedFields.length, 5)}`
-                      : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
-                  }`}
-                >
-                  {mappedFields.map((config, index) => (
-                    <div
-                      key={index}
-                      className='text-center p-4 border rounded-lg hover:shadow-md transition-shadow'
-                    >
-                      <div className='text-3xl mb-2'>{config.icon}</div>
-                      <h4 className='font-medium text-blue-900 mb-1'>{config.name}</h4>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
+            return (
+              <div
+                className={`grid gap-4 ${
+                  mappedFields.length < 5
+                    ? `grid-cols-1 sm:grid-cols-${Math.min(mappedFields.length, 5)}`
+                    : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
+                }`}
+              >
+                {mappedFields.map((config, index) => (
+                  <div
+                    key={index}
+                    className='text-center p-4 border rounded-lg hover:shadow-md transition-shadow'
+                  >
+                    <div className='text-3xl mb-2'>{config.icon}</div>
+                    <h4 className='font-medium text-blue-900 mb-1'>{config.name}</h4>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
         {/* Footer */}
         <div className='mt-12 bg-white rounded-lg shadow-sm p-6'>
@@ -253,7 +249,7 @@ const UniversityDetail: React.FC = () => {
               </a>
             </div>
             <div className='flex items-center justify-center gap-2'>
-              <Globe className='w-5 h-5 text-gray-600' />
+              <MailIcon className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Email</span>
               <a
                 href={university.email}
@@ -265,7 +261,7 @@ const UniversityDetail: React.FC = () => {
               </a>
             </div>
             <div className='flex items-center justify-center gap-2'>
-              <Globe className='w-5 h-5 text-gray-600' />
+              <PhoneIcon className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Phone</span>
               <a
                 href={university.contact}
