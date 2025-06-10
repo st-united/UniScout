@@ -137,7 +137,7 @@ const ContactForm: React.FC = () => {
   };
 
   return (
-    <div className='bg-orange-50 rounded-lg p-8 w-full max-w-6xl mx-auto shadow-sm'>
+    <div className='w-full max-w-6xl p-8 mx-auto mt-10 rounded-lg shadow-sm bg-orange-50'>
       {submissionStatus === 'success' && (
         <SuccessNotification
           show={true}
@@ -152,22 +152,22 @@ const ContactForm: React.FC = () => {
           message='Your request could not be sent. Please try again later.'
         />
       )}
-      <h2 className='text-4xl font-bold text-orange-500 text-center mb-2'>Connect with us</h2>
-      <p className='text-gray-500 text-center mb-8'>
+      <h2 className='mb-2 text-4xl font-bold text-center text-orange-500'>Connect with us</h2>
+      <p className='mb-8 text-center text-gray-500'>
         Your Gateway to University Insights and Support!
       </p>
       <form onSubmit={handleSubmit} noValidate>
-        <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
+        <div className='grid grid-cols-1 gap-6 lg:grid-cols-12'>
           {/* Left Column */}
           <div className='lg:col-span-5'>
             <div className='mb-6'>
               <label
                 htmlFor='purpose-change-info'
-                className='block text-orange-600 font-medium mb-2'
+                className='block mb-2 font-medium text-orange-600'
               >
                 Select the purpose:
               </label>
-              {errors.purpose && <p className='text-red-500 text-sm mt-1'>{errors.purpose}</p>}
+              {errors.purpose && <p className='mt-1 text-sm text-red-500'>{errors.purpose}</p>}
               <div className='space-x-4'>
                 <button
                   type='button'
@@ -196,7 +196,7 @@ const ContactForm: React.FC = () => {
             </div>
 
             <div className='mb-6'>
-              <label htmlFor='universityName" className="block text-orange-600 font-medium mb-2'>
+              <label htmlFor='universityName" className="block mb-2 font-medium text-orange-600'>
                 University Name
               </label>
               <input
@@ -210,12 +210,12 @@ const ContactForm: React.FC = () => {
                 } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
               />
               {errors.universityName && (
-                <p className='text-red-500 text-sm mt-1'>{errors.universityName}</p>
+                <p className='mt-1 text-sm text-red-500'>{errors.universityName}</p>
               )}
             </div>
 
             <div className='mb-6'>
-              <label htmlFor='phoneNumber" className="block text-orange-600 font-medium mb-2'>
+              <label htmlFor='phoneNumber" className="block mb-2 font-medium text-orange-600'>
                 Phone Number
               </label>
               <input
@@ -229,12 +229,12 @@ const ContactForm: React.FC = () => {
                 } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
               />
               {errors.phoneNumber && (
-                <p className='text-red-500 text-sm mt-1'>{errors.phoneNumber}</p>
+                <p className='mt-1 text-sm text-red-500'>{errors.phoneNumber}</p>
               )}
             </div>
 
             <div className='mb-6'>
-              <label htmlFor='email" className="block text-orange-600 font-medium mb-2'>
+              <label htmlFor='email" className="block mb-2 font-medium text-orange-600'>
                 Email
               </label>
               <input
@@ -247,7 +247,7 @@ const ContactForm: React.FC = () => {
                   errors.email ? 'border-red-500' : 'border-orange-300'
                 } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
               />
-              {errors.email && <p className='text-red-500 text-sm mt-1'>{errors.email}</p>}
+              {errors.email && <p className='mt-1 text-sm text-red-500'>{errors.email}</p>}
             </div>
           </div>
 
@@ -256,7 +256,7 @@ const ContactForm: React.FC = () => {
             <div className='mb-6'>
               <label
                 htmlFor='representativeName'
-                className='block text-orange-600 font-medium mb-2'
+                className='block mb-2 font-medium text-orange-600'
               >
                 Representative Name
               </label>
@@ -271,12 +271,12 @@ const ContactForm: React.FC = () => {
                 } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
               />
               {errors.representativeName && (
-                <p className='text-red-500 text-sm mt-1'>{errors.representativeName}</p>
+                <p className='mt-1 text-sm text-red-500'>{errors.representativeName}</p>
               )}
             </div>
 
             <div className='mb-6'>
-              <label htmlFor='country' className='block text-orange-600 font-medium mb-2'>
+              <label htmlFor='country' className='block mb-2 font-medium text-orange-600'>
                 Country
               </label>
               <input
@@ -289,11 +289,11 @@ const ContactForm: React.FC = () => {
                   errors.country ? 'border-red-500' : 'border-orange-300'
                 } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
               />
-              {errors.country && <p className='text-red-500 text-sm mt-1'>{errors.country}</p>}
+              {errors.country && <p className='mt-1 text-sm text-red-500'>{errors.country}</p>}
             </div>
 
             <div className='mb-6'>
-              <label htmlFor='message" className="block text-orange-600 font-medium mb-2'>
+              <label htmlFor='message" className="block mb-2 font-medium text-orange-600'>
                 Your message
               </label>
               <div className='relative'>
@@ -307,7 +307,7 @@ const ContactForm: React.FC = () => {
                     errors.message ? 'border-red-500' : 'border-orange-300'
                   } bg-transparent rounded-lg py-2 px-3 focus:outline-none focus:border-orange-500 transition-colors`}
                 ></textarea>
-                {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
+                {errors.message && <p className='mt-1 text-sm text-red-500'>{errors.message}</p>}
                 <input
                   type='file'
                   id='attachment'
@@ -318,7 +318,7 @@ const ContactForm: React.FC = () => {
                 />
                 <label
                   htmlFor='attachment'
-                  className='absolute bottom-3 right-3 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer'
+                  className='absolute text-gray-400 transition-colors cursor-pointer bottom-3 right-3 hover:text-orange-500'
                 >
                   <Paperclip size={20} />
                 </label>
@@ -328,7 +328,7 @@ const ContactForm: React.FC = () => {
             <div className='text-right'>
               <button
                 type='submit'
-                className='bg-orange-500 text-white py-3 px-8 rounded-full hover:bg-orange-600 transition-colors font-medium'
+                className='px-8 py-3 font-medium text-white transition-colors bg-orange-500 rounded-full hover:bg-orange-600'
               >
                 Send message
               </button>

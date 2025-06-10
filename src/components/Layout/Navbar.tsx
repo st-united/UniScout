@@ -1,23 +1,38 @@
-import { Contact } from 'lucide-react';
+import { Contact, University } from 'lucide-react';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+import { devplus } from '@app/assets/images';
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   return (
-    <nav className='bg-white shadow-md sticky top-0 z-50'>
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex justify-between h-16'>
-          <div className='flex items-center'>
-            <div className='text-2xl font-bold text-orange-500'>DEV PLUS</div>
-          </div>
-          <div className='flex items-center'>
-            <button className='inline-flex items-center px-4 py-2 border border-orange-500 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition-colors'>
-              <Contact className='w-5 h-5 mr-2' />
-              Contact
-            </button>
-          </div>
+    <div className='h-full px-4 mx-auto max-w-7xl sm:px-6 lg:px-8'>
+      <div className='flex justify-between '>
+        <div className='flex items-center'>
+          <button
+            onClick={() => navigate('/universities')}
+            className='bg-transparent border-none cursor-pointer'
+          >
+            <img
+              className='w-40 font-bold text-orange-500 bg-no-repeat bg-cover border-none rounded-none'
+              src={devplus}
+              alt='devplus'
+            />
+          </button>
+        </div>
+        <div className='flex items-center'>
+          <button
+            onClick={() => navigate('/contact')}
+            className='flex text-sm border-none items-center h-[70%] px-4 text-white transition-colors rounded-md bg-orange-500 hover:bg-orange-900 hover:text-white'
+          >
+            <Contact className='w-5 mr-2 text-sm' />
+            Contact
+          </button>
         </div>
       </div>
-    </nav>
+    </div>
   );
 };
 
