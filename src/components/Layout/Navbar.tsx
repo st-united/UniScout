@@ -1,5 +1,4 @@
-import { Contact, University } from 'lucide-react';
-import React from 'react';
+import { Contact } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { devplus } from '@app/assets/images';
@@ -12,7 +11,7 @@ const Navbar = () => {
       <div className='flex justify-between '>
         <div className='flex items-center'>
           <button
-            onClick={() => navigate('/universities')}
+            onClick={() => navigate('/')}
             className='bg-transparent border-none cursor-pointer'
           >
             <img
