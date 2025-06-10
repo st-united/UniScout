@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   frontend:
-    container_name: AICP-admin
+    container_name: uniscout-frontend
     build:
       context: .
       dockerfile: ./docker/Dockerfile
