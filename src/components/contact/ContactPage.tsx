@@ -1,8 +1,8 @@
 import React from 'react';
 
 import ConnectWithUs from './ConnectWithUs';
-import Footer from '@app/components/Layout/Footer';
-import Navbar from '@app/components/Layout/Navbar';
+import Footer from '../Layout/Footer';
+import Navbar from '../Layout/Navbar';
 
 const ContactPage: React.FC = () => {
   return (

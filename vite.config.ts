@@ -5,8 +5,6 @@ import { defineConfig, loadEnv } from 'vite';
 import pluginRewriteAll from 'vite-plugin-rewrite-all';
 
 export default ({ mode }: any) => {
-  process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
-
   return defineConfig({
     plugins: [pluginRewriteAll(), react()],
     resolve: {
@@ -29,6 +27,13 @@ export default ({ mode }: any) => {
       host: true,
       strictPort: true,
       port: 5002,
+      proxy: {
+        '/api/api': {
+          target: 'http://localhost:6002', // Your backend API server base URL
+          changeOrigin: true,
+          // No rewrite needed if your backend expects the /api/api prefix
+        },
+      },
     },
     test: {
       globals: true,
