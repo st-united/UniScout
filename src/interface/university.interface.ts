@@ -1,0 +1,31 @@
+export interface University {
+  id: string;
+  university: string;
+  latitude: number;
+  longitude: number;
+  logo: string;
+  rank: number | null;
+  type: 'public' | 'private' | string;
+  country: string;
+  location: string;
+  studentPopulation: number;
+  year: number;
+  contact: string;
+  email: string;
+  website: string;
+  strength: string;
+  description: string;
+  exchange: string | null;
+  agriculturalFoodScience: boolean;
+  artsDesign: boolean;
+  economicsBusinessManagement: boolean;
+  engineering: boolean;
+  lawPoliticalScience: boolean;
+  medicinePharmacyHealthSciences: boolean;
+  physicalScience: boolean;
+  socialSciencesHumanities: boolean;
+  sportsPhysicalEducation: boolean;
+  technology: boolean;
+  theology: boolean;
+  size: 'small' | 'medium' | 'large' | string;
+}

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import {
   ArrowLeft,
   ExternalLink,
@@ -9,15 +10,11 @@ import {
   Phone,
   Mail,
 } from 'lucide-react';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
-import { University } from '../data/mockData';
 import Navbar from '../layout/Navbar';
-
-interface UniversityDetailProps {
-  universities: University[];
-}
+import { University } from '@app/interface/university.interface';
 
 interface FieldConfig {
   name: string;
@@ -26,76 +23,72 @@ interface FieldConfig {
 }
 
 const fieldConfigs: Record<string, FieldConfig> = {
-  'Computer Science': {
-    name: 'Computer Science',
-    icon: '💻',
-    description: 'Science & Engineering',
+  agriculturalFoodScience: {
+    name: 'Agricultural & Food Science',
+    icon: '🌾',
+    description: 'Agriculture & Food Science',
   },
-  Engineering: {
+  artsDesign: {
+    name: 'Arts & Design',
+    icon: '🎨',
+    description: 'Arts & Design',
+  },
+  economicsBusinessManagement: {
+    name: 'Economics, Business & Management',
+    icon: '💼',
+    description: 'Economics, Business & Management',
+  },
+  engineering: {
     name: 'Engineering',
     icon: '⚙️',
     description: 'Science & Engineering',
   },
-  Business: {
-    name: 'Business',
-    icon: '💼',
-    description: 'Economics, Business & Management',
-  },
-  Law: {
-    name: 'Law',
+  lawPoliticalScience: {
+    name: 'Law & Political Science',
     icon: '⚖️',
     description: 'Law & Political Science',
   },
-  Medicine: {
-    name: 'Medicine',
+  medicinePharmacyHealthSciences: {
+    name: 'Medicine, Pharmacy & Health Sciences',
     icon: '🏥',
     description: 'Medicine, Pharmacy & Health Sciences',
   },
-  Humanities: {
-    name: 'Humanities',
+  physicalScience: {
+    name: 'Physical Science',
+    icon: '🔬',
+    description: 'Science & Engineering',
+  },
+  socialSciencesHumanities: {
+    name: 'Social Sciences & Humanities',
     icon: '📚',
     description: 'Social Sciences & Humanities',
   },
-  'Natural Sciences': {
-    name: 'Natural Sciences',
-    icon: '🔬',
-    description: 'Science & Engineering',
+  sportsPhysicalEducation: {
+    name: 'Sports & Physical Education',
+    icon: '🏅',
+    description: 'Sports & Physical Education',
   },
-  'Social Sciences': {
-    name: 'Social Sciences',
-    icon: '👥',
-    description: 'Social Sciences & Humanities',
-  },
-  Physics: {
-    name: 'Physics',
-    icon: '⚛️',
-    description: 'Science & Engineering',
-  },
-  Chemistry: {
-    name: 'Chemistry',
-    icon: '🧪',
-    description: 'Science & Engineering',
-  },
-  Astronomy: {
-    name: 'Astronomy',
-    icon: '🔭',
-    description: 'Science & Engineering',
-  },
-  Science: {
-    name: 'Science',
-    icon: '🔬',
-    description: 'Science & Engineering',
-  },
-  Arts: {
-    name: 'Arts',
-    icon: '🎨',
-    description: 'Arts & Design',
+  technology: {
+    name: 'Technology',
+    icon: '💻',
+    description: 'Technology',
   },
 };
 
-const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => {
+const UniversityDetail: React.FC = () => {
+  const [university, setUniversity] = React.useState<University | null>(null);
   const { id } = useParams<{ id: string }>();
-  const university = universities.find((u) => u.id === id);
+  useEffect(() => {
+    const fetchUniversity = async () => {
+      try {
+        const response = await axios.get<University>(`/universities/${id}`);
+        setUniversity(response.data);
+      } catch (error) {
+        console.error('Error fetching university:', error);
+      }
+    };
+    fetchUniversity();
+  }, [id]);
 
   if (!university) {
     return (
@@ -117,7 +110,7 @@ const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => 
 
   const googleMapsUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao
 
-&q=${university.location.lat},${university.location.lng}&zoom=15`;
+&q=${university.latitude},${university.longitude}&zoom=15`;
 
   return (
     <div className='min-h-screen w-full px-4 py-6 bg-gray-50'>
@@ -132,7 +125,6 @@ const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => 
             <ArrowLeft className='w-5 h-5' />
             Home
           </Link>
-
           {/* About and Map Section */}
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
             {/* About Section */}
@@ -140,11 +132,13 @@ const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => 
               <div className='flex items-start gap-4'>
                 <img
                   src={university.logo}
-                  alt={`${university.name} logo`}
+                  alt={`${university.university} logo`}
                   className='w-16 h-16 rounded-lg object-cover flex-shrink-0'
                 />
                 <div className='flex-1'>
-                  <h1 className='text-4xl font-bold text-blue-900 mb-2'>About {university.name}</h1>
+                  <h1 className='text-4xl font-bold text-blue-900 mb-2'>
+                    About {university.university}
+                  </h1>
                   <div className='text-base flex items-center gap-2 text-orange-500 mb-3'>
                     <MapPin className='w-4 h-4' />
                     <span>{university.country}</span>
@@ -153,11 +147,9 @@ const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => 
                 </div>
               </div>
             </div>
-
             {/* Map Section */}
             <div className='bg-white rounded-lg shadow-sm p-6'>
               <div className='w-full h-64 bg-gray-100 rounded-lg overflow-hidden'>
-                {/* Google Maps Embed */}
                 <iframe
                   src={googleMapsUrl}
                   width='100%'
@@ -166,24 +158,11 @@ const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => 
                   allowFullScreen
                   loading='lazy'
                   referrerPolicy='no-referrer-when-downgrade'
-                  title={`${university.name} Location`}
+                  title={`${university.university} Location`}
                 />
-
-                {/* Fallback for demo purposes */}
-                <div className='w-full h-full flex items-center justify-center bg-gray-200'>
-                  <div className='text-center'>
-                    <MapPin className='w-12 h-12 text-gray-400 mx-auto mb-2' />
-                    <p className='text-gray-600 font-medium'>{university.name}</p>
-                    <p className='text-sm text-gray-500'>{university.country}</p>
-                    <p className='text-xs text-gray-400 mt-2'>
-                      Coordinates: {university.location.lat}, {university.location.lng}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
-
           {/* Stats Row */}
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
             <div className='bg-orange-400 rounded-lg p-6 text-center'>
@@ -191,65 +170,73 @@ const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => 
                 <Star className='w-5 h-5 text-white' />
                 <span className='text-sm font-medium text-white'>Ranking</span>
               </div>
-              <div className='text-3xl font-bold text-white'>{university.ranking}</div>
+              <div className='text-3xl font-bold text-white'>{university.rank ?? 'N/A'}</div>
             </div>
-
             <div className='bg-orange-400 rounded-lg p-6 text-center'>
               <div className='flex items-center justify-center gap-2 mb-2'>
                 <Users className='w-5 h-5 text-white' />
                 <span className='text-sm font-medium text-white'>Students</span>
               </div>
               <div className='text-3xl font-bold text-white'>
-                {university.students.toLocaleString()}
+                {university.studentPopulation?.toLocaleString() ?? 'N/A'}
               </div>
             </div>
-
             <div className='bg-orange-400 rounded-lg p-6 text-center'>
               <div className='flex items-center justify-center gap-2 mb-2'>
                 <Building2 className='w-5 h-5 text-white' />
                 <span className='text-sm font-medium text-white'>Type</span>
               </div>
-              <div className='text-3xl font-bold text-white'>
-                {university.type === 'Public' ? 'International' : 'Private'}
-              </div>
+              <div className='text-3xl font-bold text-white'>{university.type}</div>
             </div>
           </div>
         </div>
-
-        {/* Fields Section */}
         <div className='bg-white rounded-lg shadow-sm p-6'>
           <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
-          <div
-            className={
-              university.fields.length < 5
-                ? 'flex justify-between flex-wrap gap-4'
-                : 'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
-            }
-          >
-            {university.fields.map((field, index) => {
-              const config = fieldConfigs[field] || {
-                name: field,
-                icon: '📚',
-                description: 'General Studies',
-              };
+          {/* Fields */}
+          <div className='bg-white rounded-lg shadow-sm p-6'>
+            <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
+            {(() => {
+              // Get all boolean fields that are true
+              const fieldArray = Object.entries(university)
+                .filter(([key, value]) => typeof value === 'boolean' && value)
+                .map(([key]) => key);
+
+              // Map to config, fallback if not found
+              const mappedFields = fieldArray.map((field) => {
+                const config = fieldConfigs[field] || {
+                  name: field,
+                  icon: '📚',
+                  description: 'General Studies',
+                };
+                return config;
+              });
+
+              if (mappedFields.length === 0) {
+                return <div className='text-gray-500'>No fields listed.</div>;
+              }
 
               return (
                 <div
-                  key={index}
-                  className={`flex-1 min-w-[120px] text-center p-4 border rounded-lg hover:shadow-md transition-shadow`}
-                  style={{
-                    flexBasis: `calc(${100 / university.fields.length}% - 1rem)`,
-                  }}
+                  className={`grid gap-4 ${
+                    mappedFields.length < 5
+                      ? `grid-cols-1 sm:grid-cols-${Math.min(mappedFields.length, 5)}`
+                      : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
+                  }`}
                 >
-                  <div className='text-3xl mb-2'>{config.icon}</div>
-                  <h4 className='font-medium text-blue-900 mb-1'>{config.name}</h4>
-                  <p className='text-sm text-blue-800'>{config.description}</p>
+                  {mappedFields.map((config, index) => (
+                    <div
+                      key={index}
+                      className='text-center p-4 border rounded-lg hover:shadow-md transition-shadow'
+                    >
+                      <div className='text-3xl mb-2'>{config.icon}</div>
+                      <h4 className='font-medium text-blue-900 mb-1'>{config.name}</h4>
+                    </div>
+                  ))}
                 </div>
               );
-            })}
+            })()}
           </div>
         </div>
-
         {/* Footer */}
         <div className='mt-12 bg-white rounded-lg shadow-sm p-6'>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 text-center'>
@@ -262,20 +249,32 @@ const UniversityDetail: React.FC<UniversityDetailProps> = ({ universities }) => 
                 rel='noopener noreferrer'
                 className='text-blue-600 hover:text-blue-800 text-sm'
               >
-                {university.website.replace('https://', '').replace('http://', '')}
+                {university.website.replace(/^https?:\/\//, '')}
               </a>
             </div>
-
             <div className='flex items-center justify-center gap-2'>
-              <Mail className='w-5 h-5 text-gray-600' />
+              <Globe className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Email</span>
-              <span className='text-sm text-blue-500'>Contact university directly</span>
+              <a
+                href={university.email}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='text-blue-600 hover:text-blue-800 text-sm'
+              >
+                {university.email}
+              </a>
             </div>
-
             <div className='flex items-center justify-center gap-2'>
-              <Phone className='w-5 h-5 text-gray-600' />
+              <Globe className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Phone</span>
-              <span className='text-sm text-blue-500'>See university website</span>
+              <a
+                href={university.contact}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='text-blue-600 hover:text-blue-800 text-sm'
+              >
+                {university.contact}
+              </a>
             </div>
           </div>
         </div>
