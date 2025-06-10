@@ -2,10 +2,10 @@ import { Button, Form, Input, Typography } from 'antd';
 import { Rule } from 'antd/lib/form';
 import { FC } from 'react';
 import { useTranslation } from 'react-i18next';
-import * as yup from 'yup';
+// import * as yup from 'yup';
 
 import { logo } from '@app/assets/images';
-import i18n from '@app/config/i18n';
+// import i18n from '@app/config/i18n';
 import { VITE_NAME } from '@app/constants/appName';
 import { yupSync } from '@app/helpers/yupSync';
 import { useLogin } from '@app/hooks/useAuth';
@@ -20,17 +20,17 @@ type SignInProps = {
   onInputChange: (name: string, value: string) => void;
 };
 
-const signInSchema = yup.object().shape({
-  email: yup
-    .string()
-    .email(i18n.t('VALIDATE.INVALID', { field: i18n.t('LOGIN.EMAIL') }) as string)
-    .trim()
-    .required(i18n.t('VALIDATE.REQUIRED', { field: i18n.t('LOGIN.EMAIL') }) as string),
-  password: yup
-    .string()
-    .trim()
-    .required(i18n.t('VALIDATE.REQUIRED', { field: i18n.t('LOGIN.PASSWORD') }) as string),
-});
+// const signInSchema = yup.object().shape({
+//   email: yup
+//     .string()
+//     .email(i18n.t('VALIDATE.INVALID', { field: i18n.t('LOGIN.EMAIL') }) as string)
+//     .trim()
+//     .required(i18n.t('VALIDATE.REQUIRED', { field: i18n.t('LOGIN.EMAIL') }) as string),
+//   password: yup
+//     .string()
+//     .trim()
+//     .required(i18n.t('VALIDATE.REQUIRED', { field: i18n.t('LOGIN.PASSWORD') }) as string),
+// });
 
 const { Paragraph } = Typography;
 const { Password } = Input;
@@ -41,7 +41,7 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue }) => {
 
   const { mutate: signIn } = useLogin();
 
-  const validator = [yupSync(signInSchema)] as unknown as Rule[];
+  // const validator = [yupSync(signInSchema)] as unknown as Rule[];
 
   return (
     <Form
