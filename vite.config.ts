@@ -26,14 +26,14 @@ export default ({ mode }: any) => {
       },
       host: true,
       strictPort: true,
-      port: 5002,
-      proxy: {
-        '/api/api': {
-          target: 'http://localhost:6002', // Your backend API server base URL
-          changeOrigin: true,
-          // No rewrite needed if your backend expects the /api/api prefix
-        },
-      },
+      // port: 5002,
+      // proxy: {
+      //   '/api/api': {
+      //     target: 'http://localhost:6002', // Your backend API server base URL
+      //     changeOrigin: true,
+      //     // No rewrite needed if your backend expects the /api/api prefix
+      //   },
+      // },
     },
     test: {
       globals: true,
