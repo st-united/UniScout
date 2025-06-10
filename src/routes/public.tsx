@@ -18,11 +18,7 @@ const routes = [
       },
       {
         path: 'universities',
-        element: <ViewUniversity universities={mockUniversities} />,
-      },
-      {
-        path: 'universities/:id',
-        element: <ViewUniversity universities={mockUniversities} />,
+        element: <ViewUniversity />,
       },
     ],
   },

@@ -28,7 +28,7 @@ export default ({ mode }: any) => {
       },
       host: true,
       strictPort: true,
-      port: 5001,
+      port: 5003,
     },
     test: {
       globals: true,
