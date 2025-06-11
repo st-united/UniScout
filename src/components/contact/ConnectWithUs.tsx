@@ -1,11 +1,6 @@
-import axios from 'axios';
 import { Paperclip } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-<<<<<<< HEAD
 import axios from 'axios';
-=======
-
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
 import SuccessNotification from './SuccessNotification';
 
 // Define the RequestTypeEnum to match your backend's enum
@@ -43,7 +38,7 @@ interface FormErrors {
   general?: string;
 }
 
-export default function ConnectWithUs() {
+const ContactForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     requestType: RequestTypeEnum.CHANGE_INFORMATION,
     universityName: '',
@@ -55,38 +50,8 @@ export default function ConnectWithUs() {
     attachment: [],
   });
   const [errors, setErrors] = useState<FormErrors>({});
-<<<<<<< HEAD
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error' | 'submitting'>('idle');
   const [countries, setCountries] = useState<string[]>([]);
-=======
-  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [isPurposeButtonClicked, setIsPurposeButtonClicked] = useState(false);
-  const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'error'>('checking');
-
-  // Test API connection on component mount
-  useEffect(() => {
-    axios
-      .post(
-        'http://localhost:6002/api/api/contact',
-        {
-          representativeName: formData.representativeName,
-          email: formData.email,
-          message: formData.message,
-          country: formData.country,
-          universityName: formData.universityName,
-          phoneNumber: formData.phoneNumber,
-          purpose: formData.purpose,
-          attachment: formData.attachment,
-        },
-        { timeout: 10000 },
-      )
-      .then(() => setApiStatus('connected'))
-      .catch((err: unknown) => {
-        console.error('API test failed:', err);
-        setApiStatus('error');
-      });
-  }, []);
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
 
   // Constants for file upload limits (matching backend)
   const MAX_FRONTEND_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -105,14 +70,7 @@ export default function ConnectWithUs() {
     const { name, value } = e.target;
 
     if (name === 'phoneNumber') {
-<<<<<<< HEAD
       if (value === '' || /^\d*$/.test(value)) {
-=======
-      if (/[^0-9]/.test(value)) {
-        setErrors((prev) => ({ ...prev, [name]: 'Only numerical input is allowed.' }));
-      } else {
-        setErrors((prev) => ({ ...prev, [name]: undefined }));
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
         setFormData((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: undefined }));
       } else {
@@ -179,7 +137,6 @@ export default function ConnectWithUs() {
     }
   };
 
-<<<<<<< HEAD
   const handleRemoveFile = (fileName: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -191,15 +148,6 @@ export default function ConnectWithUs() {
   const handleRequestTypeChange = (type: RequestTypeEnum) => {
     setFormData((prev) => ({ ...prev, requestType: type }));
     setErrors((prev) => ({ ...prev, requestType: undefined }));
-=======
-  const handlePurposeChange = (purpose: string) => {
-    console.log('handlePurposeChange called with purpose:', purpose);
-    console.log('Errors before clearing:', errors);
-    setFormData((prev) => ({ ...prev, purpose }));
-    setErrors({});
-    setIsPurposeButtonClicked(true);
-    console.log('Errors after clearing and purpose set:', {});
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
   };
 
   const validateForm = (): FormErrors => {
@@ -253,20 +201,10 @@ export default function ConnectWithUs() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSubmit called.');
-    console.log('isPurposeButtonClicked in handleSubmit:', isPurposeButtonClicked);
-
-    if (isPurposeButtonClicked) {
-      setIsPurposeButtonClicked(false);
-      console.log('Skipping validation due to purpose button click.');
-      return;
-    }
 
     const validationErrors = validateForm();
-    console.log('Validation errors:', validationErrors);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      console.log('Setting errors:', validationErrors);
       setSubmissionStatus('idle');
       return;
     }
@@ -274,25 +212,7 @@ export default function ConnectWithUs() {
     setErrors({});
     setSubmissionStatus('submitting');
 
-    // Create FormData and map frontend fields to backend DTO fields
-    const data = new FormData();
-
-    // Map frontend field names to backend DTO field names
-    data.append('name', formData.representativeName); // representativeName → name
-    data.append('email', formData.email);
-    data.append('message', formData.message);
-    data.append('country', formData.country);
-    data.append('universityName', formData.universityName);
-    data.append('phoneNumber', formData.phoneNumber);
-    data.append('requestType', formData.purpose); // purpose → requestType
-
-    // Handle file attachment - backend expects 'files' field name (array)
-    if (formData.attachment) {
-      data.append('files', formData.attachment);
-    }
-
     try {
-<<<<<<< HEAD
       const dataToSend = new FormData();
       
       console.log('Sending data:', {
@@ -328,13 +248,6 @@ export default function ConnectWithUs() {
       console.log('Response:', response.data);
 
       if (response.status === 201 || response.status === 200) {
-=======
-      const res = await axios.post('http://localhost:6002/api/api/contact', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 10000,
-      });
-      if (res.status === 200 || res.status === 201) {
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
         setSubmissionStatus('success');
         setFormData({
           requestType: RequestTypeEnum.CHANGE_INFORMATION,
@@ -346,7 +259,6 @@ export default function ConnectWithUs() {
           message: '',
           attachment: [],
         });
-<<<<<<< HEAD
         
         const fileInput = document.getElementById('attachment') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
@@ -360,20 +272,10 @@ export default function ConnectWithUs() {
         setTimeout(() => {
           setSubmissionStatus('idle');
         }, 5000);
-=======
-        // Reset file input
-        const fileInput = document.getElementById('attachment') as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
-        }
-      } else {
-        setSubmissionStatus('error');
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
       }
-    } catch (err: unknown) {
-      console.error(err);
+    } catch (error) {
+      console.error('Submission error:', error);
       setSubmissionStatus('error');
-<<<<<<< HEAD
 
       if (axios.isAxiosError(error)) {
         console.log('Error response:', error.response?.data);
@@ -423,36 +325,12 @@ export default function ConnectWithUs() {
       setTimeout(() => {
         setSubmissionStatus('idle');
       }, 5000);
-=======
-    } finally {
-      setTimeout(() => setSubmissionStatus('idle'), 5000);
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
     }
   };
 
   return (
-<<<<<<< HEAD
     <div className='bg-orange-50 rounded-lg p-8 w-full max-w-6xl mx-auto shadow-sm relative'>
       {/* Success notification positioned at top right - exact match to image */}
-=======
-    <div className='bg-[rgba(255,131,43,0.24)] rounded-3xl p-10 max-w-screen-xl mx-auto mt-10 shadow-lg'>
-      {apiStatus === 'checking' && (
-        <div className='mb-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg'>
-          Testing API connection...
-        </div>
-      )}
-      {apiStatus === 'error' && (
-        <div className='mb-4 p-4 bg-red-100 text-red-800 rounded-lg'>
-          Unable to connect to API. Please check your API URL and server status.
-        </div>
-      )}
-      {apiStatus === 'connected' && (
-        <div className='mb-4 p-4 bg-green-100 text-green-800 rounded-lg'>
-          Successfully connected to API!
-        </div>
-      )}
-
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
       {submissionStatus === 'success' && (
         <div className="absolute top-4 right-4 z-10">
           <div className="bg-white border border-orange-300 text-orange-500 px-4 py-3 rounded-xl flex items-center space-x-3 shadow-lg">
@@ -476,7 +354,6 @@ export default function ConnectWithUs() {
           message={errors.general || 'Your request could not be sent. Please try again later.'}
         />
       )}
-<<<<<<< HEAD
 
       <h2 className='text-4xl font-bold text-orange-500 text-center mb-2'>Connect with us</h2>
       <p className='text-gray-500 text-center mb-8'>
@@ -519,66 +396,10 @@ export default function ConnectWithUs() {
                   {RequestTypeEnum.COOPERATION}
                 </button>
               </div>
-=======
-      <h1 className='text-4xl font-bold text-orange-600 text-center mb-2'>Connect with us</h1>
-      <p className='text-center text-gray-500 mb-10 leading-relaxed'>
-        Your Gateway to University Insights and Support!
-      </p>
-      <form onSubmit={handleSubmit} noValidate>
-        <div className='grid grid-cols-1 lg:grid-cols-5 gap-8'>
-          {/* Left column for purpose buttons */}
-          <div className='lg:col-span-1 flex flex-col justify-start'>
-            <span className='text-orange-600 font-medium text-lg block mb-6'>
-              Select the purpose:
-            </span>
-            <div className='space-y-4'>
-              <button
-                type='button'
-                className={`w-full rounded-full px-6 py-3 font-medium text-base transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 ${
-                  formData.purpose === 'Change Information'
-                    ? 'bg-orange-500 text-white shadow-md'
-                    : 'bg-white border border-gray-300 text-gray-600 hover:border-[#E85A0C] hover:text-orange-600'
-                }`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log('Change Information button clicked.');
-                  handlePurposeChange('Change Information');
-                }}
-              >
-                Change Information
-              </button>
-              <button
-                type='button'
-                className={`w-full bg-tran rounded-full px-6 py-3 font-medium text-base transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 ${
-                  formData.purpose === 'Cooperation'
-                    ? 'bg-orange-500 text-white shadow-md'
-                    : 'bg-white border border-gray-300 text-gray-600 hover:border-[#E85A0C] hover:text-orange-600'
-                }`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log('Cooperation button clicked.');
-                  handlePurposeChange('Cooperation');
-                }}
-              >
-                Cooperation
-              </button>
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
             </div>
-            {errors.purpose && <p className='text-red-500 text-sm mt-2'>{errors.purpose}</p>}
-          </div>
 
-<<<<<<< HEAD
             <div className='mb-6'>
               <label htmlFor='universityName' className='block text-orange-600 font-medium mb-2'>
-=======
-          {/* Right column for form inputs */}
-          <div className='lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-8'>
-            <div>
-              <label
-                htmlFor='universityName'
-                className='block text-orange-600 font-medium mb-3 text-sm'
-              >
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
                 University Name
               </label>
               <input
@@ -587,15 +408,15 @@ export default function ConnectWithUs() {
                 name='universityName'
                 value={formData.universityName}
                 onChange={handleInputChange}
-                className='w-full border-0 border-b-2 border-[#E85A0C] rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400'
-                placeholder='Enter university name'
+                className={`w-full border-b-2 ${
+                  errors.universityName ? 'border-red-500' : 'border-orange-300'
+                } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
               />
               {errors.universityName && (
-                <p className='text-red-500 text-sm mt-2'>{errors.universityName}</p>
+                <p className='text-red-500 text-sm mt-1'>{errors.universityName}</p>
               )}
             </div>
 
-<<<<<<< HEAD
             <div className='mb-6'>
               <label htmlFor='phoneNumber' className='block text-orange-600 font-medium mb-2'>
                 Phone Number
@@ -636,12 +457,9 @@ export default function ConnectWithUs() {
           {/* Right Column */}
           <div className='lg:col-span-7'>
             <div className='mb-6'>
-=======
-            <div>
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
               <label
                 htmlFor='representativeName'
-                className='block text-orange-600 font-medium mb-3 text-sm'
+                className='block text-orange-600 font-medium mb-2'
               >
                 Representative Name
               </label>
@@ -651,16 +469,17 @@ export default function ConnectWithUs() {
                 name='representativeName'
                 value={formData.representativeName}
                 onChange={handleInputChange}
-                className='w-full border-0 border-b-2 border-[#E85A0C] rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400'
-                placeholder='Enter representative name'
+                className={`w-full border-b-2 ${
+                  errors.representativeName ? 'border-red-500' : 'border-orange-300'
+                } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
               />
               {errors.representativeName && (
-                <p className='text-red-500 text-sm mt-2'>{errors.representativeName}</p>
+                <p className='text-red-500 text-sm mt-1'>{errors.representativeName}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor='country' className='block text-orange-600 font-medium mb-3 text-sm'>
+            <div className='mb-6'>
+              <label htmlFor='country' className='block text-orange-600 font-medium mb-2'>
                 Country
               </label>
               <select
@@ -668,7 +487,6 @@ export default function ConnectWithUs() {
                 name='country'
                 value={formData.country}
                 onChange={handleInputChange}
-<<<<<<< HEAD
                 className={`w-full border-b-2 ${
                   errors.country ? 'border-red-500' : 'border-orange-300'
                 } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
@@ -685,53 +503,6 @@ export default function ConnectWithUs() {
             
             <div className='mb-6'>
               <label htmlFor='message' className='block text-orange-600 font-medium mb-2'>
-=======
-                className='w-full border-0 border-b-2 border-[#E85A0C] rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400'
-                placeholder='Enter country'
-              />
-              {errors.country && <p className='text-red-500 text-sm mt-2'>{errors.country}</p>}
-            </div>
-
-            <div>
-              <label
-                htmlFor='phoneNumber'
-                className='block text-orange-600 font-medium mb-3 text-sm'
-              >
-                Phone Number
-              </label>
-              <input
-                type='text'
-                id='phoneNumber'
-                name='phoneNumber'
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                className='w-full border-0 border-b-2 border-[#E85A0C] rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400'
-                placeholder='Enter phone number'
-              />
-              {errors.phoneNumber && (
-                <p className='text-red-500 text-sm mt-2'>{errors.phoneNumber}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor='email' className='block text-orange-600 font-medium mb-3 text-sm'>
-                Email
-              </label>
-              <input
-                type='email'
-                id='email'
-                name='email'
-                value={formData.email}
-                onChange={handleInputChange}
-                className='w-full border-0 border-b-2 border-[#E85A0C] rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400'
-                placeholder='Enter email address'
-              />
-              {errors.email && <p className='text-red-500 text-sm mt-2'>{errors.email}</p>}
-            </div>
-
-            <div className='col-span-1 md:col-span-3'>
-              <label htmlFor='message' className='block text-orange-600 font-medium mb-3 text-sm'>
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
                 Your message
               </label>
               <div className='relative'>
@@ -740,7 +511,6 @@ export default function ConnectWithUs() {
                   name='message'
                   value={formData.message}
                   onChange={handleInputChange}
-<<<<<<< HEAD
                   rows={5}
                   className={`w-full border-2 ${
                     errors.message ? 'border-red-500' : 'border-orange-300'
@@ -748,37 +518,20 @@ export default function ConnectWithUs() {
                 ></textarea>
                 {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
                 
-=======
-                  className='w-full bg-white border-2 border-[#6e6c6c87] rounded-xl py-4 px-4 pr-12 resize-none focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400 shadow-sm'
-                  rows={4}
-                  placeholder='Enter your message here...'
-                />
-                {errors.message && <p className='text-red-500 text-sm mt-2'>{errors.message}</p>}
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
                 <input
                   type='file'
                   id='attachment'
                   name='attachment'
                   onChange={handleFileChange}
                   accept='.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif'
-<<<<<<< HEAD
                   multiple
-=======
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
                   className='hidden'
                 />
                 
                 <label
                   htmlFor='attachment'
-<<<<<<< HEAD
                   className='absolute bottom-3 right-3 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer'
                   title={`Attach files (max ${MAX_FRONTEND_FILES}, 5MB each)`}
-=======
-                  className='absolute bottom-4 right-4 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer p-1 rounded-full hover:bg-orange-50'
-                  title={
-                    formData.attachment ? `Selected: ${formData.attachment.name}` : 'Attach file'
-                  }
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
                 >
                   <Paperclip size={20} />
                   {formData.attachment.length > 0 && (
@@ -809,23 +562,14 @@ export default function ConnectWithUs() {
                   <p className='text-red-500 text-sm mt-1'>{errors.attachment}</p>
                 )}
               </div>
-              {formData.attachment && (
-                <p className='text-sm text-gray-600 mt-2'>
-                  Selected file: {formData.attachment.name}
-                </p>
-              )}
             </div>
 
-            <div className='col-span-1 md:col-span-3 flex justify-end'>
+            <div className='text-right'>
               <button
                 type='submit'
-<<<<<<< HEAD
                 className='bg-orange-500 text-white py-3 px-8 rounded-full hover:bg-orange-600 transition-colors font-medium mt-2 focus:outline-none focus:ring-0 focus:shadow-none active:outline-none'
                 style={{ outline: 'none', boxShadow: 'none' }}
                 disabled={submissionStatus === 'submitting'}
-=======
-                className='bg-gradient-to-r from-orange-400 to-orange-600 text-white px-10 py-3 rounded-full shadow-md hover:shadow-lg font-medium transition-all duration-200 transform hover:scale-105 hover:from-orange-500 hover:to-orange-700'
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
               >
                 {submissionStatus === 'submitting' ? 'Sending...' : 'Send message'}
               </button>
@@ -835,10 +579,6 @@ export default function ConnectWithUs() {
       </form>
     </div>
   );
-<<<<<<< HEAD
 };
 
 export default ContactForm;
-=======
-}
->>>>>>> 71ac5dfc4e408bb60e4a963f739887752b6eb77f
