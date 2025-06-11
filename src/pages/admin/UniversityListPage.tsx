@@ -206,7 +206,7 @@ const UniversityListPage = () => {
   };
 
   const handleEdit = (universityId: number) => {
-    console.log('Edit university with ID:', universityId);
+    navigate(`/edit-university/${universityId}`);
   };
 
   const filteredUniversities = currentUniversityData.filter((u) => {
@@ -255,15 +255,16 @@ const UniversityListPage = () => {
   };
 
   return (
-    <div className='flex flex-col lg:flex-row bg-[#FFFDF9] min-h-screen'>
+    <div className='flex bg-[#FFFDF9] min-h-screen'>
       <Sidebar
-        activeTab='Manage University'
+        activeTab='manage-university'
         setActiveTab={() => {
           // Intentionally left empty
         }}
       />
 
-      <main className='flex-1 p-4 sm:p-6 flex flex-col space-y-4 max-w-screen-xl mx-auto w-full'>
+      {/* Main content with proper left margin to account for sidebar */}
+      <main className='flex-1 lg:ml-64 p-4 sm:p-6 flex flex-col space-y-4 max-w-none'>
         {/* Success Message */}
         {showSuccess && (
           <div className='fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2'>
@@ -320,37 +321,40 @@ const UniversityListPage = () => {
         </div>
 
         {/* Header Controls */}
-        <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full max-w-screen-xl mx-auto px-4'>
+        <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full'>
           <div className='text-sm text-gray-600 whitespace-nowrap'>
             <span className='font-medium'>Result:</span> {filteredUniversities.length} Universities
             Found
           </div>
 
           <div className='flex flex-wrap sm:flex-nowrap items-center justify-between sm:justify-end gap-2 w-full'>
-            <button
-              onClick={() => setShowFilter(!showFilter)}
-              className='flex items-center justify-center text-white bg-orange-400 hover:bg-orange-300 rounded-md p-2 border-0'
-              aria-label={showFilter ? 'Hide Filters' : 'Show Filters'}
-              title={showFilter ? 'Hide Filters' : 'Show Filters'}
-            >
-              <Funnel className='w-5 h-5' />
-            </button>
-
-            <div className='relative w-full sm:w-[240px]'>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className='appearance-none w-full pl-3 pr-8 py-2 text-sm bg-white text-black rounded-md border border-orange-300 cursor-pointer'
+            {/* Filter and Sort Controls */}
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={() => setShowFilter(!showFilter)}
+                className='flex items-center justify-center text-white bg-orange-400 hover:bg-orange-300 rounded-md p-2 border-0'
+                aria-label={showFilter ? 'Hide Filters' : 'Show Filters'}
+                title={showFilter ? 'Hide Filters' : 'Show Filters'}
               >
-                {sortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className='absolute right-2 top-2.5 text-orange-600 w-4 h-4 pointer-events-none' />
+                <Funnel className='w-5 h-5' />
+              </button>
+              <div className='relative w-full sm:w-[240px]'>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className='appearance-none w-full pl-3 pr-8 py-2 text-sm bg-white text-black rounded-md border border-orange-300 cursor-pointer'
+                >
+                  {sortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className='absolute right-2 top-2.5 text-orange-600 w-4 h-4 pointer-events-none' />
+              </div>
             </div>
 
+            {/* Action Buttons */}
             <div className='flex flex-wrap gap-2 w-full sm:w-auto'>
               {selectedUniversities.size > 0 && (
                 <button
@@ -367,7 +371,7 @@ const UniversityListPage = () => {
               >
                 + Create
               </button>
-              <button className='bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded-md shadow whitespace-nowrap flex items-center gap-2 border-0 w-full sm:w-auto justify-center'>
+              <button className='bg-orange-500 hover:bg-orange-600 text-white text-sm px-6 py-2 rounded-md shadow whitespace-nowrap flex items-center gap-2 border-0 w-full sm:w-auto justify-center'>
                 <ArrowRightFromLine className='w-4 h-4' />
                 Export
               </button>

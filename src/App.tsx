@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import { SignIn } from './pages';
 import CreateUniversity from './pages/admin/CreateUniversity';
 import DashboardPage from './pages/admin/DashboardPage';
+import EditUniversity from './pages/admin/EditUniversity';
 import ManagePage from './pages/admin/ManagePage';
 import UniversityListPage from './pages/admin/UniversityListPage';
 import NotFound from './pages/NotFound/NotFound';
@@ -31,6 +32,8 @@ const App: React.FC = () => {
               <Route path='/university' element={<UniversityListPage />} />
               <Route path='/sign-in' element={<SignIn />} />
               <Route path='*' element={<NotFound />} />
+              <Route path='/universities' element={<UniversityListPage />} />
+              <Route path='/edit-university/:id' element={<EditUniversity />} />
             </Routes>
           </main>
         </div>
