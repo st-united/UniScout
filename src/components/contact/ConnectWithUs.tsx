@@ -1,7 +1,6 @@
 import { Paperclip } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import SuccessNotification from './SuccessNotification';
 
 // Define the RequestTypeEnum to match your backend's enum
 enum RequestTypeEnum {
@@ -12,7 +11,7 @@ enum RequestTypeEnum {
 // Map frontend display values to backend enum values
 const RequestTypeBackendMap: Record<string, string> = {
   'Change Information': 'CHANGE_INFORMATION',
-  'Cooperation': 'COOPERATION',
+  Cooperation: 'COOPERATION',
 };
 
 interface FormData {
@@ -50,7 +49,11 @@ const ContactForm: React.FC = () => {
     attachment: [],
   });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'success' | 'error' | 'submitting'>('idle');
+  const [submissionStatus, setSubmissionStatus] = useState<
+    'idle' | 'success' | 'error' | 'submitting'
+  >('idle');
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
+  const [notificationType, setNotificationType] = useState<'success' | 'error' | null>(null);
   const [countries, setCountries] = useState<string[]>([]);
 
   // Constants for file upload limits (matching backend)
@@ -59,14 +62,37 @@ const ContactForm: React.FC = () => {
 
   // Effect hook to populate the countries list on component mount
   useEffect(() => {
-    // Mock countries list - replace with actual country-list import
-    setCountries(['Vietnam', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Japan', 'South Korea', 'Singapore']);
+    // Mock countries list - replace with actual country-list import or API call
+    setCountries([
+      'Vietnam',
+      'United States',
+      'United Kingdom',
+      'Canada',
+      'Australia',
+      'Germany',
+      'France',
+      'Japan',
+      'South Korea',
+      'Singapore',
+    ]);
   }, []);
 
   // Updated API URL
   const API_BASE_URL = 'http://localhost:6002/api/contact';
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Function to show notifications
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setTimeout(() => {
+      setNotificationMessage(null);
+      setNotificationType(null);
+    }, 5000); // Notification disappears after 5 seconds
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
 
     if (name === 'phoneNumber') {
@@ -111,7 +137,9 @@ const ContactForm: React.FC = () => {
 
         if (file.size > MAX_FRONTEND_FILE_SIZE) {
           newErrors.attachment = newErrors.attachment
-            ? `${newErrors.attachment}; ${file.name}: File size exceeds ${MAX_FRONTEND_FILE_SIZE / (1024 * 1024)}MB.`
+            ? `${newErrors.attachment}; ${file.name}: File size exceeds ${
+                MAX_FRONTEND_FILE_SIZE / (1024 * 1024)
+              }MB.`
             : `${file.name}: File size cannot exceed ${MAX_FRONTEND_FILE_SIZE / (1024 * 1024)}MB.`;
           continue;
         }
@@ -120,7 +148,7 @@ const ContactForm: React.FC = () => {
           newErrors.attachment = newErrors.attachment
             ? `${newErrors.attachment}; Cannot add more than ${MAX_FRONTEND_FILES} files.`
             : `You can only attach a maximum of ${MAX_FRONTEND_FILES} files. For more files please email us.`;
-          break;
+          break; // Stop adding files if max limit reached
         }
 
         validFilesToAdd.push(file);
@@ -133,6 +161,7 @@ const ContactForm: React.FC = () => {
       }));
       setErrors(newErrors);
 
+      // Clear the file input value to allow selecting the same file again if needed
       e.target.value = '';
     }
   };
@@ -142,7 +171,7 @@ const ContactForm: React.FC = () => {
       ...prev,
       attachment: prev.attachment.filter((file) => file.name !== fileName),
     }));
-    setErrors((prev) => ({ ...prev, attachment: undefined }));
+    setErrors((prev) => ({ ...prev, attachment: undefined })); // Clear attachment errors if any files are removed
   };
 
   const handleRequestTypeChange = (type: RequestTypeEnum) => {
@@ -154,7 +183,8 @@ const ContactForm: React.FC = () => {
     const newErrors: FormErrors = {};
     if (!formData.requestType) newErrors.requestType = 'Please select a purpose.';
     if (!formData.universityName) newErrors.universityName = 'University Name is required.';
-    if (!formData.representativeName) newErrors.representativeName = 'Representative Name is required.';
+    if (!formData.representativeName)
+      newErrors.representativeName = 'Representative Name is required.';
     if (!formData.country) newErrors.country = 'Country is required.';
     if (!formData.phoneNumber) {
       newErrors.phoneNumber = 'Phone Number is required.';
@@ -189,7 +219,9 @@ const ContactForm: React.FC = () => {
               : `${file.name}: Only PDF, Word documents, and image files are allowed.`;
           } else if (file.size > maxSize) {
             newErrors.attachment = newErrors.attachment
-              ? `${newErrors.attachment}; ${file.name}: File size cannot exceed ${maxSize / (1024 * 1024)}MB.`
+              ? `${newErrors.attachment}; ${file.name}: File size cannot exceed ${
+                  maxSize / (1024 * 1024)
+                }MB.`
               : `${file.name}: File size cannot exceed ${maxSize / (1024 * 1024)}MB.`;
           }
         }
@@ -214,7 +246,22 @@ const ContactForm: React.FC = () => {
 
     try {
       const dataToSend = new FormData();
-      
+
+      // Append text fields
+      dataToSend.append('requestType', RequestTypeBackendMap[formData.requestType]);
+      dataToSend.append('universityName', formData.universityName);
+      dataToSend.append('name', formData.representativeName); // Representative name maps to 'name' on backend
+      dataToSend.append('country', formData.country);
+      dataToSend.append('phoneNumber', formData.phoneNumber);
+      dataToSend.append('email', formData.email);
+      dataToSend.append('message', formData.message);
+
+      // Append files
+      formData.attachment.forEach((file) => {
+        dataToSend.append('files', file); // 'files' is the expected field name on the backend
+      });
+
+      // Log data being sent (for debugging)
       console.log('Sending data:', {
         requestType: RequestTypeBackendMap[formData.requestType],
         universityName: formData.universityName,
@@ -223,32 +270,22 @@ const ContactForm: React.FC = () => {
         phoneNumber: formData.phoneNumber,
         email: formData.email,
         message: formData.message,
-        hasAttachment: formData.attachment.map(f => f.name).join(', ')
-      });
-
-      dataToSend.append('requestType', RequestTypeBackendMap[formData.requestType]);
-      dataToSend.append('universityName', formData.universityName);
-      dataToSend.append('name', formData.representativeName);
-      dataToSend.append('country', formData.country);
-      dataToSend.append('phoneNumber', formData.phoneNumber);
-      dataToSend.append('email', formData.email);
-      dataToSend.append('message', formData.message);
-
-      formData.attachment.forEach((file) => {
-        dataToSend.append('files', file);
+        attachmentNames: formData.attachment.map((f) => f.name).join(', '), // Log names for attachments
       });
 
       const response = await axios.post(API_BASE_URL, dataToSend, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data', // Axios automatically sets boundary
         },
-        timeout: 30000,
+        timeout: 30000, // 30 seconds timeout
       });
 
       console.log('Response:', response.data);
 
       if (response.status === 201 || response.status === 200) {
         setSubmissionStatus('success');
+        showNotification('Send message successfully!', 'success');
+        // Clear form data after successful submission
         setFormData({
           requestType: RequestTypeEnum.CHANGE_INFORMATION,
           universityName: '',
@@ -259,19 +296,13 @@ const ContactForm: React.FC = () => {
           message: '',
           attachment: [],
         });
-        
+
+        // Clear file input visually
         const fileInput = document.getElementById('attachment') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
-
-        setTimeout(() => {
-          setSubmissionStatus('idle');
-        }, 5000);
       } else {
         setSubmissionStatus('error');
-        setErrors({ general: 'Unexpected response from server.' });
-        setTimeout(() => {
-          setSubmissionStatus('idle');
-        }, 5000);
+        showNotification('Unexpected response from server. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Submission error:', error);
@@ -285,11 +316,14 @@ const ContactForm: React.FC = () => {
         if (error.response && error.response.data) {
           const backendErrorMessage = error.response.data.message;
           const parsedErrors: FormErrors = {};
-          
+
           if (typeof backendErrorMessage === 'string') {
             const individualErrors = backendErrorMessage.split('; ');
-            individualErrors.forEach(err => {
-              if (err.toLowerCase().includes('name cannot be empty') || err.toLowerCase().includes('name cannot exceed')) {
+            individualErrors.forEach((err) => {
+              if (
+                err.toLowerCase().includes('name cannot be empty') ||
+                err.toLowerCase().includes('name cannot exceed')
+              ) {
                 parsedErrors.representativeName = err;
               } else if (err.toLowerCase().includes('email')) {
                 parsedErrors.email = err;
@@ -299,60 +333,84 @@ const ContactForm: React.FC = () => {
                 parsedErrors.country = err;
               } else if (err.toLowerCase().includes('university name')) {
                 parsedErrors.universityName = err;
-              } else if (err.toLowerCase().includes('phone number') || err.toLowerCase().includes('numerical input')) {
+              } else if (
+                err.toLowerCase().includes('phone number') ||
+                err.toLowerCase().includes('numerical input')
+              ) {
                 parsedErrors.phoneNumber = err;
-              } else if (err.toLowerCase().includes('request type') || err.toLowerCase().includes('purpose') || err.toLowerCase().includes('invalid request type')) {
+              } else if (
+                err.toLowerCase().includes('request type') ||
+                err.toLowerCase().includes('purpose') ||
+                err.toLowerCase().includes('invalid request type')
+              ) {
                 parsedErrors.requestType = err;
               } else if (err.toLowerCase().includes('file')) {
+                // Generic file error
                 parsedErrors.attachment = err;
               } else {
-                parsedErrors.general = parsedErrors.general ? `${parsedErrors.general}; ${err}` : err;
+                parsedErrors.general = parsedErrors.general
+                  ? `${parsedErrors.general}; ${err}`
+                  : err;
               }
             });
+          } else if (Array.isArray(backendErrorMessage)) {
+            // If backend returns an array of messages
+            parsedErrors.general = backendErrorMessage.join('; ');
           }
           setErrors((prev) => ({ ...prev, ...parsedErrors }));
+          showNotification(parsedErrors.general || 'Validation errors occurred.', 'error');
         } else if (error.code === 'ECONNREFUSED') {
-          setErrors({ general: 'Cannot connect to server. Please check if the backend is running.' });
+          showNotification(
+            'Cannot connect to server. Please check if the backend is running and accessible.',
+            'error',
+          );
         } else if (error.code === 'ECONNABORTED') {
-          setErrors({ general: 'Request timeout. Please try again.' });
+          showNotification(
+            'Request timed out. Please check your internet connection or try again later.',
+            'error',
+          );
         } else {
-          setErrors({ general: error.message || 'Network error occurred.' });
+          showNotification(error.message || 'A network error occurred. Please try again.', 'error');
         }
       } else {
-        setErrors({ general: 'An unexpected error occurred.' });
+        showNotification('An unexpected error occurred during submission.', 'error');
       }
-
-      setTimeout(() => {
-        setSubmissionStatus('idle');
-      }, 5000);
     }
   };
 
   return (
     <div className='bg-orange-50 rounded-lg p-8 w-full max-w-6xl mx-auto shadow-sm relative'>
-      {/* Success notification positioned at top right - exact match to image */}
-      {submissionStatus === 'success' && (
-        <div className="absolute top-4 right-4 z-10">
-          <div className="bg-white border border-orange-300 text-orange-500 px-4 py-3 rounded-xl flex items-center space-x-3 shadow-lg">
-            <div className="flex-shrink-0">
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <span className="text-base font-semibold">Send message successfully!</span>
+      {/* Dynamic Notification */}
+      {notificationMessage && notificationType && (
+        <div
+          className={`absolute top-4 right-4 z-10 p-3 rounded-xl shadow-lg flex items-center space-x-3 
+                        ${
+                          notificationType === 'success'
+                            ? 'bg-green-100 border border-green-300 text-green-700'
+                            : 'bg-red-100 border border-red-300 text-red-700'
+                        }`}
+        >
+          <div className='flex-shrink-0'>
+            {notificationType === 'success' ? (
+              <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
+                <path
+                  fillRule='evenodd'
+                  d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z'
+                  clipRule='evenodd'
+                />
+              </svg>
+            ) : (
+              <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
+                <path
+                  fillRule='evenodd'
+                  d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586l-1.293-1.293z'
+                  clipRule='evenodd'
+                />
+              </svg>
+            )}
           </div>
+          <span className='text-base font-semibold'>{notificationMessage}</span>
         </div>
-      )}
-      
-      {/* Error notification */}
-      {submissionStatus === 'error' && (
-        <SuccessNotification
-          show={true}
-          type='error'
-          message={errors.general || 'Your request could not be sent. Please try again later.'}
-        />
       )}
 
       <h2 className='text-4xl font-bold text-orange-500 text-center mb-2'>Connect with us</h2>
@@ -360,221 +418,232 @@ const ContactForm: React.FC = () => {
         Your Gateway to University Insights and Support!
       </p>
       <form onSubmit={handleSubmit} noValidate>
-        <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
-          {/* Left Column */}
-          <div className='lg:col-span-5'>
-            <div className='mb-6'>
-              <label
-                htmlFor='requestType-change-info'
-                className='block text-orange-600 font-medium mb-2'
-              >
-                Select the purpose:
-              </label>
-              {errors.requestType && <p className='text-red-500 text-sm mt-1'>{errors.requestType}</p>}
-              <div className='space-x-4'>
-                <button
-                  type='button'
-                  id='requestType-change-info'
-                  className={`px-6 py-2 rounded-full ${
-                    formData.requestType === RequestTypeEnum.CHANGE_INFORMATION
-                      ? 'bg-orange-400 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300'
-                  } transition-colors`}
-                  onClick={() => handleRequestTypeChange(RequestTypeEnum.CHANGE_INFORMATION)}
-                >
-                  {RequestTypeEnum.CHANGE_INFORMATION}
-                </button>
-                <button
-                  type='button'
-                  className={`px-6 py-2 rounded-full ${
-                    formData.requestType === RequestTypeEnum.COOPERATION
-                      ? 'bg-orange-400 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300'
-                  } transition-colors`}
-                  onClick={() => handleRequestTypeChange(RequestTypeEnum.COOPERATION)}
-                >
-                  {RequestTypeEnum.COOPERATION}
-                </button>
-              </div>
-            </div>
+        {/* Purpose selection buttons - always full width */}
+        <div className='mb-6'>
+          <label
+            htmlFor='requestType-change-info'
+            className='block text-orange-600 font-medium mb-2'
+          >
+            Select the purpose:
+          </label>
+          {errors.requestType && <p className='text-red-500 text-sm mt-1'>{errors.requestType}</p>}
+          <div className='flex flex-wrap gap-4'>
+            {' '}
+            {/* Use flex for button spacing */}
+            <button
+              type='button'
+              id='requestType-change-info'
+              className={`px-6 py-2 rounded-full shadow-sm ${
+                formData.requestType === RequestTypeEnum.CHANGE_INFORMATION
+                  ? 'bg-orange-400 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:border-orange-400'
+              } transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50`}
+              onClick={() => handleRequestTypeChange(RequestTypeEnum.CHANGE_INFORMATION)}
+            >
+              {RequestTypeEnum.CHANGE_INFORMATION}
+            </button>
+            <button
+              type='button'
+              className={`px-6 py-2 rounded-full shadow-sm ${
+                formData.requestType === RequestTypeEnum.COOPERATION
+                  ? 'bg-orange-400 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:border-orange-400'
+              } transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50`}
+              onClick={() => handleRequestTypeChange(RequestTypeEnum.COOPERATION)}
+            >
+              {RequestTypeEnum.COOPERATION}
+            </button>
+          </div>
+        </div>
 
-            <div className='mb-6'>
-              <label htmlFor='universityName' className='block text-orange-600 font-medium mb-2'>
-                University Name
-              </label>
-              <input
-                type='text'
-                id='universityName'
-                name='universityName'
-                value={formData.universityName}
-                onChange={handleInputChange}
-                className={`w-full border-b-2 ${
-                  errors.universityName ? 'border-red-500' : 'border-orange-300'
-                } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              />
-              {errors.universityName && (
-                <p className='text-red-500 text-sm mt-1'>{errors.universityName}</p>
-              )}
-            </div>
-
-            <div className='mb-6'>
-              <label htmlFor='phoneNumber' className='block text-orange-600 font-medium mb-2'>
-                Phone Number
-              </label>
-              <input
-                type='tel'
-                id='phoneNumber'
-                name='phoneNumber'
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                className={`w-full border-b-2 ${
-                  errors.phoneNumber ? 'border-red-500' : 'border-orange-300'
-                } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              />
-              {errors.phoneNumber && (
-                <p className='text-red-500 text-sm mt-1'>{errors.phoneNumber}</p>
-              )}
-            </div>
-
-            <div className='mb-6'>
-              <label htmlFor='email' className='block text-orange-600 font-medium mb-2'>
-                Email
-              </label>
-              <input
-                type='email'
-                id='email'
-                name='email'
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`w-full border-b-2 ${
-                  errors.email ? 'border-red-500' : 'border-orange-300'
-                } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              />
-              {errors.email && <p className='text-red-500 text-sm mt-1'>{errors.email}</p>}
-            </div>
+        {/* Main form fields arranged in a two-column grid on medium and larger screens */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6'>
+          {/* University Name */}
+          <div>
+            <label htmlFor='universityName' className='block text-orange-600 font-medium mb-2'>
+              University Name
+            </label>
+            <input
+              type='text'
+              id='universityName'
+              name='universityName'
+              value={formData.universityName}
+              onChange={handleInputChange}
+              className={`w-full border-b-2 ${
+                errors.universityName ? 'border-red-500' : 'border-orange-300'
+              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
+              placeholder='e.g., National University of Singapore'
+            />
+            {errors.universityName && (
+              <p className='text-red-500 text-sm mt-1'>{errors.universityName}</p>
+            )}
           </div>
 
-          {/* Right Column */}
-          <div className='lg:col-span-7'>
-            <div className='mb-6'>
-              <label
-                htmlFor='representativeName'
-                className='block text-orange-600 font-medium mb-2'
-              >
-                Representative Name
-              </label>
+          {/* Representative Name */}
+          <div>
+            <label htmlFor='representativeName' className='block text-orange-600 font-medium mb-2'>
+              Representative Name
+            </label>
+            <input
+              type='text'
+              id='representativeName'
+              name='representativeName'
+              value={formData.representativeName}
+              onChange={handleInputChange}
+              className={`w-full border-b-2 ${
+                errors.representativeName ? 'border-red-500' : 'border-orange-300'
+              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
+              placeholder='e.g., John Doe'
+            />
+            {errors.representativeName && (
+              <p className='text-red-500 text-sm mt-1'>{errors.representativeName}</p>
+            )}
+          </div>
+
+          {/* Phone Number */}
+          <div>
+            <label htmlFor='phoneNumber' className='block text-orange-600 font-medium mb-2'>
+              Phone Number
+            </label>
+            <input
+              type='tel'
+              id='phoneNumber'
+              name='phoneNumber'
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              className={`w-full border-b-2 ${
+                errors.phoneNumber ? 'border-red-500' : 'border-orange-300'
+              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
+              placeholder='e.g., +84123456789'
+            />
+            {errors.phoneNumber && (
+              <p className='text-red-500 text-sm mt-1'>{errors.phoneNumber}</p>
+            )}
+          </div>
+
+          {/* Country Dropdown */}
+          <div>
+            <label htmlFor='country' className='block text-orange-600 font-medium mb-2'>
+              Country
+            </label>
+            <select
+              id='country'
+              name='country'
+              value={formData.country}
+              onChange={handleInputChange}
+              className={`w-full border-b-2 ${
+                errors.country ? 'border-red-500' : 'border-orange-300'
+              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
+            >
+              <option value=''>Select your country</option>
+              {countries.map((countryName) => (
+                <option key={countryName} value={countryName}>
+                  {countryName}
+                </option>
+              ))}
+            </select>
+            {errors.country && <p className='text-red-500 text-sm mt-1'>{errors.country}</p>}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label htmlFor='email' className='block text-orange-600 font-medium mb-2'>
+              Email
+            </label>
+            <input
+              type='email'
+              id='email'
+              name='email'
+              value={formData.email}
+              onChange={handleInputChange}
+              className={`w-full border-b-2 ${
+                errors.email ? 'border-red-500' : 'border-orange-300'
+              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
+              placeholder='e.g., example@university.com'
+            />
+            {errors.email && <p className='text-red-500 text-sm mt-1'>{errors.email}</p>}
+          </div>
+
+          {/* Your message + Attachment */}
+          <div className='md:col-span-2'>
+            {' '}
+            {/* This div should span both columns */}
+            <label htmlFor='message' className='block text-orange-600 font-medium mb-2'>
+              Your message
+            </label>
+            <div className='relative'>
+              <textarea
+                id='message'
+                name='message'
+                value={formData.message}
+                onChange={handleInputChange}
+                rows={5}
+                // Increased pr (padding-right) further to make more space for the icon
+                className={`w-full border-2 ${
+                  errors.message ? 'border-red-500' : 'border-orange-300'
+                } bg-transparent rounded-lg py-2 pl-3 pr-20 focus:outline-none focus:border-orange-500 transition-colors resize-y`}
+                placeholder='Type your message here...'
+              ></textarea>
+              {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
+
               <input
-                type='text'
-                id='representativeName'
-                name='representativeName'
-                value={formData.representativeName}
-                onChange={handleInputChange}
-                className={`w-full border-b-2 ${
-                  errors.representativeName ? 'border-red-500' : 'border-orange-300'
-                } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
+                type='file'
+                id='attachment'
+                name='attachment'
+                onChange={handleFileChange}
+                accept='.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif'
+                multiple
+                className='hidden' // Keep input hidden
               />
-              {errors.representativeName && (
-                <p className='text-red-500 text-sm mt-1'>{errors.representativeName}</p>
-              )}
-            </div>
 
-            <div className='mb-6'>
-              <label htmlFor='country' className='block text-orange-600 font-medium mb-2'>
-                Country
-              </label>
-              <select
-                id='country'
-                name='country'
-                value={formData.country}
-                onChange={handleInputChange}
-                className={`w-full border-b-2 ${
-                  errors.country ? 'border-red-500' : 'border-orange-300'
-                } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
+              <label
+                htmlFor='attachment'
+                className='absolute bottom-5 right-3 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer flex items-center'
+                title={`Attach files (max ${MAX_FRONTEND_FILES}, 5MB each)`}
               >
-                <option value=''>Select your country</option>
-                {countries.map((countryName) => (
-                  <option key={countryName} value={countryName}>
-                    {countryName}
-                  </option>
-                ))}
-              </select>
-              {errors.country && <p className='text-red-500 text-sm mt-1'>{errors.country}</p>}
-            </div>
-            
-            <div className='mb-6'>
-              <label htmlFor='message' className='block text-orange-600 font-medium mb-2'>
-                Your message
-              </label>
-              <div className='relative'>
-                <textarea
-                  id='message'
-                  name='message'
-                  value={formData.message}
-                  onChange={handleInputChange}
-                  rows={5}
-                  className={`w-full border-2 ${
-                    errors.message ? 'border-red-500' : 'border-orange-300'
-                  } bg-transparent rounded-lg py-2 px-3 focus:outline-none focus:border-orange-500 transition-colors`}
-                ></textarea>
-                {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
-                
-                <input
-                  type='file'
-                  id='attachment'
-                  name='attachment'
-                  onChange={handleFileChange}
-                  accept='.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif'
-                  multiple
-                  className='hidden'
-                />
-                
-                <label
-                  htmlFor='attachment'
-                  className='absolute bottom-3 right-3 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer'
-                  title={`Attach files (max ${MAX_FRONTEND_FILES}, 5MB each)`}
-                >
-                  <Paperclip size={20} />
-                  {formData.attachment.length > 0 && (
-                    <span className='ml-1 text-sm'>{formData.attachment.length}</span>
-                  )}
-                </label>
-
-                <div className='mt-2 flex flex-wrap gap-2 text-sm'>
-                  {formData.attachment.map((file, index) => (
-                    <span
-                      key={file.name + index}
-                      className='bg-orange-100 text-orange-800 px-2 py-1 rounded-full flex items-center'
-                    >
-                      {file.name}
-                      <button
-                        type='button'
-                        onClick={() => handleRemoveFile(file.name)}
-                        className='ml-1 text-orange-600 hover:text-orange-900 focus:outline-none'
-                        title={`Remove ${file.name}`}
-                      >
-                        &times;
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                {errors.attachment && (
-                  <p className='text-red-500 text-sm mt-1'>{errors.attachment}</p>
+                <Paperclip size={20} />
+                {formData.attachment.length > 0 && (
+                  <span className='ml-1 text-sm'>{formData.attachment.length}</span>
                 )}
-              </div>
-            </div>
+              </label>
 
-            <div className='text-right'>
-              <button
-                type='submit'
-                className='bg-orange-500 text-white py-3 px-8 rounded-full hover:bg-orange-600 transition-colors font-medium mt-2 focus:outline-none focus:ring-0 focus:shadow-none active:outline-none'
-                style={{ outline: 'none', boxShadow: 'none' }}
-                disabled={submissionStatus === 'submitting'}
-              >
-                {submissionStatus === 'submitting' ? 'Sending...' : 'Send message'}
-              </button>
+              <div className='mt-2 flex flex-wrap gap-2 text-sm'>
+                {formData.attachment.map((file, index) => (
+                  <span
+                    key={file.name + index}
+                    className='bg-orange-100 text-orange-800 px-2 py-1 rounded-full flex items-center'
+                  >
+                    {file.name}
+                    <button
+                      type='button'
+                      onClick={() => handleRemoveFile(file.name)}
+                      className='ml-1 text-orange-600 hover:text-orange-900 focus:outline-none'
+                      title={`Remove ${file.name}`}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {errors.attachment && (
+                <p className='text-red-500 text-sm mt-1'>{errors.attachment}</p>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Submit Button - spans two columns and aligns right */}
+        <div className='text-right mt-8 md:col-span-2'>
+          {' '}
+          {/* md:col-span-2 ensures it moves below both columns */}
+          <button
+            type='submit'
+            className='bg-orange-500 text-white py-3 px-8 rounded-full hover:bg-orange-600 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2'
+            disabled={submissionStatus === 'submitting'}
+          >
+            {submissionStatus === 'submitting' ? 'Sending...' : 'Send message'}
+          </button>
         </div>
       </form>
     </div>
