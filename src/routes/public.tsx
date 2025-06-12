@@ -2,6 +2,7 @@ import { mockUniversities } from '@app/components/data/mockData';
 import HomePage from '@app/components/home/homepage';
 import UniversityDetail from '@app/components/home/universitydetail';
 import ViewUniversity from '@app/components/home/viewuniversity';
+import WorldMap from '@app/components/home/worldmap';
 import PublicLayout from '@app/components/templates/PublicLayout';
 
 const routes = [
@@ -23,6 +24,10 @@ const routes = [
       {
         path: 'universities/:id',
         element: <UniversityDetail />,
+      },
+      {
+        path: 'worldmap',
+        element: <WorldMap />,
       },
     ],
   },
