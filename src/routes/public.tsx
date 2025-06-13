@@ -1,4 +1,6 @@
 import ContactPage from '@app/components/contact/ContactPage';
+import HomePage from '@app/components/home/homepage';
+import ViewUniversity from '@app/components/home/viewuniversity';
 import PublicLayout from '@app/components/templates/PublicLayout';
 
 const routes = [
@@ -7,6 +9,7 @@ const routes = [
     children: [
       {
         path: '/',
+        element: <HomePage />,
       },
       {
         path: 'login',
@@ -15,6 +18,10 @@ const routes = [
       {
         path: 'contact',
         element: <ContactPage />,
+      },
+      {
+        path: 'universities',
+        element: <ViewUniversity />,
       },
     ],
   },
