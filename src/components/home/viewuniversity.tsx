@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 import UniversityFilter, { University, FilterOptions } from './universityfilter';
+import WorldMap from './worldmap'; // Import the WorldMap component
 
 interface RawUniversity {
   id: number;
@@ -91,6 +92,31 @@ const UniversityCard: React.FC<UniversityCardProps> = ({ university }) => (
         <div className='flex items-center gap-2'>
           <Users className='w-5 h-5 text-blue-600' />
           <span className='text-blue-600 text-xs'>{university.size}</span>
+        </div>
+      </div>
+
+      {/* Additional info for better card preview */}
+      <div className='mt-3 pt-3 border-t border-gray-100'>
+        <div className='flex items-center justify-between text-sm text-gray-600'>
+          <span>{university.students.toLocaleString()} students</span>
+          <span className='text-yellow-500'>★ {university.rating}</span>
+        </div>
+        <div className='mt-2'>
+          <div className='flex flex-wrap gap-1'>
+            {university.fields.slice(0, 3).map((field, index) => (
+              <span
+                key={index}
+                className='inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full'
+              >
+                {field}
+              </span>
+            ))}
+            {university.fields.length > 3 && (
+              <span className='inline-block text-gray-500 text-xs px-2 py-1'>
+                +{university.fields.length - 3} more
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -308,7 +334,9 @@ const ViewUniversity = () => {
 
   return (
     <div className='min-h-screen w-full px-4 py-6'>
-      <div className='flex justify-center'>
+      <WorldMap />
+
+      <div className='flex justify-center mt-6'>
         <div className='w-full max-w-screen-xl flex flex-col lg:flex-row gap-6'>
           <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0'>
             <UniversityFilter
