@@ -6,7 +6,7 @@ const HomePage = () => {
   return (
     <div className='flex flex-col min-h-screen'>
       <Navbar />
-      <main className='flex-grow p-4 max-w-7xl mx-auto'>
+      <main className='flex-grow p-4 mx-auto w-full'>
         <ViewUniversity />
       </main>
       <Footer />

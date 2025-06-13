@@ -42,16 +42,16 @@ interface UniversityFilterProps {
 }
 
 const FIELD_NAME_TO_API_KEY: Record<string, string> = {
-  'Agricultural Science': 'agriculturalFoodScience',
-  Arts: 'artsDesign',
-  Business: 'economicsBusinessManagement',
-  Engineering: 'engineering',
-  Law: 'lawPoliticalScience',
-  Medicine: 'medicinePharmacyHealthSciences',
-  'Social Sciences': 'socialSciencesHumanities',
-  Sports: 'sportsPhysicalEducation',
+  'Agriculture & Food Science': 'agriculturalFoodScience',
+  'Arts & Design': 'artsDesign',
+  'Economics, Business & Management': 'economicsBusinessManagement',
   'Computer Science': 'technology',
-  Theology: 'theology',
+  'Science & Engineering': 'scienceEngineering',
+  'Law & Political Science': 'lawPoliticalScience',
+  'Medicine, Pharmacy & Health Sciences': 'medicinePharmacyHealthSciences',
+  'Social Sciences': 'socialSciencesHumanities',
+  'Sports & Physical Education': 'sportsPhysicalEducation',
+  Others: 'others',
 };
 
 const UniversityFilter: React.FC<UniversityFilterProps> = ({
@@ -106,7 +106,10 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
   };
 
   return (
-    <div className='lg:w-80 w-full lg:sticky lg:top-6 self-start'>
+    <div
+      className='lg:w-80 w-full lg:sticky lg:top-6 self-start'
+      style={{ position: 'sticky', top: '24px', zIndex: 10 }}
+    >
       {/* Mobile Toggle */}
       <div className='lg:hidden flex justify-between items-center mb-4'>
         <button
@@ -120,7 +123,7 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
 
       {/* Outer Filter Box */}
       <div
-        className={`border border-gray-200 bg-white rounded-xl p-4 space-y-6 shadow-sm transition-all duration-300 ${
+        className={`border border-gray-200 bg-white rounded-xl p-4 space-y-6 shadow-sm transition-all duration-300 w-[320px] ${
           isMobileOpen ? 'block' : 'hidden'
         } lg:block`}
       >
@@ -214,7 +217,7 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
         <div className='border border-gray-200 bg-white rounded-lg p-4 shadow-sm'>
           <h3 className='text-base font-semibold mb-3'>Size</h3>
           <div className='grid grid-cols-2 gap-3'>
-            {['Small', 'Medium', 'Large', 'Mega Large'].map((size) => (
+            {['Small', 'Medium', 'Large', 'Extra Large'].map((size) => (
               <label key={size} className='flex items-center gap-2'>
                 <input
                   type='radio'
@@ -243,21 +246,7 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
               {/* Use availableFields from props */}
               {availableFields.map((field) => (
                 <option key={field} value={field}>
-                  {field === 'Medicine'
-                    ? 'Medicine, Pharmacy & Health Sciences'
-                    : field === 'Engineering'
-                    ? 'Science & Engineering'
-                    : field === 'Business'
-                    ? 'Economics, Business & Management'
-                    : field === 'Arts'
-                    ? 'Arts & Design'
-                    : field === 'Law'
-                    ? 'Law & Political Science'
-                    : field === 'Agricultural Science'
-                    ? 'Agriculture & Food Science'
-                    : field === 'Sports'
-                    ? 'Sports & Physical Education'
-                    : field}
+                  {field}
                 </option>
               ))}
             </select>
