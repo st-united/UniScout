@@ -1,6 +1,8 @@
 import ContactPage from '@app/components/contact/ContactPage';
 import HomePage from '@app/components/home/homepage';
+import UniversityDetail from '@app/components/home/universitydetail';
 import ViewUniversity from '@app/components/home/viewuniversity';
+import WorldMap from '@app/components/home/worldmap';
 import PublicLayout from '@app/components/templates/PublicLayout';
 
 const routes = [
@@ -22,6 +24,14 @@ const routes = [
       {
         path: 'universities',
         element: <ViewUniversity />,
+      },
+      {
+        path: 'universities/:id',
+        element: <UniversityDetail />,
+      },
+      {
+        path: 'worldmap',
+        element: <WorldMap />,
       },
     ],
   },
