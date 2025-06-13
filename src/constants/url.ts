@@ -6,6 +6,8 @@ export const API_URL = {
   ROLES: '/roles',
   USERS: '/users',
   CLASSES: '/classes',
+  UNIVERSITIES: '/universities',
+  DASHBOARD: '/dashboard/summary',
   ASSIGN_PERMISSION: '/users/assign-permission',
   LOGIN: '/auth/login',
   REFRESH_TOKEN: '/auth/refresh',
