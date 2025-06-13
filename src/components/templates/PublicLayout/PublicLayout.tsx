@@ -1,8 +1,10 @@
+import { Layout } from 'antd';
 import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Outlet, useNavigate } from 'react-router-dom';
 
-import { UniversityProvider } from '@app/components/molecules/mockdata/UniversityContext';
+import Footer from '@app/components/home/Footer';
+import Navbar from '@app/components/Layout/Navbar';
 import { getStorageData } from '@app/config';
 import { ACCESS_TOKEN } from '@app/constants';
 import { RootState } from '@app/redux/store';
@@ -10,17 +12,24 @@ import { RootState } from '@app/redux/store';
 const PublicLayout: React.FC = () => {
   const navigate = useNavigate();
   const { isAuth } = useSelector((state: RootState) => state.auth);
+  const token = getStorageData(ACCESS_TOKEN); // Cache token
 
   useEffect(() => {
-    if (getStorageData(ACCESS_TOKEN) && isAuth) {
+    if (token && isAuth) {
       navigate('/');
     }
-  }, [isAuth, getStorageData(ACCESS_TOKEN)]);
+  }, [isAuth, navigate, token]); // Include all stable dependencies
 
   return (
-    <UniversityProvider>
-      <Outlet />
-    </UniversityProvider>
+    <Layout>
+      <Navbar />
+      <Layout.Content className='flex-1'>
+        <Outlet />
+      </Layout.Content>
+      <Layout.Footer className='w-full p-0'>
+        <Footer />
+      </Layout.Footer>
+    </Layout>
   );
 };
 
