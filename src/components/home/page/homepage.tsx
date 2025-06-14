@@ -1,4 +1,4 @@
-import ViewUniversity from './viewuniversity';
+import ViewUniversity from '../viewuniversity';
 
 const HomePage = () => {
   return (

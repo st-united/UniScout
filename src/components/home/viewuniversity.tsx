@@ -6,7 +6,7 @@ import { Building2, Users } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
-import UniversityFilter, { University, FilterOptions } from './universityfilter';
+import UniversityFilter, { University, FilterOptions } from './page/universityfilter';
 import WorldMap from './worldmap'; // Import the WorldMap component
 
 interface RawUniversity {
