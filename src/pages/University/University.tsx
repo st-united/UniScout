@@ -1,5 +1,7 @@
+import ViewUniversity from './components/ViewUniversity';
+
 const University = () => {
-  return <div></div>;
+  return <ViewUniversity />;
 };
 
 export default University;

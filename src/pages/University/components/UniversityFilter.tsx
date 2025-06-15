@@ -1,26 +1,6 @@
-// src/components/universityfilter.tsx
-
+import { Input } from 'antd';
 import { Search, RotateCcw, ArrowUpDown, Filter, MapPin } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-
-// Keep these interfaces as they are
-export interface University {
-  id: string;
-  name: string;
-  logo: string;
-  country: string;
-  region: string;
-  ranking: number;
-  size: string;
-  type: string;
-  fields: string[];
-  description: string;
-  website: string;
-  partnerships: number;
-  students: number;
-  location: { lat: number; lng: number };
-  rating: number;
-}
+import { useState, useEffect } from 'react';
 
 export interface FilterOptions {
   search: string;
@@ -31,14 +11,11 @@ export interface FilterOptions {
   sortOrder: 'asc' | 'desc';
 }
 
-// UPDATED PROPS: Receives filter options directly from parent.
 interface UniversityFilterProps {
   onFiltersUpdate: (filters: FilterOptions) => void;
-  initialFilters: FilterOptions; // To sync initial state from parent
+  initialFilters: FilterOptions;
   availableCountries: string[];
   availableFields: string[];
-  // Assuming 'types' and 'sizes' are fixed/hardcoded as per your current code.
-  // If they become dynamic, pass them similarly.
 }
 
 const FIELD_NAME_TO_API_KEY: Record<string, string> = {
@@ -54,32 +31,23 @@ const FIELD_NAME_TO_API_KEY: Record<string, string> = {
   Others: 'others',
 };
 
-const UniversityFilter: React.FC<UniversityFilterProps> = ({
+const UniversityFilter = ({
   onFiltersUpdate,
   initialFilters,
   availableCountries,
   availableFields,
-}) => {
+}: UniversityFilterProps) => {
   const [filters, setFilters] = useState<FilterOptions>(initialFilters);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // **IMPORTANT**: No API calls here. The useEffect for availableCountries/Fields
-  // has been removed as they are now passed as props.
-
-  // Effect to sync internal filters state with parent's initialFilters prop
-  // This ensures that when the parent resets filters, the child also updates.
   useEffect(() => {
-    // Only update if the incoming initialFilters are actually different from current internal filters
     if (JSON.stringify(filters) !== JSON.stringify(initialFilters)) {
       setFilters(initialFilters);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(initialFilters)]);
 
-  // Effect to inform parent about local filter changes
   useEffect(() => {
     onFiltersUpdate(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
@@ -108,9 +76,8 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
   return (
     <div
       className='lg:w-80 w-full lg:sticky lg:top-6 self-start'
-      style={{ position: 'sticky', top: '24px', zIndex: 10 }}
+      style={{ position: 'sticky', top: '90px', zIndex: 10 }}
     >
-      {/* Mobile Toggle */}
       <div className='lg:hidden flex justify-between items-center mb-4'>
         <button
           className='flex items-center gap-2 text-orange-500 font-semibold'
@@ -121,25 +88,21 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
         </button>
       </div>
 
-      {/* Outer Filter Box */}
       <div
         className={`border border-gray-200 bg-white rounded-xl p-4 space-y-6 shadow-sm transition-all duration-300 w-[320px] ${
           isMobileOpen ? 'block' : 'hidden'
         } lg:block`}
       >
-        {/* Search */}
-        <div className='relative'>
-          <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400' />
-          <input
-            type='text'
-            placeholder='Search'
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500'
-          />
-        </div>
+        <Input
+          prefix={<Search className='w-4 h-4 text-gray-400' />}
+          allowClear
+          type='text'
+          placeholder='Search'
+          value={filters.search}
+          onChange={(e) => handleFilterChange('search', e.target.value)}
+          className='w-full pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500'
+        />
 
-        {/* Filter Header */}
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-1'>
             <span className='text-orange-500 font-semibold text-base'>Filter</span>
@@ -168,7 +131,6 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
               className='w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none'
             >
               <option value=''>All Countries</option>
-              {/* Use availableCountries from props */}
               {availableCountries.map((country) => (
                 <option key={country} value={country}>
                   {country}

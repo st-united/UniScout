@@ -1,12 +1,11 @@
 import axios from 'axios';
 import React, { useEffect, useState, useRef } from 'react';
 
-import mapImage from '../../assets/images/map.png';
+import mapImage from '@app/assets/images/map.png';
 
-// Updated interface to match API response
 interface ApiCountryData {
   country: string;
-  count: string; // API returns count as string
+  count: string;
 }
 
 interface CountryData {
@@ -55,22 +54,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
         setLoading(true);
         setError(null);
 
-        // Updated API call with proper base URL
-        const response = await axios.get<ApiCountryData[]>(
-          'http://34.172.65.225:6002/api/dashboard/country-distribution',
-          {
-            timeout: 10000,
-            headers: {
-              accept: '*/*',
-            },
-          },
-        );
+        const response = await axios.get<ApiCountryData[]>('dashboard/country-distribution', {});
 
         if (response.data && Array.isArray(response.data)) {
           const transformedData: CountryData[] = response.data.map((item, index) => ({
-            id: index + 1, // Generate ID since API doesn't provide one
+            id: index + 1,
             country: item.country,
-            count: parseInt(item.count, 10) || 0, // Convert string to number
+            count: parseInt(item.count, 10) || 0,
           }));
 
           setCountryData(transformedData);
@@ -78,7 +68,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
           throw new Error('Invalid API response format');
         }
       } catch (error) {
-        // More specific error handling
         if (axios.isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
             setError('Request timeout - API took too long to respond');
@@ -93,11 +82,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
           setError('Failed to load data from API');
         }
 
-        // Fallback mock data (keeping your original structure)
         setCountryData([
           { id: 1, country: 'USA', count: 100 },
           { id: 2, country: 'India', count: 100 },
-          { id: 3, country: 'Korea', count: 100 }, // Changed from 'South Korea' to match API
+          { id: 3, country: 'Korea', count: 100 },
           { id: 4, country: 'Japan', count: 100 },
           { id: 5, country: 'Vietnam', count: 100 },
           { id: 6, country: 'Australia', count: 43 },
@@ -111,10 +99,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
   }, []);
 
   const getCountryCount = (countryName: string): number => {
-    // Try exact match first
     let data = countryData.find((item) => item.country === countryName);
 
-    // If no exact match, try some common variations
     if (!data) {
       const variations: { [key: string]: string[] } = {
         Korea: ['South Korea', 'Korea'],
@@ -122,7 +108,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
         Australia: ['Australia', 'AU'],
       };
 
-      for (const [key, values] of Object.entries(variations)) {
+      for (const [_, values] of Object.entries(variations)) {
         if (values.includes(countryName)) {
           data = countryData.find((item) => values.includes(item.country));
           if (data) break;
@@ -137,7 +123,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
     setSelectedCountry(selectedCountry === countryName ? null : countryName);
   };
 
-  // Country marker positions (normalized to 0-1 scale based on image dimensions) - REALIGNED
   const countryPositions = {
     USA: { x: 0.38, y: 0.3 },
     India: { x: 0.97, y: 0.48 },
@@ -147,7 +132,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
     Australia: { x: 1.16, y: 0.8 },
   };
 
-  // Calculate actual pixel positions based on current map size
   const getMarkerPosition = (country: string) => {
     const position = countryPositions[country as keyof typeof countryPositions];
     if (!position || !mapDimensions.width || !mapDimensions.height) {
@@ -177,14 +161,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Error message */}
       {error && (
         <div className='mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
           <p className='text-sm text-yellow-800'>⚠️ {error} - Using sample data</p>
         </div>
       )}
 
-      {/* World Map Container */}
       <div
         className='relative w-full rounded-lg overflow-hidden'
         style={{
@@ -195,7 +177,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
         }}
       >
         <div ref={mapRef} className='relative w-full h-full flex items-center justify-center'>
-          {/* Map Image - Responsive */}
           <img
             ref={imageRef}
             src={mapImage}
@@ -209,7 +190,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
             }}
           />
 
-          {/* Country Markers Overlay - Positioned absolutely over the image */}
           {mapDimensions.width > 0 && (
             <div className='absolute inset-0 pointer-events-none'>
               {Object.keys(countryPositions).map((country) => {
@@ -218,7 +198,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
 
                 return (
                   <div key={country}>
-                    {/* Marker */}
                     <div
                       className='absolute pointer-events-auto cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 hover:scale-125 z-10'
                       style={{
@@ -236,9 +215,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
                         }
                       }}
                     >
-                      {/* Location icon with pulse effect */}
                       <div className={`relative ${isSelected ? 'animate-pulse' : ''}`}>
-                        {/* Location icon */}
                         <svg
                           className={`w-6 h-6 md:w-8 md:h-8 text-white drop-shadow-lg`}
                           fill='currentColor'
@@ -247,7 +224,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
                           <path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z' />
                         </svg>
 
-                        {/* Ripple effect */}
                         <div
                           className={`absolute inset-0 ${
                             isSelected ? 'bg-yellow-400' : 'bg-orange-400'
@@ -256,7 +232,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
                       </div>
                     </div>
 
-                    {/* Country Label (always visible) */}
                     <div
                       className='absolute pointer-events-none text-white text-xs md:text-sm font-bold drop-shadow-lg z-5'
                       style={{
@@ -268,7 +243,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
                       {getCountryDisplayName(country)}
                     </div>
 
-                    {/* Tooltip on click - Updated display sequence: Country, Number, Universities */}
                     {isSelected && (
                       <div
                         className='absolute z-20 pointer-events-none'
@@ -280,20 +254,16 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
                       >
                         <div className='bg-white rounded-lg shadow-xl border-2 border-orange-400 p-3 min-w-24 animate-in fade-in duration-200'>
                           <div className='text-center'>
-                            {/* Country name first */}
                             <div className='text-xs md:text-sm text-gray-700 font-semibold mb-1'>
                               {country}
                             </div>
-                            {/* Number second */}
                             <div className='text-lg md:text-xl font-bold text-blue-900'>
                               {loading ? '...' : getCountryCount(country)}
                             </div>
-                            {/* Universities label third */}
                             <div className='text-xs md:text-sm text-gray-600 font-medium'>
                               Universities
                             </div>
                           </div>
-                          {/* Arrow pointing down */}
                           <div className='absolute left-1/2 top-full w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent border-t-orange-400 transform -translate-x-1/2'></div>
                         </div>
                       </div>
@@ -304,7 +274,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
             </div>
           )}
 
-          {/* Loading Overlay */}
           {loading && (
             <div className='absolute inset-0 bg-blue-900 bg-opacity-60 flex items-center justify-center z-30'>
               <div className='text-white text-base md:text-lg flex items-center gap-3 bg-blue-800 px-6 py-3 rounded-lg shadow-lg'>

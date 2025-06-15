@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Paperclip } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import SuccessNotification from './SuccessNotification';
 
@@ -42,28 +42,28 @@ export default function ConnectWithUs() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'error'>('checking');
 
   // Test API connection on component mount
-  useEffect(() => {
-    axios
-      .post(
-        'http://localhost:6002/api/api/contact',
-        {
-          representativeName: formData.representativeName,
-          email: formData.email,
-          message: formData.message,
-          country: formData.country,
-          universityName: formData.universityName,
-          phoneNumber: formData.phoneNumber,
-          purpose: formData.purpose,
-          attachment: formData.attachment,
-        },
-        { timeout: 10000 },
-      )
-      .then(() => setApiStatus('connected'))
-      .catch((err: unknown) => {
-        console.error('API test failed:', err);
-        setApiStatus('error');
-      });
-  }, []);
+  // useEffect(() => {
+  //   axios
+  //     .post(
+  //       'contact',
+  //       {
+  //         representativeName: formData.representativeName,
+  //         email: formData.email,
+  //         message: formData.message,
+  //         country: formData.country,
+  //         universityName: formData.universityName,
+  //         phoneNumber: formData.phoneNumber,
+  //         purpose: formData.purpose,
+  //         attachment: formData.attachment,
+  //       },
+  //       { timeout: 10000 },
+  //     )
+  //     .then(() => setApiStatus('connected'))
+  //     .catch((err: unknown) => {
+  //       console.error('API test failed:', err);
+  //       setApiStatus('error');
+  //     });
+  // }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -138,28 +138,22 @@ export default function ConnectWithUs() {
     setErrors({});
     setSubmissionStatus('idle');
 
-    // Create FormData and map frontend fields to backend DTO fields
     const data = new FormData();
 
-    // Map frontend field names to backend DTO field names
-    data.append('name', formData.representativeName); // representativeName → name
+    data.append('name', formData.representativeName);
     data.append('email', formData.email);
     data.append('message', formData.message);
     data.append('country', formData.country);
     data.append('universityName', formData.universityName);
     data.append('phoneNumber', formData.phoneNumber);
-    data.append('requestType', formData.purpose); // purpose → requestType
+    data.append('requestType', formData.purpose);
 
-    // Handle file attachment - backend expects 'files' field name (array)
     if (formData.attachment) {
       data.append('files', formData.attachment);
     }
 
     try {
-      const res = await axios.post('http://localhost:6002/api/api/contact', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 10000,
-      });
+      const res = await axios.post('contact', data, {});
       if (res.status === 200 || res.status === 201) {
         setSubmissionStatus('success');
         setFormData({

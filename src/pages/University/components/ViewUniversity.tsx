@@ -1,233 +1,60 @@
-// src/components/ViewUniversity.tsx
-
 import { Pagination } from 'antd';
 import axios from 'axios';
-import { Building2, Users } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 
-import UniversityFilter, { University, FilterOptions } from './components/universityfilter';
-import WorldMap from './worldmap'; // Import the WorldMap component
-
-interface RawUniversity {
-  id: number;
-
-  university: string;
-
-  logo: string;
-
-  country: string;
-
-  location: string;
-
-  rank?: number;
-
-  size: string;
-
-  agriculturalFoodScience: boolean;
-
-  artsDesign: boolean;
-
-  economicsBusinessManagement: boolean;
-
-  lawPoliticalScience: boolean;
-
-  medicinePharmacyHealthSciences: boolean;
-
-  scienceEngineering: boolean;
-
-  socialSciencesHumanities: boolean;
-
-  sportsPhysicalEducation: boolean;
-
-  technology: boolean;
-
-  others: boolean;
-
-  description: string;
-
-  website: string;
-
-  exchange?: number;
-
-  studentPopulation: number;
-
-  latitude: number;
-
-  longitude: number;
-
-  type: string;
-}
-
-interface UniversityCardProps {
-  university: University;
-}
-
-const UniversityCard: React.FC<UniversityCardProps> = ({ university }) => (
-  <Link to={`/universities/${university.id}`} className='block'>
-    <div className='bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow h-35 flex flex-col justify-between'>
-      <div className='flex items-start justify-between mb-4'>
-        <div className='w-4/5'>
-          <h3 className='text-blue-700 font-medium text-sm leading-tight line-clamp-2'>
-            {university.name}
-          </h3>
-          <div className='text-orange-500 text-xs'>{university.country}</div>
-        </div>
-        <img
-          src={university.logo}
-          alt={`${university.name} logo`}
-          className='w-12 h-12 object-contain rounded-lg'
-        />
-      </div>
-      <div className='flex items-center gap-4 mt-auto'>
-        <div className='flex items-center gap-2'>
-          <div className='w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center text-white text-xs'>
-            {university.ranking}
-          </div>
-        </div>
-        <div className='flex items-center gap-2'>
-          <Building2 className='w-5 h-5 text-blue-600' />
-          <span className='text-blue-600 text-xs'>{university.type}</span>
-        </div>
-        <div className='flex items-center gap-2'>
-          <Users className='w-5 h-5 text-blue-600' />
-          <span className='text-blue-600 text-xs'>{university.size}</span>
-        </div>
-      </div>
-
-      {/* Additional info for better card preview */}
-      <div className='mt-3 pt-3 border-t border-gray-100'>
-        <div className='flex items-center justify-between text-sm text-gray-600'>
-          <span>{university.students.toLocaleString()} students</span>
-          <span className='text-yellow-500'>★ {university.rating}</span>
-        </div>
-        <div className='mt-2'>
-          <div className='flex flex-wrap gap-1'>
-            {university.fields.slice(0, 3).map((field, index) => (
-              <span
-                key={index}
-                className='inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full'
-              >
-                {field}
-              </span>
-            ))}
-            {university.fields.length > 3 && (
-              <span className='inline-block text-gray-500 text-xs px-2 py-1'>
-                +{university.fields.length - 3} more
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  </Link>
-);
-
-const FIELD_NAME_TO_API_KEY: Record<string, string> = {
-  'Agriculture & Food Science': 'agriculturalFoodScience',
-
-  'Arts & Design': 'artsDesign',
-
-  'Economics, Business & Management': 'economicsBusinessManagement',
-
-  'Computer Science': 'technology',
-
-  'Science & Engineering': 'scienceEngineering',
-
-  'Law & Political Science': 'lawPoliticalScience',
-
-  'Medicine, Pharmacy & Health Sciences': 'medicinePharmacyHealthSciences',
-
-  'Social Sciences': 'socialSciencesHumanities',
-
-  'Sports & Physical Education': 'sportsPhysicalEducation',
-
-  Others: 'others',
-};
-
-const countries = ['Vietnam', 'Australia', 'Japan', 'Korea', 'USA', 'India'];
+import UniversityCard from './UniversityCard';
+import UniversityFilter, { FilterOptions } from './UniversityFilter';
+import WorldMap from './Worldmap';
+import { countries } from '@app/constants/university';
+import { RawUniversity, UniversityCustom } from '@app/interface/university.interface';
 
 const ViewUniversity = () => {
   const [currentPage, setCurrentPage] = useState(1);
-
   const [limit] = useState<number>(18);
-
-  const [universities, setUniversities] = useState<University[]>([]);
-
+  const [universities, setUniversities] = useState<UniversityCustom[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [total, setTotal] = useState(0);
-
   const [availableFields, setAvailableFields] = useState<string[]>([]);
-
   const [activeFilters, setActiveFilters] = useState<FilterOptions>({
     search: '',
-
     country: '',
-
     type: '',
-
     size: '',
-
     field: '',
-
     sortOrder: 'asc',
   });
 
   const fetchControllerRef = React.useRef(new AbortController());
 
-  const mapRawToUniversity = useCallback((rawUniversity: RawUniversity): University => {
+  const mapRawToUniversity = useCallback((rawUniversity: RawUniversity): UniversityCustom => {
     return {
       id: rawUniversity.id.toString(),
-
       name: rawUniversity.university,
-
       logo: rawUniversity.logo,
-
       country: rawUniversity.country,
-
       region: rawUniversity.location,
-
       ranking: rawUniversity.rank || 9999,
-
       size: rawUniversity.size.charAt(0).toUpperCase() + rawUniversity.size.slice(1),
-
       type: rawUniversity.type.charAt(0).toUpperCase() + rawUniversity.type.slice(1),
-
       fields: [
         ...(rawUniversity.agriculturalFoodScience ? ['Agriculture & Food Science'] : []),
-
         ...(rawUniversity.artsDesign ? ['Arts & Design'] : []),
-
         ...(rawUniversity.economicsBusinessManagement ? ['Economics, Business & Management'] : []),
-
         ...(rawUniversity.lawPoliticalScience ? ['Law & Political Science'] : []),
-
         ...(rawUniversity.medicinePharmacyHealthSciences
           ? ['Medicine, Pharmacy & Health Sciences']
           : []),
-
         ...(rawUniversity.scienceEngineering ? ['Science & Engineering'] : []),
-
         ...(rawUniversity.socialSciencesHumanities ? ['Social Sciences'] : []),
-
         ...(rawUniversity.sportsPhysicalEducation ? ['Sports & Physical Education'] : []),
-
         ...(rawUniversity.technology ? ['Computer Science'] : []),
-
         ...(rawUniversity.others ? ['Others'] : []),
       ],
-
       description: rawUniversity.description,
-
       website: rawUniversity.website,
-
       partnerships: rawUniversity.exchange || 0,
-
       students: rawUniversity.studentPopulation,
-
       location: { lat: rawUniversity.latitude, lng: rawUniversity.longitude },
-
       rating: 4.5,
     };
   }, []);
@@ -235,7 +62,7 @@ const ViewUniversity = () => {
   useEffect(() => {
     const fetchAllFilterOptions = async () => {
       try {
-        const res = await axios.get('http://34.172.65.225:6002/api/universities/academic-fields');
+        const res = await axios.get('/universities/academic-fields');
 
         if (res.data && Array.isArray(res.data.data)) {
           setAvailableFields(res.data.data.sort());
@@ -284,31 +111,22 @@ const ViewUniversity = () => {
     }
 
     try {
-      const res = await axios.get('http://34.172.65.225:6002/api/universities', {
+      const res = await axios.get('universities', {
         params,
-
         signal: fetchControllerRef.current.signal as any,
       });
 
       if (res.data && Array.isArray(res.data.data)) {
         const rawData: RawUniversity[] = res.data.data;
-
         setTotal(res.data.totalCount);
-
         setUniversities(rawData.map(mapRawToUniversity));
       } else {
-        console.error('Unexpected API response shape:', res.data);
-
         setUniversities([]);
-
         setTotal(0);
       }
     } catch (err: any) {
       if (!axios.isCancel(err)) {
-        console.error('API Error:', err);
-
         setUniversities([]);
-
         setTotal(0);
       }
     } finally {

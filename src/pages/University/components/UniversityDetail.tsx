@@ -79,9 +79,7 @@ const UniversityDetail: React.FC = () => {
   useEffect(() => {
     const fetchUniversity = async () => {
       try {
-        const response = await axios.get<University>(
-          `http://34.172.65.225:6002/api/universities/${id}`,
-        );
+        const response = await axios.get<University>(`universities/${id}`);
         setUniversity(response.data);
       } catch (error) {
         console.error('Error fetching university:', error);
@@ -97,7 +95,7 @@ const UniversityDetail: React.FC = () => {
           <div className='text-gray-400 text-6xl mb-4'>🏫</div>
           <h2 className='text-2xl font-semibold text-gray-700 mb-4'>University Not Found</h2>
           <Link
-            to='/universities'
+            to='/'
             className='text-orange-500 hover:text-orange-600 flex items-center justify-center gap-2'
           >
             <ArrowLeft className='w-4 h-4' />
@@ -108,9 +106,7 @@ const UniversityDetail: React.FC = () => {
     );
   }
 
-  const googleMapsUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao
-
-&q=${university.latitude},${university.longitude}&zoom=15`;
+  const googleMapsUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&q=${university.latitude},${university.longitude}&zoom=15`;
 
   return (
     <div className='min-h-screen w-full px-4 py-6 bg-gray-50'>
@@ -118,7 +114,7 @@ const UniversityDetail: React.FC = () => {
         {/* Header */}
         <div className='pt-4 mb-6'>
           <Link
-            to='/universities'
+            to='/'
             className='inline-flex items-center gap-2 text-[#595858] font-[500] hover:text-gray-600 mb-4 relative top-1 text-lg'
           >
             <ArrowLeft className='w-5 h-5' />
@@ -191,15 +187,8 @@ const UniversityDetail: React.FC = () => {
         </div>
         <div className='bg-white rounded-lg shadow-sm p-6'>
           <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
-          {/* Fields */}
           {(() => {
-            // Get all boolean fields that are true
-            const fieldArray = Object.entries(university)
-              .filter(([key, value]) => typeof value === 'boolean' && value)
-              .map(([key]) => key);
-
-            // Map to config, fallback if not found
-            const mappedFields = fieldArray.map((field) => {
+            const mappedFields = university.academicFields?.map((field) => {
               const config = fieldConfigs[field] || {
                 name: field,
                 icon: '📚',
@@ -208,7 +197,7 @@ const UniversityDetail: React.FC = () => {
               return config;
             });
 
-            if (mappedFields.length === 0) {
+            if (!mappedFields || mappedFields.length === 0) {
               return <div className='text-gray-500'>No fields listed.</div>;
             }
 
@@ -223,7 +212,7 @@ const UniversityDetail: React.FC = () => {
                 {mappedFields.map((config, index) => (
                   <div
                     key={index}
-                    className='text-center p-4 border rounded-lg hover:shadow-md transition-shadow'
+                    className='text-center p-4 border rounded-lg hover:shadow-md transition-shadow shadow-md'
                   >
                     <div className='text-3xl mb-2'>{config.icon}</div>
                     <h4 className='font-medium text-blue-900 mb-1'>{config.name}</h4>
@@ -233,7 +222,6 @@ const UniversityDetail: React.FC = () => {
             );
           })()}
         </div>
-        {/* Footer */}
         <div className='mt-12 bg-white rounded-lg shadow-sm p-6'>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 text-center'>
             <div className='flex items-center justify-center gap-2'>

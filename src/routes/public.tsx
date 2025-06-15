@@ -1,9 +1,8 @@
-import ContactPage from '@app/components/contact/ContactPage';
-import HomePage from '@app/components/home/components/homepage';
-import UniversityDetail from '@app/components/home/universitydetail';
-import ViewUniversity from '@app/components/home/viewuniversity';
-import WorldMap from '@app/components/home/worldmap';
 import PublicLayout from '@app/components/templates/PublicLayout';
+import ContactPage from '@app/pages/Contact/ContactPage';
+import UniversityDetail from '@app/pages/University/components/UniversityDetail';
+import WorldMap from '@app/pages/University/components/Worldmap';
+import University from '@app/pages/University/University';
 
 const routes = [
   {
@@ -11,15 +10,11 @@ const routes = [
     children: [
       {
         path: '/',
-        element: <HomePage />,
+        element: <University />,
       },
       {
         path: 'contact',
         element: <ContactPage />,
-      },
-      {
-        path: 'universities',
-        element: <ViewUniversity />,
       },
       {
         path: 'universities/:id',
