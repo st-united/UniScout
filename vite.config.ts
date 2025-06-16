@@ -30,6 +30,7 @@ export default async ({ mode }: any) => {
       host: true,
       strictPort: true,
       port: 5001,
+      allowedHosts: ['uniscout.dev.stunited.vn'],
     },
     test: {
       globals: true,
