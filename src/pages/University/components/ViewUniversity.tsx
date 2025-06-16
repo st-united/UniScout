@@ -55,7 +55,7 @@ const ViewUniversity = () => {
       partnerships: rawUniversity.exchange || 0,
       students: rawUniversity.studentPopulation,
       location: { lat: rawUniversity.latitude, lng: rawUniversity.longitude },
-      rating: 4.5,
+      rating: 0,
     };
   }, []);
 
