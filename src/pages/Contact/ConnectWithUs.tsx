@@ -77,9 +77,6 @@ const ContactForm: React.FC = () => {
     ]);
   }, []);
 
-  // Updated API URL
-  const API_BASE_URL = 'http://localhost:6002/api/contact';
-
   // Function to show notifications
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotificationMessage(message);
@@ -96,11 +93,11 @@ const ContactForm: React.FC = () => {
     const { name, value } = e.target;
 
     if (name === 'phoneNumber') {
-      if (value === '' || /^\d*$/.test(value)) {
+      if (value === '' || /^\+?\d*$/.test(value)) {
         setFormData((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: undefined }));
       } else {
-        setErrors((prev) => ({ ...prev, [name]: 'Only numerical input is allowed.' }));
+        setErrors((prev) => ({ ...prev, [name]: 'Only numerical input and + is allowed.' }));
       }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -188,8 +185,8 @@ const ContactForm: React.FC = () => {
     if (!formData.country) newErrors.country = 'Country is required.';
     if (!formData.phoneNumber) {
       newErrors.phoneNumber = 'Phone Number is required.';
-    } else if (!/^\d+$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Only numerical input is allowed for phone number.';
+    } else if (!/^\+?\d+$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = 'Only numerical input and + is allowed for phone number.';
     }
     if (!formData.email) {
       newErrors.email = 'Email is required.';
@@ -273,7 +270,7 @@ const ContactForm: React.FC = () => {
         attachmentNames: formData.attachment.map((f) => f.name).join(', '), // Log names for attachments
       });
 
-      const response = await axios.post(API_BASE_URL, dataToSend, {
+      const response = await axios.post('contact', dataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data', // Axios automatically sets boundary
         },
@@ -437,7 +434,7 @@ const ContactForm: React.FC = () => {
                 formData.requestType === RequestTypeEnum.CHANGE_INFORMATION
                   ? 'bg-orange-400 text-white'
                   : 'bg-white text-gray-700 border border-gray-300 hover:border-orange-400'
-              } transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50`}
+              } transition-colors focus:outline-none`}
               onClick={() => handleRequestTypeChange(RequestTypeEnum.CHANGE_INFORMATION)}
             >
               {RequestTypeEnum.CHANGE_INFORMATION}
@@ -448,7 +445,7 @@ const ContactForm: React.FC = () => {
                 formData.requestType === RequestTypeEnum.COOPERATION
                   ? 'bg-orange-400 text-white'
                   : 'bg-white text-gray-700 border border-gray-300 hover:border-orange-400'
-              } transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50`}
+              } transition-colors focus:outline-none`}
               onClick={() => handleRequestTypeChange(RequestTypeEnum.COOPERATION)}
             >
               {RequestTypeEnum.COOPERATION}
@@ -472,7 +469,7 @@ const ContactForm: React.FC = () => {
               className={`w-full border-b-2 ${
                 errors.universityName ? 'border-red-500' : 'border-orange-300'
               } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., National University of Singapore'
+              placeholder='Enter your university name'
             />
             {errors.universityName && (
               <p className='text-red-500 text-sm mt-1'>{errors.universityName}</p>
@@ -493,7 +490,7 @@ const ContactForm: React.FC = () => {
               className={`w-full border-b-2 ${
                 errors.representativeName ? 'border-red-500' : 'border-orange-300'
               } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., John Doe'
+              placeholder='Enter your representative name'
             />
             {errors.representativeName && (
               <p className='text-red-500 text-sm mt-1'>{errors.representativeName}</p>
@@ -514,7 +511,7 @@ const ContactForm: React.FC = () => {
               className={`w-full border-b-2 ${
                 errors.phoneNumber ? 'border-red-500' : 'border-orange-300'
               } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., +84123456789'
+              placeholder='Enter your phone number'
             />
             {errors.phoneNumber && (
               <p className='text-red-500 text-sm mt-1'>{errors.phoneNumber}</p>
@@ -559,7 +556,7 @@ const ContactForm: React.FC = () => {
               className={`w-full border-b-2 ${
                 errors.email ? 'border-red-500' : 'border-orange-300'
               } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., example@university.com'
+              placeholder='Enter your email'
             />
             {errors.email && <p className='text-red-500 text-sm mt-1'>{errors.email}</p>}
           </div>
@@ -578,13 +575,11 @@ const ContactForm: React.FC = () => {
                 value={formData.message}
                 onChange={handleInputChange}
                 rows={5}
-                // Increased pr (padding-right) further to make more space for the icon
                 className={`w-full border-2 ${
                   errors.message ? 'border-red-500' : 'border-orange-300'
                 } bg-transparent rounded-lg py-2 pl-3 pr-20 focus:outline-none focus:border-orange-500 transition-colors resize-y`}
                 placeholder='Type your message here...'
               ></textarea>
-              {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
 
               <input
                 type='file'
@@ -593,12 +588,12 @@ const ContactForm: React.FC = () => {
                 onChange={handleFileChange}
                 accept='.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif'
                 multiple
-                className='hidden' // Keep input hidden
+                className='hidden'
               />
 
               <label
                 htmlFor='attachment'
-                className='absolute bottom-5 right-3 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer flex items-center'
+                className='absolute bottom-3 right-5 flex items-center text-gray-400 hover:text-orange-500 transition-colors cursor-pointer'
                 title={`Attach files (max ${MAX_FRONTEND_FILES}, 5MB each)`}
               >
                 <Paperclip size={20} />
@@ -606,30 +601,27 @@ const ContactForm: React.FC = () => {
                   <span className='ml-1 text-sm'>{formData.attachment.length}</span>
                 )}
               </label>
-
-              <div className='mt-2 flex flex-wrap gap-2 text-sm'>
-                {formData.attachment.map((file, index) => (
-                  <span
-                    key={file.name + index}
-                    className='bg-orange-100 text-orange-800 px-2 py-1 rounded-full flex items-center'
-                  >
-                    {file.name}
-                    <button
-                      type='button'
-                      onClick={() => handleRemoveFile(file.name)}
-                      className='ml-1 text-orange-600 hover:text-orange-900 focus:outline-none'
-                      title={`Remove ${file.name}`}
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              {errors.attachment && (
-                <p className='text-red-500 text-sm mt-1'>{errors.attachment}</p>
-              )}
             </div>
+            {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
+            <div className='mt-2 flex flex-wrap gap-2 text-sm'>
+              {formData.attachment.map((file, index) => (
+                <span
+                  key={file.name + index}
+                  className='bg-orange-100 text-orange-800 px-2 py-1 rounded-full flex items-center'
+                >
+                  {file.name}
+                  <button
+                    type='button'
+                    onClick={() => handleRemoveFile(file.name)}
+                    className='ml-2 w-5 h-5 bg-white text-orange-600 hover:text-orange-900 focus:outline-none flex items-center justify-center text-lg rounded-full'
+                    title={`Remove ${file.name}`}
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+            {errors.attachment && <p className='text-red-500 text-sm mt-1'>{errors.attachment}</p>}
           </div>
         </div>
 
@@ -639,7 +631,7 @@ const ContactForm: React.FC = () => {
           {/* md:col-span-2 ensures it moves below both columns */}
           <button
             type='submit'
-            className='bg-orange-500 text-white py-3 px-8 rounded-full hover:bg-orange-600 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2'
+            className='bg-orange-500 text-white py-3 px-8 rounded-full hover:bg-orange-600 font-medium focus:outline-none'
             disabled={submissionStatus === 'submitting'}
           >
             {submissionStatus === 'submitting' ? 'Sending...' : 'Send message'}

@@ -21,16 +21,12 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
           <img
             src={university.logo}
             alt={`${university.name} logo`}
-            className='w-12 h-12 object-contain rounded-lg'
+            className='w-16 h-16 object-contain rounded-lg'
           />
         </div>
         <div className='flex items-center gap-4 mt-auto'>
           <div className='flex items-center gap-2'>
-            <div className='w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center text-white text-xs'>
-              {university.ranking}
-            </div>
-          </div>
-          <div className='flex items-center gap-2'>
+            <span className='text-blue-600 text-xs'>#{university.ranking}</span>
             <Building2 className='w-5 h-5 text-blue-600' />
             <span className='text-blue-600 text-xs'>{university.type}</span>
           </div>
@@ -41,10 +37,7 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
         </div>
 
         <div className='mt-3 pt-3 border-t border-gray-100'>
-          <div className='flex items-center justify-between text-sm text-gray-600'>
-            <span>{university.students.toLocaleString()} students</span>
-            <span className='text-yellow-500'>★ {university.rating}</span>
-          </div>
+          <div className='flex items-center justify-between text-sm text-gray-600'></div>
           <div className='mt-2'>
             <div className='flex flex-wrap gap-1'>
               {university.fields.slice(0, 3).map((field, index) => (
