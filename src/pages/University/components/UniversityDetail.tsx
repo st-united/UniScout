@@ -26,21 +26,13 @@ const fieldConfigs: Record<string, FieldConfig> = {
     icon: '🌾',
     description: 'Agriculture & Food Science',
   },
-  artsDesign: {
-    name: 'Arts & Design',
-    icon: '🎨',
-    description: 'Arts & Design',
-  },
+  artsDesign: { name: 'Arts & Design', icon: '🎨', description: 'Arts & Design' },
   economicsBusinessManagement: {
     name: 'Economics, Business & Management',
     icon: '💼',
     description: 'Economics, Business & Management',
   },
-  engineering: {
-    name: 'Engineering',
-    icon: '⚙️',
-    description: 'Science & Engineering',
-  },
+  engineering: { name: 'Engineering', icon: '⚙️', description: 'Science & Engineering' },
   lawPoliticalScience: {
     name: 'Law & Political Science',
     icon: '⚖️',
@@ -51,11 +43,7 @@ const fieldConfigs: Record<string, FieldConfig> = {
     icon: '🏥',
     description: 'Medicine, Pharmacy & Health Sciences',
   },
-  physicalScience: {
-    name: 'Physical Science',
-    icon: '🔬',
-    description: 'Science & Engineering',
-  },
+  physicalScience: { name: 'Physical Science', icon: '🔬', description: 'Science & Engineering' },
   socialSciencesHumanities: {
     name: 'Social Sciences & Humanities',
     icon: '📚',
@@ -66,16 +54,13 @@ const fieldConfigs: Record<string, FieldConfig> = {
     icon: '🏅',
     description: 'Sports & Physical Education',
   },
-  technology: {
-    name: 'Technology',
-    icon: '💻',
-    description: 'Technology',
-  },
+  technology: { name: 'Technology', icon: '💻', description: 'Technology' },
 };
 
 const UniversityDetail: React.FC = () => {
   const [university, setUniversity] = React.useState<University | null>(null);
   const { id } = useParams<{ id: string }>();
+
   useEffect(() => {
     const fetchUniversity = async () => {
       try {
@@ -120,6 +105,7 @@ const UniversityDetail: React.FC = () => {
             <ArrowLeft className='w-5 h-5' />
             Home
           </Link>
+
           {/* About and Map Section */}
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
             {/* About Section */}
@@ -128,7 +114,7 @@ const UniversityDetail: React.FC = () => {
                 <img
                   src={university.logo}
                   alt={`${university.university} logo`}
-                  className='w-16 h-16 rounded-lg object-cover flex-shrink-0'
+                  className='w-20 h-20 rounded-lg object-contain bg-white p-1'
                 />
                 <div className='flex-1'>
                   <h1 className='text-4xl font-bold text-blue-900 mb-2'>
@@ -136,12 +122,16 @@ const UniversityDetail: React.FC = () => {
                   </h1>
                   <div className='text-base flex items-center gap-2 text-orange-500 mb-3'>
                     <MapPin className='w-4 h-4' />
-                    <span>{university.country}</span>
+                    <span>
+                      {university.country}
+                      {university.location ? `, ${university.location}` : ''}
+                    </span>
                   </div>
                   <p className='text-gray-600 text-sm italic'>{university.description}</p>
                 </div>
               </div>
             </div>
+
             {/* Map Section */}
             <div className='bg-white rounded-lg shadow-sm p-6'>
               <div className='w-full h-64 bg-gray-100 rounded-lg overflow-hidden'>
@@ -158,6 +148,7 @@ const UniversityDetail: React.FC = () => {
               </div>
             </div>
           </div>
+
           {/* Stats Row */}
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
             <div className='bg-orange-400 rounded-lg p-6 text-center'>
@@ -185,6 +176,8 @@ const UniversityDetail: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Fields Section */}
         <div className='bg-white rounded-lg shadow-sm p-6'>
           <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
           {(() => {
@@ -204,7 +197,7 @@ const UniversityDetail: React.FC = () => {
             return (
               <div
                 className={`grid gap-4 ${
-                  mappedFields.length < 5
+                  mappedFields.length < 4
                     ? `grid-cols-1 sm:grid-cols-${Math.min(mappedFields.length, 5)}`
                     : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
                 }`}
@@ -222,6 +215,8 @@ const UniversityDetail: React.FC = () => {
             );
           })()}
         </div>
+
+        {/* Contact Section */}
         <div className='mt-12 bg-white rounded-lg shadow-sm p-6'>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 text-center'>
             <div className='flex items-center justify-center gap-2'>
@@ -240,9 +235,7 @@ const UniversityDetail: React.FC = () => {
               <MailIcon className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Email</span>
               <a
-                href={university.email}
-                target='_blank'
-                rel='noopener noreferrer'
+                href={`mailto:${university.email}`}
                 className='text-blue-600 hover:text-blue-800 text-sm'
               >
                 {university.email}
@@ -252,9 +245,7 @@ const UniversityDetail: React.FC = () => {
               <PhoneIcon className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Phone</span>
               <a
-                href={university.contact}
-                target='_blank'
-                rel='noopener noreferrer'
+                href={`tel:${university.contact}`}
                 className='text-blue-600 hover:text-blue-800 text-sm'
               >
                 {university.contact}
