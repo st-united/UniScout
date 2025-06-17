@@ -1,5 +1,7 @@
 import { MapPin, Phone, Mail } from 'lucide-react';
 
+import { devplus } from '@app/assets/images';
+
 const Footer = () => {
   const googleMapsUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&q=16.051297506653487, 108.24315289757041&zoom=15`;
 
@@ -11,8 +13,10 @@ const Footer = () => {
         '
         >
           <div>
-            <h3 className='text-2xl font-bold text-orange-500 mb-4'>DEV PLUS</h3>
-            <p className='text-sm text-[#DADADA] mb-4 pr-28'>
+            <h3 className='text-2xl font-bold text-orange-500 mb-4'>
+              <img src={devplus} alt='DEV PLUS Logo' className='h-24 inline-block mr-2' />
+            </h3>
+            <p className='text-sm text-[#DADADA] mb-4 md:pr-10'>
               Dev Plus is a Sandbox Bootcamp with a variety of online and offline programs aimed at
               enhancing practical skills with the #Ready-To-Work model. With the goal of improving
               the quality of IT human resources, helping students after graduation meet the
@@ -80,7 +84,7 @@ const Footer = () => {
             <div className='flex w-full'>
               <div>
                 <h4 className='font-bold mb-4 text-white'>DEVPLUS ACTIVITIES</h4>
-                <ul className='space-y-2 list-none'>
+                <ul className='space-y-2 list-none pr-10'>
                   <li>
                     <a
                       href='https://devplus.edu.vn/#devplus-activities'
@@ -123,7 +127,7 @@ const Footer = () => {
                   </li>
                 </ul>
               </div>
-              <div className='ml-20'>
+              <div className='class="ml-16 md:ml-20'>
                 <h4 className='font-bold mb-4 text-white'>CONTACT</h4>
                 <ul className='space-y-4'>
                   <li className='flex items-center'>

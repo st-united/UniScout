@@ -26,7 +26,9 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
         </div>
         <div className='flex items-center gap-4 mt-auto'>
           <div className='flex items-center gap-2'>
-            <span className='text-blue-600 text-xs'>#{university.ranking}</span>
+            <span className='text-blue-600 text-xs'>
+              {university.ranking === 9999 ? '' : `#${university.ranking}`}
+            </span>
             <Building2 className='w-5 h-5 text-blue-600' />
             <span className='text-blue-600 text-xs'>{university.type}</span>
           </div>

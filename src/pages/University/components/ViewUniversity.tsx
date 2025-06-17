@@ -8,6 +8,19 @@ import WorldMap from './Worldmap';
 import { countries } from '@app/constants/university';
 import { RawUniversity, UniversityCustom } from '@app/interface/university.interface';
 
+const FIELD_NAME_TO_API_KEY: Record<string, string> = {
+  'Agriculture & Food Science': 'agriculturalFoodScience',
+  'Arts & Design': 'artsDesign',
+  'Economics, Business & Management': 'economicsBusinessManagement',
+  'Law & Political Science': 'lawPoliticalScience',
+  'Medicine, Pharmacy & Health Sciences': 'medicinePharmacyHealthSciences',
+  'Science & Engineering': 'scienceEngineering',
+  'Social Sciences & Humanities': 'socialSciencesHumanities',
+  'Sports & Physical Education': 'sportsPhysicalEducation',
+  'Emerging Technologies & Interdisciplinary Studies': 'technology',
+  Other: 'others',
+};
+
 const ViewUniversity = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState<number>(18);
@@ -17,10 +30,10 @@ const ViewUniversity = () => {
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   const [activeFilters, setActiveFilters] = useState<FilterOptions>({
     search: '',
-    country: '',
-    type: '',
-    size: '',
-    field: '',
+    country: [],
+    type: [],
+    size: [],
+    field: [],
     sortOrder: 'asc',
   });
 
@@ -86,7 +99,7 @@ const ViewUniversity = () => {
 
     fetchControllerRef.current = new AbortController();
 
-    const params: Record<string, string | number> = {
+    const params: Record<string, string | number | string[]> = {
       page: currentPage,
 
       limit: limit,
@@ -94,14 +107,20 @@ const ViewUniversity = () => {
 
     if (activeFilters.search) params.search = activeFilters.search;
 
-    if (activeFilters.country) params.country = activeFilters.country;
+    if (activeFilters.country && activeFilters.country.length > 0) {
+      params.country = activeFilters.country;
+    }
 
-    if (activeFilters.type) params.type = activeFilters.type.toLowerCase();
+    if (activeFilters.type && activeFilters.type.length > 0) {
+      params.type = activeFilters.type.map((t) => t.toLowerCase());
+    }
 
-    if (activeFilters.size) params.size = activeFilters.size.toLowerCase();
+    if (activeFilters.size && activeFilters.size.length > 0) {
+      params.size = activeFilters.size.map((s) => s.toLowerCase());
+    }
 
-    if (activeFilters.field) {
-      params.fieldNames = activeFilters.field;
+    if (activeFilters.field && activeFilters.field.length > 0) {
+      params.fieldNames = activeFilters.field.map((field) => FIELD_NAME_TO_API_KEY[field]);
     }
 
     if (activeFilters.sortOrder) {
