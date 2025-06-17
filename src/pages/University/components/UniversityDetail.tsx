@@ -173,14 +173,16 @@ const UniversityDetail: React.FC = () => {
                 <Building2 className='w-5 h-5 text-white' />
                 <span className='text-sm font-medium text-white'>Type</span>
               </div>
-              <div className='text-3xl font-bold text-white'>{university.type}</div>
+              <div className='text-3xl font-bold text-white'>
+                {university.type.charAt(0).toUpperCase() + university.type.slice(1)}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Fields Section */}
         <div className='bg-white rounded-lg shadow-sm p-6'>
-          <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
+          <h3 className='text-lg font-semibold  text-blue-900 mb-6'>Fields</h3>
           {(() => {
             const mappedFields = university.academicFields?.map((field) => {
               const config = fieldConfigs[field] || {
@@ -196,13 +198,7 @@ const UniversityDetail: React.FC = () => {
             }
 
             return (
-              <div
-                className={`grid gap-4 ${
-                  mappedFields.length < 4
-                    ? `grid-cols-1 sm:grid-cols-${Math.min(mappedFields.length, 5)}`
-                    : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
-                }`}
-              >
+              <div className='grid gap-4 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]'>
                 {mappedFields.map((config, index) => (
                   <div
                     key={index}
