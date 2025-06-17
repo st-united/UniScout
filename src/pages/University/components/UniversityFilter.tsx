@@ -1,5 +1,14 @@
 import { Input } from 'antd';
-import { Search, RotateCcw, ArrowUp, ArrowDown, Filter, MapPin, ChevronDown } from 'lucide-react';
+import {
+  Search,
+  RotateCcw,
+  ArrowUp,
+  ArrowDown,
+  Filter,
+  MapPin,
+  ChevronDown,
+  BookOpenText,
+} from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
 export interface FilterOptions {
@@ -32,13 +41,13 @@ const FIELD_NAME_TO_API_KEY: Record<string, string> = {
 };
 
 const FIELD_DISPLAY_NAMES = [
-  'Agriculture & Food Science',
-  'Arts & Design',
-  'Economics, Business & Management',
-  'Law & Political Science',
-  'Medicine, Pharmacy & Health Sciences',
   'Science & Engineering',
+  'Economics, Business & Management',
   'Social Sciences & Humanities',
+  'Medicine, Pharmacy & Health Sciences',
+  'Arts & Design',
+  'Law & Political Science',
+  'Agriculture & Food Science',
   'Sports & Physical Education',
   'Emerging Technologies & Interdisciplinary Studies',
   'Other',
@@ -331,7 +340,7 @@ const UniversityFilter = ({
             onClick={() => setIsFieldDropdownOpen((prev) => !prev)}
           >
             <div className='flex items-center'>
-              <MapPin className='w-4 h-4 text-gray-500 mr-2' />
+              <BookOpenText className='w-4 h-4 text-gray-500 mr-2' />
               <span>
                 {filters.field.length === 0
                   ? 'All Fields'
