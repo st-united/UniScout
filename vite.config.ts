@@ -32,13 +32,5 @@ export default async ({ mode }: any) => {
       port: 5001,
       allowedHosts: ['uniscout.dev.stunited.vn'],
     },
-    test: {
-      globals: true,
-      environment: 'jsdom',
-      coverage: {
-        reporter: ['text', 'html'],
-        exclude: ['node_modules/'],
-      },
-    },
   });
 };
