@@ -32,7 +32,7 @@ const fieldConfigs: Record<string, FieldConfig> = {
     icon: '💼',
     description: 'Economics, Business & Management',
   },
-  engineering: { name: 'Engineering', icon: '⚙️', description: 'Science & Engineering' },
+  scienceEngineering: { name: 'Engineering', icon: '⚙️', description: 'Science & Engineering' },
   lawPoliticalScience: {
     name: 'Law & Political Science',
     icon: '⚖️',
@@ -55,6 +55,7 @@ const fieldConfigs: Record<string, FieldConfig> = {
     description: 'Sports & Physical Education',
   },
   technology: { name: 'Technology', icon: '💻', description: 'Technology' },
+  others: { name: 'Others', icon: '🌍', description: 'Others' },
 };
 
 const UniversityDetail: React.FC = () => {
