@@ -1,3 +1,4 @@
+import devplus from './devplus.png';
 import logo from './logo.svg';
-
-export { logo };
+import tiktok from './tiktok.svg';
+export { logo, devplus, tiktok };
