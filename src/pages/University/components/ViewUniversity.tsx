@@ -172,7 +172,7 @@ const ViewUniversity = () => {
   return (
     <div className='min-h-screen w-full px-4 py-6'>
       <WorldMap />
-
+      <h2 className='text-center text-4xl font-bold mt-6 mb-12'>DISCOVER UNIVERSITIES</h2>
       <div className='flex justify-center mt-6'>
         <div className='w-full max-w-screen-xl flex flex-col lg:flex-row gap-6'>
           <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0'>
