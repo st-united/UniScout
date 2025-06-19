@@ -1,8 +1,5 @@
 import PublicLayout from '@app/components/templates/PublicLayout';
-import ContactPage from '@app/pages/Contact/ContactPage';
-import UniversityDetail from '@app/pages/University/components/UniversityDetail';
-import WorldMap from '@app/pages/University/components/Worldmap';
-import University from '@app/pages/University/University';
+
 
 const routes = [
   {
@@ -23,6 +20,26 @@ const routes = [
       {
         path: 'worldmap',
         element: <WorldMap />,
+      },
+      {
+        path: '/universities',
+        element: <UniversityListPage />,
+      },
+      {
+        path: '/create-university',
+        element: <CreateUniversity />,
+      },
+      {
+        path: '/edit-university',
+        element: <EditUniversity />,
+      },
+      {
+        path: '/dashboard',
+        element: <DashboardPage />,
+      },
+      {
+        path: '/manage',
+        element: <ManagePage />,
       },
     ],
   },
