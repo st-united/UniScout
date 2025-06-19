@@ -359,7 +359,7 @@ const UniversityListPage = () => {
                 </button>
               )}
               <button
-                onClick={() => navigate('/create-university')}
+                onClick={() => navigate('/admin/create-university')}
                 className='bg-orange-500 hover:bg-orange-600 text-white text-sm px-6 py-2 rounded-md shadow whitespace-nowrap border-0 w-full sm:w-auto'
               >
                 + Create
