@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Upload } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -275,14 +276,45 @@ const CreateUniversity = () => {
     setSubmitMessage('');
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log('University data to save:', formData);
+      const payload = new FormData();
+      payload.append('universityName', formData.universityName);
+      payload.append('country', formData.country);
+      payload.append('location', formData.location);
+      payload.append('coordinates', formData.coordinates);
+      payload.append('type', formData.type);
+      payload.append('yearFounded', formData.yearFounded);
+      payload.append('numberOfStudents', formData.numberOfStudents);
+      payload.append('ranking', formData.ranking);
+      payload.append('strength', formData.strength);
+      payload.append('phone', formData.phone);
+      payload.append('email', formData.email);
+      payload.append('website', formData.website);
+      payload.append('description', formData.description);
+      payload.append('other', formData.other);
 
-      // Show success message
+      // Append fields
+      formData.fields.forEach((field, index) => {
+        payload.append(`fields[${index}]`, field);
+      });
+
+      // Append logo file
+      if (formData.logo) {
+        payload.append('logo', formData.logo);
+      }
+
+      const response = await axios.post(
+        'https://api.uniscout.dev.stunited.vn/api/universities',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
+      console.log('Response:', response.data);
       setSubmitMessage('Success!');
 
-      // Reset form after 3 seconds
       setTimeout(() => {
         setFormData({
           universityName: '',
@@ -304,8 +336,11 @@ const CreateUniversity = () => {
         });
         setSubmitMessage('');
       }, 3000);
-    } catch (error) {
-      setSubmitMessage('Failed to create university. Please try again.');
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      setSubmitMessage(
+        error.response?.data?.message || 'Failed to create university. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
