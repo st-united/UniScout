@@ -1,7 +1,7 @@
 import PublicLayout from '@app/components/templates/PublicLayout';
 import ContactPage from '@app/pages/Contact/ContactPage';
+import SignIn from '@app/pages/SignIn/SignIn'; // ✅ Import the SignIn page
 import UniversityDetail from '@app/pages/University/components/UniversityDetail';
-import WorldMap from '@app/pages/University/components/Worldmap';
 import University from '@app/pages/University/University';
 
 const routes = [
@@ -21,8 +21,8 @@ const routes = [
         element: <UniversityDetail />,
       },
       {
-        path: 'worldmap',
-        element: <WorldMap />,
+        path: 'login',
+        element: <SignIn />,
       },
     ],
   },
