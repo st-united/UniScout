@@ -16,25 +16,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      path: '/dashboard',
+      path: 'dashboard',
     },
     {
       id: 'manage-university',
       label: 'Manage University',
       icon: GraduationCap,
-      path: '/universities',
+      path: 'universities',
       children: [
         {
           id: 'manage-request',
           label: 'Manage Request',
           icon: FileText,
-          path: '/manage',
+          path: 'manage',
         },
         {
           id: 'manage-account',
           label: 'Manage Account',
           icon: User,
-          path: '/',
+          path: 'account',
         },
         {
           id: 'logout',
@@ -59,29 +59,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
 
   return (
     <>
-      {/* Mobile Menu Toggle Button */}
       <div className='lg:hidden p-4'>
         <button onClick={() => setIsOpen(true)} className='text-gray-700'>
           <Menu className='w-6 h-6' />
         </button>
       </div>
 
-      {/* Sidebar */}
       <div
         className={`z-50 w-64 bg-white h-full flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
-          isOpen
-            ? 'fixed inset-y-0 left-0 translate-x-0'
-            : 'fixed inset-y-0 left-0 -translate-x-full'
-        } lg:fixed lg:inset-y-0 lg:left-0 lg:translate-x-0`}
+          isOpen ? 'inset-y-0 left-0 translate-x-0' : 'inset-y-0 left-0 -translate-x-full'
+        } lg:inset-y-0 lg:left-0 lg:translate-x-0`}
       >
-        {/* Close Button on Mobile */}
         <div className='lg:hidden flex justify-end p-4'>
           <button onClick={() => setIsOpen(false)}>
             <X className='w-6 h-6 text-gray-700' />
           </button>
         </div>
 
-        {/* User Profile */}
         <div className='p-6 pt-8'>
           <div className='flex items-center space-x-3'>
             <div className='w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center'>
@@ -91,7 +85,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
 
-        {/* Navigation Menu */}
         <nav className='flex-1 py-4 overflow-y-auto'>
           <ul className='space-y-2 px-4 list-none'>
             {menuItems.map((item) => {

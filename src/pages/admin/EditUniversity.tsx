@@ -117,8 +117,6 @@ const EditUniversity: React.FC = () => {
 
   return (
     <div className='flex h-screen overflow-hidden'>
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
       <div className='flex flex-col flex-1 overflow-y-auto'>
         <main className='flex-1 p-6 bg-gray-50'>
           <div className='max-w-7xl mx-auto bg-white p-6 rounded-md shadow'>

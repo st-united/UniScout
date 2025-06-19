@@ -1,3 +1,4 @@
+import AdminLayout from '@app/components/templates/AdminLayout/AdminLayout';
 import PublicLayout from '@app/components/templates/PublicLayout';
 import CreateUniversity from '@app/pages/admin/CreateUniversity';
 import DashboardPage from '@app/pages/admin/DashboardPage';
@@ -14,7 +15,7 @@ const routes = [
     element: <PublicLayout />,
     children: [
       {
-        path: '/',
+        index: true,
         element: <University />,
       },
       {
@@ -29,24 +30,30 @@ const routes = [
         path: 'worldmap',
         element: <WorldMap />,
       },
+    ],
+  },
+  {
+    path: 'admin',
+    element: <AdminLayout />,
+    children: [
       {
-        path: '/universities',
+        path: 'universities',
         element: <UniversityListPage />,
       },
       {
-        path: '/create-university',
+        path: 'create-university',
         element: <CreateUniversity />,
       },
       {
-        path: '/edit-university',
+        path: 'edit-university',
         element: <EditUniversity />,
       },
       {
-        path: '/dashboard',
+        path: 'dashboard',
         element: <DashboardPage />,
       },
       {
-        path: '/manage',
+        path: 'manage',
         element: <ManagePage />,
       },
     ],

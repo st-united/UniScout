@@ -256,15 +256,8 @@ const UniversityListPage = () => {
 
   return (
     <div className='flex bg-[#FFFDF9] min-h-screen'>
-      <Sidebar
-        activeTab='manage-university'
-        setActiveTab={() => {
-          // Intentionally left empty
-        }}
-      />
-
       {/* Main content with proper left margin to account for sidebar */}
-      <main className='flex-1 lg:ml-64 p-4 sm:p-6 flex flex-col space-y-4 max-w-none'>
+      <main className='flex-1 flex flex-col'>
         {/* Success Message */}
         {showSuccess && (
           <div className='fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2'>
