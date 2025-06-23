@@ -1,5 +1,7 @@
 import { Contact } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
+import { devplus } from '@app/assets/images';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -9,19 +11,9 @@ const Navbar = () => {
       <div className='md:mx-16 mx-8'>
         <div className='flex justify-between h-16'>
           <div className='flex items-center'>
-            <span
-              onClick={() => navigate('/')}
-              className='text-2xl font-bold text-orange-500 cursor-pointer'
-              role='button'
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  navigate('/');
-                }
-              }}
-            >
-              DEV PLUS
-            </span>
+            <Link to='/'>
+              <img src={devplus} alt='DEV PLUS Logo' className='h-16 cursor-pointer' />
+            </Link>
           </div>
           <div className='flex items-center'>
             <button

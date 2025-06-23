@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { Paperclip } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+// Import the configured axios instance
+// Assuming SuccessNotification componet exists and takes `show`, `type`, `message` props
+// If you don't have this component, you'll need to define it or replace it with inline notification logic.
+// For demonstration, I'll provide a simple mock if it's not defined elsewhere.
 
 // Define the RequestTypeEnum to match your backend's enum
 enum RequestTypeEnum {
@@ -15,18 +19,18 @@ const RequestTypeBackendMap: Record<string, string> = {
 };
 
 interface FormData {
-  requestType: RequestTypeEnum;
+  requestType: RequestTypeEnum; // Changed from 'purpose'
   universityName: string;
   representativeName: string;
   country: string;
   phoneNumber: string;
   email: string;
   message: string;
-  attachment: File[];
+  attachment: File[]; // Changed to File[] for multiple attachments
 }
 
 interface FormErrors {
-  requestType?: string;
+  requestType?: string; // Changed from 'purpose'
   universityName?: string;
   representativeName?: string;
   country?: string;
@@ -34,24 +38,24 @@ interface FormErrors {
   email?: string;
   message?: string;
   attachment?: string;
-  general?: string;
+  general?: string; // For general backend errors
 }
 
-const ContactForm: React.FC = () => {
+export default function ConnectWithUs() {
   const [formData, setFormData] = useState<FormData>({
-    requestType: RequestTypeEnum.CHANGE_INFORMATION,
+    requestType: RequestTypeEnum.CHANGE_INFORMATION, // Changed from 'purpose'
     universityName: '',
     representativeName: '',
     country: '',
     phoneNumber: '',
     email: '',
     message: '',
-    attachment: [],
+    attachment: [], // Initial state for multiple files
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [submissionStatus, setSubmissionStatus] = useState<
     'idle' | 'success' | 'error' | 'submitting'
-  >('idle');
+  >('idle'); // Added 'submitting' status
   const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
   const [notificationType, setNotificationType] = useState<'success' | 'error' | null>(null);
   const [countries, setCountries] = useState<string[]>([]);
@@ -60,27 +64,13 @@ const ContactForm: React.FC = () => {
   const MAX_FRONTEND_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const MAX_FRONTEND_FILES = 5;
 
-  // Effect hook to populate the countries list on component mount
-  useEffect(() => {
-    // Mock countries list - replace with actual country-list import or API call
-    setCountries([
-      'Vietnam',
-      'United States',
-      'United Kingdom',
-      'Canada',
-      'Australia',
-      'Germany',
-      'France',
-      'Japan',
-      'South Korea',
-      'Singapore',
-    ]);
-  }, []);
+  // Effect hook to populate the countries list on component mount (from Code 2)
+  // useEffect(() => {
+  //   const countryNames = getNames();
+  //   setCountries(countryNames);
+  // }, []);
 
-  // Updated API URL
-  const API_BASE_URL = 'http://localhost:6002/api/contact';
-
-  // Function to show notifications
+  // Function to show notifications (from Code 2)
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotificationMessage(message);
     setNotificationType(type);
@@ -91,16 +81,17 @@ const ContactForm: React.FC = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, // Added HTMLSelectElement
   ) => {
     const { name, value } = e.target;
 
     if (name === 'phoneNumber') {
-      if (value === '' || /^\d*$/.test(value)) {
+      // Allow empty string or numbers/plus sign
+      if (value === '' || /^\+?\d*$/.test(value)) {
         setFormData((prev) => ({ ...prev, [name]: value }));
         setErrors((prev) => ({ ...prev, [name]: undefined }));
       } else {
-        setErrors((prev) => ({ ...prev, [name]: 'Only numerical input is allowed.' }));
+        setErrors((prev) => ({ ...prev, [name]: 'Only numerical input and + is allowed.' }));
       }
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -113,12 +104,13 @@ const ContactForm: React.FC = () => {
       const selectedFiles = Array.from(e.target.files);
       const newErrors: FormErrors = { ...errors };
 
+      // Clear previous attachment errors related to new selection
       newErrors.attachment = undefined;
 
       const allowedTypes = [
         'application/pdf',
         'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
         'image/jpeg',
         'image/png',
         'image/gif',
@@ -157,7 +149,7 @@ const ContactForm: React.FC = () => {
 
       setFormData((prev) => ({
         ...prev,
-        attachment: [...prev.attachment, ...validFilesToAdd],
+        attachment: [...prev.attachment, ...validFilesToAdd], // Append new valid files
       }));
       setErrors(newErrors);
 
@@ -175,8 +167,9 @@ const ContactForm: React.FC = () => {
   };
 
   const handleRequestTypeChange = (type: RequestTypeEnum) => {
-    setFormData((prev) => ({ ...prev, requestType: type }));
-    setErrors((prev) => ({ ...prev, requestType: undefined }));
+    // Changed from handlePurposeChange
+    setFormData((prev) => ({ ...prev, requestType: type })); // Changed purpose to requestType
+    setErrors({}); // Clear all errors when purpose changes (Code 1 behavior)
   };
 
   const validateForm = (): FormErrors => {
@@ -188,8 +181,9 @@ const ContactForm: React.FC = () => {
     if (!formData.country) newErrors.country = 'Country is required.';
     if (!formData.phoneNumber) {
       newErrors.phoneNumber = 'Phone Number is required.';
-    } else if (!/^\d+$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = 'Only numerical input is allowed for phone number.';
+    } else if (!/^\+?\d+$/.test(formData.phoneNumber)) {
+      // More robust phone validation
+      newErrors.phoneNumber = 'Only numerical input and + is allowed for phone number.';
     }
     if (!formData.email) {
       newErrors.email = 'Email is required.';
@@ -198,6 +192,7 @@ const ContactForm: React.FC = () => {
     }
     if (!formData.message) newErrors.message = 'Message is required.';
 
+    // File validation (moved from handleFileChange to ensure full validation on submit)
     if (formData.attachment.length > 0) {
       const allowedTypes = [
         'application/pdf',
@@ -237,20 +232,21 @@ const ContactForm: React.FC = () => {
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      setSubmissionStatus('idle');
+      setSubmissionStatus('idle'); // Reset status if validation fails
       return;
     }
 
-    setErrors({});
+    setErrors({}); // Clear errors before submission
     setSubmissionStatus('submitting');
+    setNotificationMessage(null); // Clear any old notifications
 
     try {
       const dataToSend = new FormData();
 
-      // Append text fields
-      dataToSend.append('requestType', RequestTypeBackendMap[formData.requestType]);
+      // Append text fields, mapping frontend to backend DTO
+      dataToSend.append('requestType', RequestTypeBackendMap[formData.requestType]); // Map to backend enum
       dataToSend.append('universityName', formData.universityName);
-      dataToSend.append('name', formData.representativeName); // Representative name maps to 'name' on backend
+      dataToSend.append('name', formData.representativeName); // Representative name → name
       dataToSend.append('country', formData.country);
       dataToSend.append('phoneNumber', formData.phoneNumber);
       dataToSend.append('email', formData.email);
@@ -261,7 +257,6 @@ const ContactForm: React.FC = () => {
         dataToSend.append('files', file); // 'files' is the expected field name on the backend
       });
 
-      // Log data being sent (for debugging)
       console.log('Sending data:', {
         requestType: RequestTypeBackendMap[formData.requestType],
         universityName: formData.universityName,
@@ -270,12 +265,14 @@ const ContactForm: React.FC = () => {
         phoneNumber: formData.phoneNumber,
         email: formData.email,
         message: formData.message,
-        attachmentNames: formData.attachment.map((f) => f.name).join(', '), // Log names for attachments
+        attachmentNames: formData.attachment.map((f) => f.name).join(', '),
       });
 
-      const response = await axios.post(API_BASE_URL, dataToSend, {
+      // Using relative path 'contact' assuming axios base URL is configured in a higher level (e.g., main.ts/index.tsx)
+      // If not, you'll need the full path: 'http://localhost:6002/api/api/contact'
+      const response = await axios.post('contact', dataToSend, {
         headers: {
-          'Content-Type': 'multipart/form-data', // Axios automatically sets boundary
+          'Content-Type': 'multipart/form-data',
         },
         timeout: 30000, // 30 seconds timeout
       });
@@ -284,7 +281,7 @@ const ContactForm: React.FC = () => {
 
       if (response.status === 201 || response.status === 200) {
         setSubmissionStatus('success');
-        showNotification('Send message successfully!', 'success');
+        showNotification('Message sent successfully.', 'success');
         // Clear form data after successful submission
         setFormData({
           requestType: RequestTypeEnum.CHANGE_INFORMATION,
@@ -296,8 +293,7 @@ const ContactForm: React.FC = () => {
           message: '',
           attachment: [],
         });
-
-        // Clear file input visually
+        // Reset file input visually
         const fileInput = document.getElementById('attachment') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
       } else {
@@ -345,7 +341,6 @@ const ContactForm: React.FC = () => {
               ) {
                 parsedErrors.requestType = err;
               } else if (err.toLowerCase().includes('file')) {
-                // Generic file error
                 parsedErrors.attachment = err;
               } else {
                 parsedErrors.general = parsedErrors.general
@@ -354,7 +349,6 @@ const ContactForm: React.FC = () => {
               }
             });
           } else if (Array.isArray(backendErrorMessage)) {
-            // If backend returns an array of messages
             parsedErrors.general = backendErrorMessage.join('; ');
           }
           setErrors((prev) => ({ ...prev, ...parsedErrors }));
@@ -413,200 +407,201 @@ const ContactForm: React.FC = () => {
         </div>
       )}
 
-      <h2 className='text-4xl font-bold text-orange-500 text-center mb-2'>Connect with us</h2>
-      <p className='text-gray-500 text-center mb-8'>
+      <h1 className='mb-2 text-4xl font-bold text-center text-orange-600'>Connect with us</h1>
+      <p className='mb-10 leading-relaxed text-center text-gray-500'>
         Your Gateway to University Insights and Support!
       </p>
       <form onSubmit={handleSubmit} noValidate>
-        {/* Purpose selection buttons - always full width */}
-        <div className='mb-6'>
-          <label
-            htmlFor='requestType-change-info'
-            className='block text-orange-600 font-medium mb-2'
-          >
-            Select the purpose:
-          </label>
-          {errors.requestType && <p className='text-red-500 text-sm mt-1'>{errors.requestType}</p>}
-          <div className='flex flex-wrap gap-4'>
-            {' '}
-            {/* Use flex for button spacing */}
-            <button
-              type='button'
-              id='requestType-change-info'
-              className={`px-6 py-2 rounded-full shadow-sm ${
-                formData.requestType === RequestTypeEnum.CHANGE_INFORMATION
-                  ? 'bg-orange-400 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:border-orange-400'
-              } transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50`}
-              onClick={() => handleRequestTypeChange(RequestTypeEnum.CHANGE_INFORMATION)}
-            >
-              {RequestTypeEnum.CHANGE_INFORMATION}
-            </button>
-            <button
-              type='button'
-              className={`px-6 py-2 rounded-full shadow-sm ${
-                formData.requestType === RequestTypeEnum.COOPERATION
-                  ? 'bg-orange-400 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:border-orange-400'
-              } transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50`}
-              onClick={() => handleRequestTypeChange(RequestTypeEnum.COOPERATION)}
-            >
-              {RequestTypeEnum.COOPERATION}
-            </button>
-          </div>
-        </div>
-
-        {/* Main form fields arranged in a two-column grid on medium and larger screens */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6'>
-          {/* University Name */}
-          <div>
-            <label htmlFor='universityName' className='block text-orange-600 font-medium mb-2'>
-              University Name
-            </label>
-            <input
-              type='text'
-              id='universityName'
-              name='universityName'
-              value={formData.universityName}
-              onChange={handleInputChange}
-              className={`w-full border-b-2 ${
-                errors.universityName ? 'border-red-500' : 'border-orange-300'
-              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., National University of Singapore'
-            />
-            {errors.universityName && (
-              <p className='text-red-500 text-sm mt-1'>{errors.universityName}</p>
-            )}
-          </div>
-
-          {/* Representative Name */}
-          <div>
-            <label htmlFor='representativeName' className='block text-orange-600 font-medium mb-2'>
-              Representative Name
-            </label>
-            <input
-              type='text'
-              id='representativeName'
-              name='representativeName'
-              value={formData.representativeName}
-              onChange={handleInputChange}
-              className={`w-full border-b-2 ${
-                errors.representativeName ? 'border-red-500' : 'border-orange-300'
-              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., John Doe'
-            />
-            {errors.representativeName && (
-              <p className='text-red-500 text-sm mt-1'>{errors.representativeName}</p>
-            )}
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <label htmlFor='phoneNumber' className='block text-orange-600 font-medium mb-2'>
-              Phone Number
-            </label>
-            <input
-              type='tel'
-              id='phoneNumber'
-              name='phoneNumber'
-              value={formData.phoneNumber}
-              onChange={handleInputChange}
-              className={`w-full border-b-2 ${
-                errors.phoneNumber ? 'border-red-500' : 'border-orange-300'
-              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., +84123456789'
-            />
-            {errors.phoneNumber && (
-              <p className='text-red-500 text-sm mt-1'>{errors.phoneNumber}</p>
-            )}
-          </div>
-
-          {/* Country Dropdown */}
-          <div>
-            <label htmlFor='country' className='block text-orange-600 font-medium mb-2'>
-              Country
-            </label>
-            <select
-              id='country'
-              name='country'
-              value={formData.country}
-              onChange={handleInputChange}
-              className={`w-full border-b-2 ${
-                errors.country ? 'border-red-500' : 'border-orange-300'
-              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-            >
-              <option value=''>Select your country</option>
-              {countries.map((countryName) => (
-                <option key={countryName} value={countryName}>
-                  {countryName}
-                </option>
-              ))}
-            </select>
-            {errors.country && <p className='text-red-500 text-sm mt-1'>{errors.country}</p>}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label htmlFor='email' className='block text-orange-600 font-medium mb-2'>
-              Email
-            </label>
-            <input
-              type='email'
-              id='email'
-              name='email'
-              value={formData.email}
-              onChange={handleInputChange}
-              className={`w-full border-b-2 ${
-                errors.email ? 'border-red-500' : 'border-orange-300'
-              } bg-transparent py-2 px-0 focus:outline-none focus:border-orange-500 transition-colors`}
-              placeholder='e.g., example@university.com'
-            />
-            {errors.email && <p className='text-red-500 text-sm mt-1'>{errors.email}</p>}
-          </div>
-
-          {/* Your message + Attachment */}
-          <div className='md:col-span-2'>
-            {' '}
-            {/* This div should span both columns */}
-            <label htmlFor='message' className='block text-orange-600 font-medium mb-2'>
-              Your message
-            </label>
-            <div className='relative'>
-              <textarea
-                id='message'
-                name='message'
-                value={formData.message}
-                onChange={handleInputChange}
-                rows={5}
-                // Increased pr (padding-right) further to make more space for the icon
-                className={`w-full border-2 ${
-                  errors.message ? 'border-red-500' : 'border-orange-300'
-                } bg-transparent rounded-lg py-2 pl-3 pr-20 focus:outline-none focus:border-orange-500 transition-colors resize-y`}
-                placeholder='Type your message here...'
-              ></textarea>
-              {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
-
-              <input
-                type='file'
-                id='attachment'
-                name='attachment'
-                onChange={handleFileChange}
-                accept='.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif'
-                multiple
-                className='hidden' // Keep input hidden
-              />
-
-              <label
-                htmlFor='attachment'
-                className='absolute bottom-5 right-3 text-gray-400 hover:text-orange-500 transition-colors cursor-pointer flex items-center'
-                title={`Attach files (max ${MAX_FRONTEND_FILES}, 5MB each)`}
+        <div className='grid grid-cols-1 gap-8 lg:grid-cols-5'>
+          {/* Left column for purpose buttons (Code 1 styling and layout) */}
+          <div className='flex flex-col justify-start lg:col-span-1'>
+            <span className='block mb-6 text-lg font-medium text-orange-600'>
+              Select the purpose:
+            </span>
+            <div className='space-y-4'>
+              <button
+                type='button'
+                className={`w-full rounded-full px-6 py-3 font-medium text-base transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 ${
+                  formData.requestType === RequestTypeEnum.CHANGE_INFORMATION // Changed from purpose
+                    ? 'bg-orange-500 text-white shadow-md'
+                    : 'bg-white border border-gray-300 text-gray-600 hover:border-[#E85A0C] hover:text-orange-600'
+                }`}
+                onClick={() => handleRequestTypeChange(RequestTypeEnum.CHANGE_INFORMATION)} // Changed from handlePurposeChange
               >
-                <Paperclip size={20} />
-                {formData.attachment.length > 0 && (
-                  <span className='ml-1 text-sm'>{formData.attachment.length}</span>
-                )}
-              </label>
+                {RequestTypeEnum.CHANGE_INFORMATION}
+              </button>
+              <button
+                type='button'
+                className={`w-full bg-tran rounded-full px-6 py-3 font-medium text-base transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 ${
+                  formData.requestType === RequestTypeEnum.COOPERATION // Changed from purpose
+                    ? 'bg-orange-500 text-white shadow-md'
+                    : 'bg-white border border-gray-300 text-gray-600 hover:border-[#E85A0C] hover:text-orange-600'
+                }`}
+                onClick={() => handleRequestTypeChange(RequestTypeEnum.COOPERATION)} // Changed from handlePurposeChange
+              >
+                {RequestTypeEnum.COOPERATION}
+              </button>
+            </div>
+            {errors.requestType && (
+              <p className='mt-2 text-sm text-red-500'>{errors.requestType}</p>
+            )}{' '}
+            {/* Changed from errors.purpose */}
+          </div>
 
+          {/* Right column for form inputs (Code 1 layout, Code 2 validation styles) */}
+          <div className='grid grid-cols-1 lg:col-span-4 md:grid-cols-3 gap-x-6 gap-y-8'>
+            <div>
+              <label
+                htmlFor='universityName'
+                className='block mb-3 text-sm font-medium text-orange-600'
+              >
+                University Name
+              </label>
+              <input
+                type='text'
+                id='universityName'
+                name='universityName'
+                value={formData.universityName}
+                onChange={handleInputChange}
+                className={`w-full border-0 border-b-2 ${
+                  errors.universityName ? 'border-red-500' : 'border-[#E85A0C]' // Dynamic error border
+                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400`}
+                placeholder='Enter university name'
+              />
+              {errors.universityName && (
+                <p className='mt-2 text-sm text-red-500'>{errors.universityName}</p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor='representativeName'
+                className='block mb-3 text-sm font-medium text-orange-600'
+              >
+                Representative Name
+              </label>
+              <input
+                type='text'
+                id='representativeName'
+                name='representativeName'
+                value={formData.representativeName}
+                onChange={handleInputChange}
+                className={`w-full border-0 border-b-2 ${
+                  errors.representativeName ? 'border-red-500' : 'border-[#E85A0C]'
+                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400`}
+                placeholder='Enter representative name'
+              />
+              {errors.representativeName && (
+                <p className='mt-2 text-sm text-red-500'>{errors.representativeName}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor='country' className='block mb-3 text-sm font-medium text-orange-600'>
+                Country
+              </label>
+              {/* Country dropdown from Code 2, styled with Code 1 aesthetics */}
+              <select
+                id='country'
+                name='country'
+                value={formData.country}
+                onChange={handleInputChange}
+                className={`w-full border-0 border-b-2 ${
+                  errors.country ? 'border-red-500' : 'border-[#E85A0C]'
+                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors text-gray-700`}
+              >
+                <option value='' disabled>
+                  Select your country
+                </option>
+                {countries.map((countryName) => (
+                  <option key={countryName} value={countryName}>
+                    {countryName}
+                  </option>
+                ))}
+              </select>
+              {errors.country && <p className='mt-2 text-sm text-red-500'>{errors.country}</p>}
+            </div>
+
+            <div>
+              <label
+                htmlFor='phoneNumber'
+                className='block mb-3 text-sm font-medium text-orange-600'
+              >
+                Phone Number
+              </label>
+              <input
+                type='text' // Keep as text to allow '+', validation handles numbers
+                id='phoneNumber'
+                name='phoneNumber'
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                className={`w-full border-0 border-b-2 ${
+                  errors.phoneNumber ? 'border-red-500' : 'border-[#E85A0C]'
+                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400`}
+                placeholder='Enter phone number'
+              />
+              {errors.phoneNumber && (
+                <p className='mt-2 text-sm text-red-500'>{errors.phoneNumber}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor='email' className='block mb-3 text-sm font-medium text-orange-600'>
+                Email
+              </label>
+              <input
+                type='email'
+                id='email'
+                name='email'
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`w-full border-0 border-b-2 ${
+                  errors.email ? 'border-red-500' : 'border-[#E85A0C]'
+                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400`}
+                placeholder='Enter email address'
+              />
+              {errors.email && <p className='mt-2 text-sm text-red-500'>{errors.email}</p>}
+            </div>
+
+            <div className='col-span-1 md:col-span-3'>
+              <label htmlFor='message' className='block mb-3 text-sm font-medium text-orange-600'>
+                Your message
+              </label>
+              <div className='relative'>
+                <textarea
+                  id='message'
+                  name='message'
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  className={`w-full bg-white border-2 ${
+                    errors.message ? 'border-red-500' : 'border-gray-300'
+                  } rounded-xl py-4 px-4 pr-12 resize-y focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400 shadow-sm min-h-[120px] box-border`}
+                  rows={4}
+                  placeholder='Enter your message here...'
+                />
+                <input
+                  type='file'
+                  id='attachment'
+                  name='attachment'
+                  onChange={handleFileChange}
+                  accept='.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif'
+                  multiple
+                  className='hidden'
+                />
+                <label
+                  htmlFor='attachment'
+                  className='absolute p-1 text-gray-400 transition-colors rounded-full cursor-pointer bottom-4 right-4 hover:text-orange-500 hover:bg-orange-50'
+                  title={`Attach files (max ${MAX_FRONTEND_FILES}, ${
+                    MAX_FRONTEND_FILE_SIZE / (1024 * 1024)
+                  }MB each)`}
+                >
+                  <Paperclip size={20} />
+                  {formData.attachment.length > 0 && (
+                    <span className='ml-1 text-sm'>{formData.attachment.length}</span>
+                  )}
+                </label>
+              </div>
+              {errors.message && <p className='text-red-500 text-sm mt-1'>{errors.message}</p>}
               <div className='mt-2 flex flex-wrap gap-2 text-sm'>
                 {formData.attachment.map((file, index) => (
                   <span
@@ -617,7 +612,7 @@ const ContactForm: React.FC = () => {
                     <button
                       type='button'
                       onClick={() => handleRemoveFile(file.name)}
-                      className='ml-1 text-orange-600 hover:text-orange-900 focus:outline-none'
+                      className='ml-2 w-5 h-5 bg-white text-orange-600 hover:text-orange-900 focus:outline-none flex items-center justify-center text-lg rounded-full'
                       title={`Remove ${file.name}`}
                     >
                       &times;
@@ -625,29 +620,23 @@ const ContactForm: React.FC = () => {
                   </span>
                 ))}
               </div>
-
               {errors.attachment && (
-                <p className='text-red-500 text-sm mt-1'>{errors.attachment}</p>
+                <p className='mt-2 text-sm text-red-500'>{errors.attachment}</p>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Submit Button - spans two columns and aligns right */}
-        <div className='text-right mt-8 md:col-span-2'>
-          {' '}
-          {/* md:col-span-2 ensures it moves below both columns */}
-          <button
-            type='submit'
-            className='bg-orange-500 text-white py-3 px-8 rounded-full hover:bg-orange-600 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2'
-            disabled={submissionStatus === 'submitting'}
-          >
-            {submissionStatus === 'submitting' ? 'Sending...' : 'Send message'}
-          </button>
+            <div className='flex justify-end col-span-1 md:col-span-3'>
+              <button
+                type='submit'
+                className='px-10 py-3 font-medium text-white transition-all duration-200 transform rounded-full shadow-md bg-gradient-to-r from-orange-400 to-orange-600 hover:shadow-lg hover:scale-105 hover:from-orange-500 hover:to-orange-700'
+                disabled={submissionStatus === 'submitting'} // Disable button during submission
+              >
+                {submissionStatus === 'submitting' ? 'Sending...' : 'Send message'}
+              </button>
+            </div>
+          </div>
         </div>
       </form>
     </div>
   );
-};
-
-export default ContactForm;
+}
