@@ -61,17 +61,19 @@ const fieldConfigs: Record<string, FieldConfig> = {
 
 const getStudentSizeInfo = (studentPopulation: number | undefined) => {
   if (!studentPopulation) {
-    return { size: 'N/A', description: 'Student population not available' };
+    return { size: 'N/A', population: 'N/A' };
   }
 
+  const formattedPopulation = studentPopulation.toLocaleString();
+
   if (studentPopulation < 5000) {
-    return { size: 'S', description: `Small (under 5,000 students)` };
+    return { size: 'S', population: formattedPopulation };
   } else if (studentPopulation < 15000) {
-    return { size: 'M', description: `Medium (5,000–15,000 students)` };
+    return { size: 'M', population: formattedPopulation };
   } else if (studentPopulation < 30000) {
-    return { size: 'L', description: `Large (15,000–30,000 students)` };
+    return { size: 'L', population: formattedPopulation };
   } else {
-    return { size: 'XL', description: `Extra Large (over 30,000 students)` };
+    return { size: 'XL', population: formattedPopulation };
   }
 };
 
@@ -182,7 +184,7 @@ const UniversityDetail: React.FC = () => {
                 <span className='text-sm font-medium text-white'>Size</span>
               </div>
               <div className='text-3xl font-bold text-white'>{studentSizeInfo.size}</div>
-              <div className='text-xs text-white mt-1'>{studentSizeInfo.description}</div>
+              <div className='text-xs text-white mt-1'>{studentSizeInfo.population} students</div>
             </div>
             <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
               <div className='flex items-center justify-center gap-2 mb-2'>
