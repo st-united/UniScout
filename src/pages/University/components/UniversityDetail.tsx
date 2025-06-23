@@ -10,7 +10,7 @@ import {
   PhoneIcon,
 } from 'lucide-react';
 import React, { useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { University } from '@app/interface/university.interface';
 
@@ -26,21 +26,13 @@ const fieldConfigs: Record<string, FieldConfig> = {
     icon: '🌾',
     description: 'Agriculture & Food Science',
   },
-  artsDesign: {
-    name: 'Arts & Design',
-    icon: '🎨',
-    description: 'Arts & Design',
-  },
+  artsDesign: { name: 'Arts & Design', icon: '🎨', description: 'Arts & Design' },
   economicsBusinessManagement: {
     name: 'Economics, Business & Management',
     icon: '💼',
     description: 'Economics, Business & Management',
   },
-  engineering: {
-    name: 'Engineering',
-    icon: '⚙️',
-    description: 'Science & Engineering',
-  },
+  scienceEngineering: { name: 'Engineering', icon: '⚙️', description: 'Science & Engineering' },
   lawPoliticalScience: {
     name: 'Law & Political Science',
     icon: '⚖️',
@@ -51,11 +43,7 @@ const fieldConfigs: Record<string, FieldConfig> = {
     icon: '🏥',
     description: 'Medicine, Pharmacy & Health Sciences',
   },
-  physicalScience: {
-    name: 'Physical Science',
-    icon: '🔬',
-    description: 'Science & Engineering',
-  },
+  physicalScience: { name: 'Physical Science', icon: '🔬', description: 'Science & Engineering' },
   socialSciencesHumanities: {
     name: 'Social Sciences & Humanities',
     icon: '📚',
@@ -66,16 +54,16 @@ const fieldConfigs: Record<string, FieldConfig> = {
     icon: '🏅',
     description: 'Sports & Physical Education',
   },
-  technology: {
-    name: 'Technology',
-    icon: '💻',
-    description: 'Technology',
-  },
+  technology: { name: 'Technology', icon: '💻', description: 'Technology' },
+  others: { name: 'Others', icon: '🌍', description: 'Others' },
 };
 
 const UniversityDetail: React.FC = () => {
   const [university, setUniversity] = React.useState<University | null>(null);
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchUniversity = async () => {
       try {
@@ -88,6 +76,11 @@ const UniversityDetail: React.FC = () => {
     fetchUniversity();
   }, [id]);
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   if (!university) {
     return (
       <div className='min-h-screen w-full px-4 py-6 flex items-center justify-center'>
@@ -95,7 +88,7 @@ const UniversityDetail: React.FC = () => {
           <div className='text-gray-400 text-6xl mb-4'>🏫</div>
           <h2 className='text-2xl font-semibold text-gray-700 mb-4'>University Not Found</h2>
           <Link
-            to='/'
+            to={`/universities${location.search}`}
             className='text-orange-500 hover:text-orange-600 flex items-center justify-center gap-2'
           >
             <ArrowLeft className='w-4 h-4' />
@@ -113,13 +106,15 @@ const UniversityDetail: React.FC = () => {
       <div className='mx-auto max-w-7xl'>
         {/* Header */}
         <div className='pt-4 mb-6'>
-          <Link
-            to='/'
-            className='inline-flex items-center gap-2 text-[#595858] font-[500] hover:text-gray-600 mb-4 relative top-1 text-lg'
+          <button
+            type='button'
+            onClick={() => navigate(-1)}
+            className='inline-flex items-center gap-2 text-[#595858] font-[500] mb-4 relative top-1 text-lg bg-transparent border-0 hover:bg-gray-100 hover:text-orange-500 transition-colors'
           >
-            <ArrowLeft className='w-5 h-5' />
-            Home
-          </Link>
+            <ArrowLeft className='w-5 h-5 text-inherit' />
+            Back
+          </button>
+
           {/* About and Map Section */}
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
             {/* About Section */}
@@ -128,7 +123,7 @@ const UniversityDetail: React.FC = () => {
                 <img
                   src={university.logo}
                   alt={`${university.university} logo`}
-                  className='w-16 h-16 rounded-lg object-cover flex-shrink-0'
+                  className='w-20 h-20 rounded-lg object-contain bg-white p-1'
                 />
                 <div className='flex-1'>
                   <h1 className='text-4xl font-bold text-blue-900 mb-2'>
@@ -136,12 +131,16 @@ const UniversityDetail: React.FC = () => {
                   </h1>
                   <div className='text-base flex items-center gap-2 text-orange-500 mb-3'>
                     <MapPin className='w-4 h-4' />
-                    <span>{university.country}</span>
+                    <span>
+                      {university.country}
+                      {university.location ? `, ${university.location}` : ''}
+                    </span>
                   </div>
                   <p className='text-gray-600 text-sm italic'>{university.description}</p>
                 </div>
               </div>
             </div>
+
             {/* Map Section */}
             <div className='bg-white rounded-lg shadow-sm p-6'>
               <div className='w-full h-64 bg-gray-100 rounded-lg overflow-hidden'>
@@ -158,6 +157,7 @@ const UniversityDetail: React.FC = () => {
               </div>
             </div>
           </div>
+
           {/* Stats Row */}
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
             <div className='bg-orange-400 rounded-lg p-6 text-center'>
@@ -185,6 +185,8 @@ const UniversityDetail: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Fields Section */}
         <div className='bg-white rounded-lg shadow-sm p-6'>
           <h3 className='text-lg font-semibold text-blue-900 mb-6'>Fields</h3>
           {(() => {
@@ -204,7 +206,7 @@ const UniversityDetail: React.FC = () => {
             return (
               <div
                 className={`grid gap-4 ${
-                  mappedFields.length < 5
+                  mappedFields.length < 4
                     ? `grid-cols-1 sm:grid-cols-${Math.min(mappedFields.length, 5)}`
                     : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
                 }`}
@@ -222,6 +224,8 @@ const UniversityDetail: React.FC = () => {
             );
           })()}
         </div>
+
+        {/* Contact Section */}
         <div className='mt-12 bg-white rounded-lg shadow-sm p-6'>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 text-center'>
             <div className='flex items-center justify-center gap-2'>
@@ -240,9 +244,7 @@ const UniversityDetail: React.FC = () => {
               <MailIcon className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Email</span>
               <a
-                href={university.email}
-                target='_blank'
-                rel='noopener noreferrer'
+                href={`mailto:${university.email}`}
                 className='text-blue-600 hover:text-blue-800 text-sm'
               >
                 {university.email}
@@ -252,9 +254,7 @@ const UniversityDetail: React.FC = () => {
               <PhoneIcon className='w-5 h-5 text-gray-600' />
               <span className='text-sm font-bold text-blue-600'>Phone</span>
               <a
-                href={university.contact}
-                target='_blank'
-                rel='noopener noreferrer'
+                href={`tel:${university.contact}`}
                 className='text-blue-600 hover:text-blue-800 text-sm'
               >
                 {university.contact}
