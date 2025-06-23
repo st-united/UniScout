@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { getNames } from 'country-list';
 import { Paperclip } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 // Import the configured axios instance
@@ -66,10 +65,10 @@ export default function ConnectWithUs() {
   const MAX_FRONTEND_FILES = 5;
 
   // Effect hook to populate the countries list on component mount (from Code 2)
-  useEffect(() => {
-    const countryNames = getNames();
-    setCountries(countryNames);
-  }, []);
+  // useEffect(() => {
+  //   const countryNames = getNames();
+  //   setCountries(countryNames);
+  // }, []);
 
   // Function to show notifications (from Code 2)
   const showNotification = (message: string, type: 'success' | 'error') => {
