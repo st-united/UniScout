@@ -10,7 +10,7 @@ import {
   Col,
   Typography,
   Pagination,
-  Popconfirm,
+  Modal,
 } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -81,6 +81,11 @@ const UniversityListPage: React.FC = () => {
   // Multi-select state
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
+  // Delete confirmation modal state
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteType, setDeleteType] = useState<'single' | 'multiple'>('single');
+  const [universityToDelete, setUniversityToDelete] = useState<University | null>(null);
+
   useEffect(() => {
     const debounce = setTimeout(() => {
       setFilters((prev) => ({ ...prev, search: searchInput }));
@@ -101,6 +106,7 @@ const UniversityListPage: React.FC = () => {
     setSearchInput('');
     setCurrentPage(1);
     setSelectedRowKeys([]);
+    // Note: sortBy is NOT reset here, so it maintains the current sort option
   };
 
   const handleFilterChange = (field: FilterKey, value: string) => {
@@ -108,53 +114,52 @@ const UniversityListPage: React.FC = () => {
     setCurrentPage(1);
   };
 
-  // Delete handlers
-  const handleDeleteSingle = async (universityId: number) => {
-    try {
-      const university = currentUniversityData.find((uni) => uni.id === universityId);
-      if (!university) {
-        throw new Error('University not found');
-      }
-
-      // Mock check for existing references
-      const hasReferences = Math.random() < 0.1;
-      if (hasReferences) {
-        throw new Error('Cannot delete university due to existing references.');
-      }
-
-      setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityId));
-      message.success('University deleted successfully');
-
-      console.log(`AUDIT: Deleted university ${university.name} (ID: ${universityId})`);
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : 'Delete failed');
-    }
+  // Show delete confirmation modal
+  const showDeleteModal = (type: 'single' | 'multiple', university?: University) => {
+    setDeleteType(type);
+    setUniversityToDelete(university || null);
+    setDeleteModalVisible(true);
   };
 
-  const handleDeleteMultiple = async () => {
-    if (selectedRowKeys.length === 0) return;
-
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
     try {
-      const universitiesToDelete = currentUniversityData.filter((uni) =>
-        selectedRowKeys.includes(uni.id),
-      );
+      if (deleteType === 'single' && universityToDelete) {
+        // Mock check for existing references
+        const hasReferences = Math.random() < 0.1;
+        if (hasReferences) {
+          throw new Error('Cannot delete university due to existing references.');
+        }
 
-      // Mock check for references
-      const hasReferences = Math.random() < 0.1;
-      if (hasReferences) {
-        throw new Error('Cannot delete universities due to existing references.');
+        setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
+        message.success('University deleted successfully');
+        console.log(
+          `AUDIT: Deleted university ${universityToDelete.name} (ID: ${universityToDelete.id})`,
+        );
+      } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
+        const universitiesToDelete = currentUniversityData.filter((uni) =>
+          selectedRowKeys.includes(uni.id),
+        );
+
+        // Mock check for references
+        const hasReferences = Math.random() < 0.1;
+        if (hasReferences) {
+          throw new Error('Cannot delete universities due to existing references.');
+        }
+
+        setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
+        setSelectedRowKeys([]);
+        message.success(`${selectedRowKeys.length} universities deleted successfully`);
+        console.log(
+          `AUDIT: Deleted ${universitiesToDelete.length} universities:`,
+          universitiesToDelete.map((u) => u.name),
+        );
       }
-
-      setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
-      setSelectedRowKeys([]);
-      message.success(`${selectedRowKeys.length} universities deleted successfully`);
-
-      console.log(
-        `AUDIT: Deleted ${universitiesToDelete.length} universities:`,
-        universitiesToDelete.map((u) => u.name),
-      );
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Delete failed');
+    } finally {
+      setDeleteModalVisible(false);
+      setUniversityToDelete(null);
     }
   };
 
@@ -252,15 +257,12 @@ const UniversityListPage: React.FC = () => {
             onClick={() => handleEdit(record.id)}
             style={{ color: '#ff7a00' }}
           />
-          <Popconfirm
-            title={`Are you sure delete ${record.name}?`}
-            onConfirm={() => handleDeleteSingle(record.id)}
-            okText='Yes'
-            cancelText='No'
-            okButtonProps={{ danger: true }}
-          >
-            <Button type='text' icon={<DeleteOutlined />} style={{ color: '#ff7a00' }} />
-          </Popconfirm>
+          <Button
+            type='text'
+            icon={<DeleteOutlined />}
+            onClick={() => showDeleteModal('single', record)}
+            style={{ color: '#ff7a00' }}
+          />
         </Space>
       ),
     },
@@ -277,80 +279,107 @@ const UniversityListPage: React.FC = () => {
     },
   };
 
+  // Get confirmation message
+  const getConfirmationMessage = () => {
+    if (deleteType === 'single' && universityToDelete) {
+      return `Are you sure delete ${universityToDelete.name}?`;
+    } else if (deleteType === 'multiple') {
+      return 'Are you sure delete all selected fields?';
+    }
+    return '';
+  };
+
   return (
     <div style={{ padding: '24px', backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
       <Card>
         {/* Filter Section */}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} md={6} lg={4}>
+          <Col span={4}>
+            <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Country</div>
             <Select
-              placeholder='Select...'
-              value={filters.country}
-              onChange={(value) => handleFilterChange('country', value || '')}
+              value={filters.country || 'all'}
+              onChange={(value) => handleFilterChange('country', value === 'all' ? '' : value)}
               style={{ width: '100%' }}
-              allowClear
             >
+              <Option value='all'>All Countries</Option>
               {getUniqueValues('location').map((country) => (
                 <Option key={country} value={country}>
                   {country}
                 </Option>
               ))}
             </Select>
-            <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>Country</div>
           </Col>
 
-          <Col xs={24} sm={12} md={6} lg={4}>
+          <Col span={4}>
+            <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Type</div>
             <Select
-              placeholder='Select...'
-              value={filters.type}
-              onChange={(value) => handleFilterChange('type', value || '')}
+              value={filters.type || 'all'}
+              onChange={(value) => handleFilterChange('type', value === 'all' ? '' : value)}
               style={{ width: '100%' }}
-              allowClear
             >
+              <Option value='all'>All Type</Option>
               {['Public', 'Private', 'Academy', 'International'].map((type) => (
                 <Option key={type} value={type}>
                   {type}
                 </Option>
               ))}
             </Select>
-            <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>Type</div>
           </Col>
 
-          <Col xs={24} sm={12} md={6} lg={4}>
+          <Col span={4}>
+            <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Size</div>
             <Select
-              placeholder='Select'
-              value={filters.size}
-              onChange={(value) => handleFilterChange('size', value || '')}
+              value={filters.size || 'all'}
+              onChange={(value) => handleFilterChange('size', value === 'all' ? '' : value)}
               style={{ width: '100%' }}
-              allowClear
             >
+              <Option value='all'>All Size</Option>
               {['Small', 'Medium', 'Large', 'XL'].map((size) => (
                 <Option key={size} value={size}>
                   {size}
                 </Option>
               ))}
             </Select>
-            <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>Size</div>
           </Col>
 
-          <Col xs={24} sm={12} md={6} lg={4}>
+          <Col span={4}>
+            <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Fields</div>
             <Select
-              placeholder='Select'
-              value={filters.department}
-              onChange={(value) => handleFilterChange('department', value || '')}
+              value={filters.department || 'all'}
+              onChange={(value) => handleFilterChange('department', value === 'all' ? '' : value)}
               style={{ width: '100%' }}
-              allowClear
             >
+              <Option value='all'>All Fields</Option>
               {getUniqueValues('department').map((dept) => (
                 <Option key={dept} value={dept}>
                   {dept}
                 </Option>
               ))}
             </Select>
-            <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>Fields</div>
           </Col>
 
-          <Col xs={24} sm={12} md={6} lg={4}>
+          <Col span={8}>
+            <div
+              style={{ fontSize: '12px', marginBottom: '4px', color: '#666', textAlign: 'right' }}
+            >
+              <button
+                onClick={handleResetFilters}
+                style={{
+                  color: '#ff7a00',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  outline: 'none',
+                }}
+                type='button'
+                tabIndex={0}
+              >
+                Reset Filter
+              </button>
+            </div>
             <Select value={sortBy} onChange={setSortBy} style={{ width: '100%' }}>
               {sortOptions.map((option) => (
                 <Option key={option.value} value={option.value}>
@@ -358,15 +387,6 @@ const UniversityListPage: React.FC = () => {
                 </Option>
               ))}
             </Select>
-            <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>
-              Sort by: high to low
-            </div>
-          </Col>
-
-          <Col xs={24} sm={12} md={6} lg={4}>
-            <Button onClick={handleResetFilters} style={{ width: '100%' }}>
-              Reset Filters
-            </Button>
           </Col>
         </Row>
 
@@ -380,15 +400,9 @@ const UniversityListPage: React.FC = () => {
           <Col>
             <Space>
               {selectedRowKeys.length > 0 && (
-                <Popconfirm
-                  title='Are you sure delete all selected fields?'
-                  onConfirm={handleDeleteMultiple}
-                  okText='Yes'
-                  cancelText='No'
-                  okButtonProps={{ danger: true }}
-                >
-                  <Button danger>Delete Selected ({selectedRowKeys.length})</Button>
-                </Popconfirm>
+                <Button danger onClick={() => showDeleteModal('multiple')}>
+                  Delete Selected ({selectedRowKeys.length})
+                </Button>
               )}
               <Button
                 type='primary'
@@ -445,6 +459,84 @@ const UniversityListPage: React.FC = () => {
           />
         </Row>
       </Card>
+
+      {/* Custom Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalVisible}
+        onCancel={() => setDeleteModalVisible(false)}
+        footer={null}
+        centered
+        width={400}
+        style={{
+          borderRadius: '12px',
+        }}
+        bodyStyle={{
+          padding: '32px',
+          textAlign: 'center',
+        }}
+        maskStyle={{
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        }}
+      >
+        <div style={{ marginBottom: '24px' }}>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: '#FFF3CD',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}
+          >
+            <span style={{ fontSize: '24px', color: '#F59E0B' }}>⚠</span>
+          </div>
+          <div
+            style={{
+              fontSize: '18px',
+              fontWeight: 500,
+              color: '#333',
+              lineHeight: '24px',
+            }}
+          >
+            {getConfirmationMessage()}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <Button
+            onClick={() => setDeleteModalVisible(false)}
+            style={{
+              minWidth: '80px',
+              height: '40px',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 500,
+              borderColor: '#d9d9d9',
+              color: '#666',
+            }}
+          >
+            No
+          </Button>
+          <Button
+            type='primary'
+            onClick={handleDeleteConfirm}
+            style={{
+              minWidth: '80px',
+              height: '40px',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 500,
+              backgroundColor: '#1890ff',
+              borderColor: '#1890ff',
+            }}
+          >
+            Yes
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };
