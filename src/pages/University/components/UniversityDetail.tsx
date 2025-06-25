@@ -8,8 +8,9 @@ import {
   Globe,
   MailIcon,
   PhoneIcon,
+  Contact,
 } from 'lucide-react';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { University } from '@app/interface/university.interface';
@@ -58,9 +59,26 @@ const fieldConfigs: Record<string, FieldConfig> = {
   others: { name: 'Others', icon: '🌍', description: 'Others' },
 };
 
+const getStudentSizeInfo = (studentPopulation: number | undefined) => {
+  if (!studentPopulation) {
+    return { size: 'N/A', description: 'Student population not available' };
+  }
+
+  if (studentPopulation < 5000) {
+    return { size: 'S', description: `Small (under 5,000 students)` };
+  } else if (studentPopulation < 15000) {
+    return { size: 'M', description: `Medium (5,000–15,000 students)` };
+  } else if (studentPopulation < 30000) {
+    return { size: 'L', description: `Large (15,000–30,000 students)` };
+  } else {
+    return { size: 'XL', description: `Extra Large (over 30,000 students)` };
+  }
+};
+
 const UniversityDetail: React.FC = () => {
-  const [university, setUniversity] = React.useState<University | null>(null);
+  const [university, setUniversity] = useState<University | null>(null);
   const { id } = useParams<{ id: string }>();
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -100,6 +118,7 @@ const UniversityDetail: React.FC = () => {
   }
 
   const googleMapsUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&q=${university.latitude},${university.longitude}&zoom=15`;
+  const studentSizeInfo = getStudentSizeInfo(university.studentPopulation);
 
   return (
     <div className='min-h-screen w-full px-4 py-6 bg-gray-50'>
@@ -111,13 +130,12 @@ const UniversityDetail: React.FC = () => {
             onClick={() => navigate(-1)}
             className='inline-flex items-center gap-2 text-[#595858] font-[500] mb-4 relative top-1 text-lg bg-transparent border-0 hover:bg-gray-100 hover:text-orange-500 transition-colors'
           >
-            <ArrowLeft className='w-5 h-5 text-inherit' />
-            Back
+            <ArrowLeft className='w-5 h-5' />
+            Home
           </button>
 
           {/* About and Map Section */}
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
-            {/* About Section */}
             <div className='bg-white rounded-lg shadow-sm p-6'>
               <div className='flex items-start gap-4'>
                 <img
@@ -160,28 +178,30 @@ const UniversityDetail: React.FC = () => {
 
           {/* Stats Row */}
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
-            <div className='bg-orange-400 rounded-lg p-6 text-center'>
+            <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
               <div className='flex items-center justify-center gap-2 mb-2'>
                 <Star className='w-5 h-5 text-white' />
                 <span className='text-sm font-medium text-white'>Ranking</span>
               </div>
               <div className='text-3xl font-bold text-white'>{university.rank ?? 'N/A'}</div>
             </div>
-            <div className='bg-orange-400 rounded-lg p-6 text-center'>
+            <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
               <div className='flex items-center justify-center gap-2 mb-2'>
                 <Users className='w-5 h-5 text-white' />
-                <span className='text-sm font-medium text-white'>Students</span>
+                <span className='text-sm font-medium text-white'>Size</span>
               </div>
-              <div className='text-3xl font-bold text-white'>
-                {university.studentPopulation?.toLocaleString() ?? 'N/A'}
-              </div>
+              <div className='text-3xl font-bold text-white'>{studentSizeInfo.size}</div>
+              <div className='text-xs text-white mt-1'>{studentSizeInfo.description}</div>
             </div>
-            <div className='bg-orange-400 rounded-lg p-6 text-center'>
+            <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
               <div className='flex items-center justify-center gap-2 mb-2'>
                 <Building2 className='w-5 h-5 text-white' />
                 <span className='text-sm font-medium text-white'>Type</span>
               </div>
-              <div className='text-3xl font-bold text-white'>{university.type}</div>
+              <div className='text-3xl font-bold text-white'>
+                {university.type?.charAt(0).toUpperCase() +
+                  university.type?.slice(1).toLowerCase() || 'N/A'}
+              </div>
             </div>
           </div>
         </div>
@@ -214,10 +234,12 @@ const UniversityDetail: React.FC = () => {
                 {mappedFields.map((config, index) => (
                   <div
                     key={index}
-                    className='text-center p-4 border rounded-lg hover:shadow-md transition-shadow shadow-md'
+                    className='text-center p-4 border rounded-lg hover:shadow-md transition-shadow shadow-md h-28 flex flex-col justify-center'
                   >
                     <div className='text-3xl mb-2'>{config.icon}</div>
-                    <h4 className='font-medium text-blue-900 mb-1'>{config.name}</h4>
+                    <h4 className='font-medium text-blue-900 text-sm leading-tight'>
+                      {config.name}
+                    </h4>
                   </div>
                 ))}
               </div>
@@ -230,19 +252,19 @@ const UniversityDetail: React.FC = () => {
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 text-center'>
             <div className='flex items-center justify-center gap-2'>
               <Globe className='w-5 h-5 text-gray-600' />
-              <span className='text-sm font-bold text-blue-600'>Website</span>
+              <span className='text-sm font-bold text-blue-600'>Website:</span>
               <a
                 href={university.website}
                 target='_blank'
                 rel='noopener noreferrer'
-                className='text-blue-600 hover:text-blue-800 text-sm'
+                className='text-blue-600 hover:text-blue-800 text-sm break-all'
               >
                 {university.website.replace(/^https?:\/\//, '')}
               </a>
             </div>
-            <div className='flex items-center justify-center gap-2'>
+            <div className='flex items-center gap-2 min-w-[280px]'>
               <MailIcon className='w-5 h-5 text-gray-600' />
-              <span className='text-sm font-bold text-blue-600'>Email</span>
+              <span className='text-sm font-bold text-blue-600'>Email:</span>
               <a
                 href={`mailto:${university.email}`}
                 className='text-blue-600 hover:text-blue-800 text-sm'
@@ -250,9 +272,9 @@ const UniversityDetail: React.FC = () => {
                 {university.email}
               </a>
             </div>
-            <div className='flex items-center justify-center gap-2'>
+            <div className='flex items-center gap-2 min-w-[280px]'>
               <PhoneIcon className='w-5 h-5 text-gray-600' />
-              <span className='text-sm font-bold text-blue-600'>Phone</span>
+              <span className='text-sm font-bold text-blue-600'>Phone:</span>
               <a
                 href={`tel:${university.contact}`}
                 className='text-blue-600 hover:text-blue-800 text-sm'

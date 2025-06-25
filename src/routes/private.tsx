@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 
+// Lazy-loaded layout and pages
 const PrivateLayout = lazy(() => import('@app/components/templates/PrivateLayout'));
 const NotFound = lazy(() => import('@app/pages/NotFound/NotFound'));
 const Forbidden = lazy(() => import('@app/pages/Forbidden/Forbidden'));

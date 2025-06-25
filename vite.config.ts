@@ -30,14 +30,7 @@ export default async ({ mode }: any) => {
       host: true,
       strictPort: true,
       port: 5001,
-    },
-    test: {
-      globals: true,
-      environment: 'jsdom',
-      coverage: {
-        reporter: ['text', 'html'],
-        exclude: ['node_modules/'],
-      },
+      allowedHosts: ['uniscout.dev.stunited.vn'],
     },
   });
 };
