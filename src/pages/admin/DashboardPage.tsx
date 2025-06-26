@@ -108,10 +108,9 @@ const DashboardPage = () => {
   return (
     <div className='flex min-h-screen bg-gray-50'>
       {/* Sidebar on the left */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Content Area */}
-      <div className='flex-1 p-6 overflow-y-auto'>
+      <div className='flex-1 p-6 overflow-y-auto w-full'>
         <div className='mb-6'>
           <h1 className='text-2xl font-bold text-gray-800 mb-2'>Overview</h1>
         </div>
