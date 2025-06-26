@@ -1,10 +1,10 @@
 import AdminLayout from '@app/components/templates/AdminLayout/AdminLayout';
 import PublicLayout from '@app/components/templates/PublicLayout';
-import CreateUniversity from '@app/pages/Admin/CreateUniversity';
-import DashboardPage from '@app/pages/Admin/DashboardPage';
-import EditUniversity from '@app/pages/Admin/EditUniversity';
-import ManagePage from '@app/pages/Admin/ManagePage';
-import UniversityListPage from '@app/pages/Admin/UniversityListPage';
+import CreateUniversity from '@app/pages/admin/CreateUniversity';
+import DashboardPage from '@app/pages/admin/DashboardPage';
+import EditUniversity from '@app/pages/admin/EditUniversity';
+import ManagePage from '@app/pages/admin/ManagePage';
+import UniversityListPage from '@app/pages/admin/UniversityListPage';
 import ContactPage from '@app/pages/Contact/ContactPage';
 import UniversityDetail from '@app/pages/University/components/UniversityDetail';
 import WorldMap from '@app/pages/University/components/Worldmap';
@@ -37,6 +37,9 @@ const routes = [
     element: <AdminLayout />,
     children: [
       {
+        element: <UniversityListPage />,
+      },
+      {
         path: 'universities',
         element: <UniversityListPage />,
       },
@@ -45,7 +48,7 @@ const routes = [
         element: <CreateUniversity />,
       },
       {
-        path: 'edit-university',
+        path: 'edit-university/:id',
         element: <EditUniversity />,
       },
       {

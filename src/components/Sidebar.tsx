@@ -57,25 +57,41 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     // navigate('/login');
   };
 
+  // Check if any child is active for parent highlighting
+  const isParentActive = (item: any) => {
+    if (activeTab === item.id) return true;
+    if (item.children) {
+      return item.children.some((child: any) => activeTab === child.id);
+    }
+    return false;
+  };
+
   return (
     <>
-      <div className='lg:hidden p-4'>
-        <button onClick={() => setIsOpen(true)} className='text-gray-700'>
+      {/* Mobile menu button */}
+      <div className='lg:hidden fixed top-4 left-4 z-50'>
+        <button
+          onClick={() => setIsOpen(true)}
+          className='p-2 bg-white rounded-lg shadow-md text-gray-700 hover:bg-gray-50'
+        >
           <Menu className='w-6 h-6' />
         </button>
       </div>
 
+      {/* Sidebar */}
       <div
-        className={`z-50 w-64 bg-white h-full flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
-          isOpen ? 'inset-y-0 left-0 translate-x-0' : 'inset-y-0 left-0 -translate-x-full'
-        } lg:inset-y-0 lg:left-0 lg:translate-x-0`}
+        className={`fixed lg:static z-50 w-64 bg-white h-full flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
       >
+        {/* Mobile close button */}
         <div className='lg:hidden flex justify-end p-4'>
-          <button onClick={() => setIsOpen(false)}>
+          <button onClick={() => setIsOpen(false)} className='p-1 hover:bg-gray-100 rounded'>
             <X className='w-6 h-6 text-gray-700' />
           </button>
         </div>
 
+        {/* User profile section */}
         <div className='p-6 pt-8'>
           <div className='flex items-center space-x-3'>
             <div className='w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center'>
@@ -85,11 +101,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
 
+        {/* Navigation */}
         <nav className='flex-1 py-4 overflow-y-auto'>
           <ul className='space-y-2 px-4 list-none'>
             {menuItems.map((item) => {
               const IconComponent = item.icon;
-              const isActiveParent = activeTab === item.id;
+              const isActiveParent = isParentActive(item);
 
               return (
                 <li key={item.id}>
@@ -118,6 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     </div>
                   )}
 
+                  {/* Child menu items */}
                   {item.children && (
                     <ul className='ml-6 mt-2 space-y-1 list-none'>
                       {item.children.map((child) => {
@@ -162,7 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         </div>
       </div>
 
-      {/* Overlay for mobile */}
+      {/* Mobile overlay */}
       {isOpen && (
         <div
           role='button'

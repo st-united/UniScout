@@ -42,6 +42,46 @@ const CreateUniversity = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [showOtherField, setShowOtherField] = useState(false);
+
+  // Button styles with hover effects
+  const buttonStyles = {
+    back: {
+      marginBottom: '12px',
+      width: '100%',
+      maxWidth: '120px',
+      backgroundColor: 'white',
+      borderColor: '#d9d9d9',
+      color: 'rgba(0, 0, 0, 0.88)',
+      transition: 'all 0.3s ease',
+    },
+    backHover: {
+      backgroundColor: '#ff8c00',
+      borderColor: '#ff8c00',
+      color: 'white',
+    },
+    reset: {
+      width: '100%',
+      backgroundColor: '#ff8c00',
+      borderColor: '#ff8c00',
+      color: 'white',
+      transition: 'all 0.3s ease',
+    },
+    resetHover: {
+      backgroundColor: '#e67e00',
+      borderColor: '#e67e00',
+    },
+    save: {
+      width: '100%',
+      backgroundColor: '#ff8c00',
+      borderColor: '#ff8c00',
+      transition: 'all 0.3s ease',
+    },
+    saveHover: {
+      backgroundColor: '#e67e00',
+      borderColor: '#e67e00',
+    },
+  };
 
   const fieldsOptions = [
     'Science & Engineering',
@@ -91,6 +131,45 @@ const CreateUniversity = () => {
     },
   };
 
+  // Handle fields selection change
+  const handleFieldsChange = (selectedFields: string[]) => {
+    const hasOther = selectedFields.includes('Other');
+    setShowOtherField(hasOther);
+
+    // Clear the other field if "Other" is not selected
+    if (!hasOther) {
+      form.setFieldsValue({ other: undefined });
+    }
+  };
+
+  // Custom validation for unique values (this would typically be done on the server)
+  const validateUniqueness = (fieldName: string, value: string) => {
+    // This is a placeholder for uniqueness validation
+    // In a real application, you would make an API call to check uniqueness
+    return new Promise((resolve, reject) => {
+      // Simulate API call
+      setTimeout(() => {
+        // Mock validation - in real app, this would be an actual API call
+        const mockExistingValues = {
+          universityName: ['Harvard University', 'MIT', 'Stanford University'],
+          phone: ['+1-617-495-1000', '+1-650-723-2300'],
+          email: ['info@harvard.edu', 'info@mit.edu'],
+          website: ['https://harvard.edu', 'https://mit.edu'],
+        };
+
+        if (mockExistingValues[fieldName as keyof typeof mockExistingValues]?.includes(value)) {
+          reject(
+            new Error(
+              `This ${fieldName.replace(/([A-Z])/g, ' $1').toLowerCase()} is already taken`,
+            ),
+          );
+        } else {
+          resolve(true);
+        }
+      }, 500);
+    });
+  };
+
   const onFinish = async (values: UniversityData) => {
     setLoading(true);
     try {
@@ -127,6 +206,7 @@ const CreateUniversity = () => {
       message.success('University created successfully!');
       form.resetFields();
       setLogoFile(null);
+      setShowOtherField(false);
 
       // Optional: Handle success response
       console.log('University created:', response.data);
@@ -150,23 +230,59 @@ const CreateUniversity = () => {
     }
   };
 
+  const handleReset = () => {
+    form.resetFields();
+    setLogoFile(null);
+    setShowOtherField(false);
+  };
+
   return (
-    <div style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <div
+      style={{
+        padding: '12px 16px 24px',
+        backgroundColor: '#f5f5f5',
+        minHeight: '100vh',
+      }}
+    >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => window.history.back()}
-            style={{ marginBottom: '16px' }}
+            style={buttonStyles.back}
+            size='middle'
+            onMouseEnter={(e) => {
+              Object.assign(e.currentTarget.style, buttonStyles.backHover);
+            }}
+            onMouseLeave={(e) => {
+              Object.assign(e.currentTarget.style, buttonStyles.back);
+            }}
           >
             Back
           </Button>
-          <Title level={2}>Create New University</Title>
+          <Title
+            level={2}
+            style={{
+              marginBottom: '8px',
+              fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+              lineHeight: '1.2',
+            }}
+          >
+            Create University Information
+          </Title>
         </div>
 
         {/* Create University Form */}
-        <Card title='University Information' style={{ marginBottom: '24px' }}>
+        <Card
+          style={{
+            marginBottom: '24px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          }}
+          bodyStyle={{
+            padding: '16px',
+          }}
+        >
           <Form
             form={form}
             layout='vertical'
@@ -175,63 +291,87 @@ const CreateUniversity = () => {
               website: 'https://',
               fields: [],
             }}
+            scrollToFirstError
           >
-            <Row gutter={[16, 16]}>
-              {/* University Name, Country, Logo */}
-              <Col xs={24} md={8}>
+            {/* University Name, Country, Logo */}
+            <Row gutter={[12, 16]}>
+              <Col xs={24} sm={24} md={8} lg={8}>
                 <Form.Item
                   label='University Name'
                   name='universityName'
                   rules={[
                     { required: true, message: 'Please enter university name' },
                     { min: 2, message: 'University name must be at least 2 characters' },
+                    {
+                      validator: async (_, value) => {
+                        if (value && value.length >= 2) {
+                          try {
+                            await validateUniqueness('universityName', value);
+                          } catch (error: any) {
+                            throw new Error(error.message);
+                          }
+                        }
+                      },
+                    },
                   ]}
+                  hasFeedback
                 >
-                  <Input placeholder='Enter university name' />
+                  <Input placeholder='Enter university name' size='large' />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={8}>
+              <Col xs={24} sm={24} md={8} lg={8}>
                 <Form.Item
                   label='Country'
                   name='country'
                   rules={[{ required: true, message: 'Please enter country' }]}
                 >
-                  <Input placeholder='Enter country' />
+                  <Input placeholder='Enter country' size='large' />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={8}>
+              <Col xs={24} sm={24} md={8} lg={8}>
                 <Form.Item
                   label='Logo'
                   name='logo'
                   rules={[{ required: true, message: 'Please upload a logo' }]}
                 >
-                  <Dragger {...uploadProps} style={{ height: '120px' }}>
+                  <Dragger
+                    {...uploadProps}
+                    style={{
+                      height: '100px',
+                      borderColor: '#ff8c00',
+                      backgroundColor: '#fff7e6',
+                    }}
+                  >
                     <p className='ant-upload-drag-icon'>
-                      <InboxOutlined />
+                      <InboxOutlined style={{ color: '#ff8c00', fontSize: '32px' }} />
                     </p>
-                    <p className='ant-upload-text'>Click or drag file to upload</p>
-                    <p className='ant-upload-hint'>Support for single image upload. Max 5MB.</p>
+                    <p className='ant-upload-text' style={{ fontSize: '14px', color: '#ff8c00' }}>
+                      Click or drag file to upload
+                    </p>
+                    <p className='ant-upload-hint' style={{ fontSize: '12px', color: '#ff8c00' }}>
+                      Support for single image upload. Max 5MB.
+                    </p>
                   </Dragger>
                 </Form.Item>
               </Col>
             </Row>
 
             {/* Location */}
-            <Row gutter={[16, 16]}>
+            <Row gutter={[12, 16]}>
               <Col xs={24}>
                 <Form.Item
                   label='Location'
                   name='location'
                   rules={[{ required: true, message: 'Please enter location' }]}
                 >
-                  <Input placeholder='Enter complete address/location' />
+                  <Input placeholder='Enter complete address/location' size='large' />
                 </Form.Item>
               </Col>
             </Row>
 
             {/* Latitude, Longitude */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={12}>
+            <Row gutter={[12, 16]}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
                   label='Latitude'
                   name='latitude'
@@ -242,10 +382,10 @@ const CreateUniversity = () => {
                     },
                   ]}
                 >
-                  <Input placeholder='e.g. 40.7128' />
+                  <Input placeholder='e.g. 40.7128' size='large' />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={12}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
                   label='Longitude'
                   name='longitude'
@@ -256,20 +396,20 @@ const CreateUniversity = () => {
                     },
                   ]}
                 >
-                  <Input placeholder='e.g. -74.0060' />
+                  <Input placeholder='e.g. -74.0060' size='large' />
                 </Form.Item>
               </Col>
             </Row>
 
             {/* Type, Students, Rank */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={8}>
+            <Row gutter={[12, 16]}>
+              <Col xs={24} sm={24} md={8} lg={8}>
                 <Form.Item
                   label='University Type'
                   name='type'
                   rules={[{ required: true, message: 'Please select university type' }]}
                 >
-                  <Select placeholder='Select university type'>
+                  <Select placeholder='Select university type' size='large'>
                     {universityTypes.map((type) => (
                       <Option key={type.value} value={type.value}>
                         {type.label}
@@ -278,26 +418,52 @@ const CreateUniversity = () => {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} md={8}>
-                <Form.Item label='Number of Students' name='numberOfStudents'>
+              <Col xs={24} sm={12} md={8} lg={8}>
+                <Form.Item
+                  label='Number of Students'
+                  name='numberOfStudents'
+                  rules={[
+                    {
+                      type: 'number',
+                      min: 1,
+                      message: 'Number of students must be a positive number',
+                    },
+                  ]}
+                >
                   <InputNumber
-                    min={0}
+                    min={1}
                     style={{ width: '100%' }}
                     placeholder='Enter number of students'
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    size='large'
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={8}>
-                <Form.Item label='Ranking' name='rank'>
-                  <InputNumber min={1} style={{ width: '100%' }} placeholder='Enter ranking' />
+              <Col xs={24} sm={12} md={8} lg={8}>
+                <Form.Item
+                  label='Ranking'
+                  name='rank'
+                  rules={[
+                    {
+                      type: 'number',
+                      min: 1,
+                      message: 'Ranking must be a positive number',
+                    },
+                  ]}
+                >
+                  <InputNumber
+                    min={1}
+                    style={{ width: '100%' }}
+                    placeholder='Enter ranking'
+                    size='large'
+                  />
                 </Form.Item>
               </Col>
             </Row>
 
             {/* Phone, Email */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={12}>
+            <Row gutter={[12, 16]}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
                   label='Phone'
                   name='phone'
@@ -307,43 +473,82 @@ const CreateUniversity = () => {
                       pattern: /^\+?[1-9][\d\-()\s]{7,15}$/,
                       message: 'Please enter valid phone number',
                     },
+                    {
+                      validator: async (_, value) => {
+                        if (value && /^\+?[1-9][\d\-()\s]{7,15}$/.test(value)) {
+                          try {
+                            await validateUniqueness('phone', value);
+                          } catch (error: any) {
+                            throw new Error(error.message);
+                          }
+                        }
+                      },
+                    },
                   ]}
+                  hasFeedback
                 >
-                  <Input placeholder='Enter phone number' />
+                  <Input placeholder='Enter phone number' size='large' />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={12}>
+              <Col xs={24} sm={12} md={12}>
                 <Form.Item
                   label='Email'
                   name='email'
                   rules={[
                     { required: true, message: 'Please enter email' },
                     { type: 'email', message: 'Please enter valid email' },
+                    {
+                      validator: async (_, value) => {
+                        if (value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                          try {
+                            await validateUniqueness('email', value);
+                          } catch (error: any) {
+                            throw new Error(error.message);
+                          }
+                        }
+                      },
+                    },
                   ]}
+                  hasFeedback
                 >
-                  <Input placeholder='Enter email address' />
+                  <Input placeholder='Enter email address' size='large' />
                 </Form.Item>
               </Col>
             </Row>
 
             {/* Website */}
-            <Row gutter={[16, 16]}>
+            <Row gutter={[12, 16]}>
               <Col xs={24}>
                 <Form.Item
                   label='Website'
                   name='website'
                   rules={[
                     { required: true, message: 'Please enter website URL' },
-                    { type: 'url', message: 'Please enter valid website URL' },
+                    {
+                      pattern: /^https?:\/\/.+/,
+                      message: 'Website URL must start with http:// or https://',
+                    },
+                    {
+                      validator: async (_, value) => {
+                        if (value && /^https?:\/\/.+/.test(value)) {
+                          try {
+                            await validateUniqueness('website', value);
+                          } catch (error: any) {
+                            throw new Error(error.message);
+                          }
+                        }
+                      },
+                    },
                   ]}
+                  hasFeedback
                 >
-                  <Input placeholder='https://example.com' />
+                  <Input placeholder='https://example.com' size='large' />
                 </Form.Item>
               </Col>
             </Row>
 
             {/* Description */}
-            <Row gutter={[16, 16]}>
+            <Row gutter={[12, 16]}>
               <Col xs={24}>
                 <Form.Item label='Description' name='description'>
                   <TextArea
@@ -351,19 +556,27 @@ const CreateUniversity = () => {
                     placeholder='Enter description about the university'
                     showCount
                     maxLength={1000}
+                    style={{ fontSize: '16px' }}
                   />
                 </Form.Item>
               </Col>
             </Row>
 
             {/* Fields */}
-            <Row gutter={[16, 16]}>
+            <Row gutter={[12, 16]}>
               <Col xs={24}>
-                <Form.Item label='Academic Fields' name='fields'>
+                <Form.Item
+                  label='Field of Study'
+                  name='fields'
+                  rules={[{ required: true, message: 'Please select at least one field of study' }]}
+                >
                   <Select
                     mode='multiple'
                     placeholder='Select academic fields'
                     style={{ width: '100%' }}
+                    size='large'
+                    maxTagCount='responsive'
+                    onChange={handleFieldsChange}
                   >
                     {fieldsOptions.map((field) => (
                       <Option key={field} value={field}>
@@ -375,40 +588,72 @@ const CreateUniversity = () => {
               </Col>
             </Row>
 
-            {/* Other */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24}>
-                <Form.Item label='Other Information' name='other'>
-                  <TextArea
-                    rows={4}
-                    placeholder='Enter other relevant information'
-                    showCount
-                    maxLength={500}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+            {/* Other - Conditional Field */}
+            {showOtherField && (
+              <Row gutter={[12, 16]}>
+                <Col xs={24}>
+                  <Form.Item
+                    label='Other Field of Study'
+                    name='other'
+                    rules={[
+                      {
+                        required: showOtherField,
+                        message: 'Please specify the other academic field',
+                      },
+                      { min: 2, message: 'Academic field must be at least 2 characters' },
+                    ]}
+                  >
+                    <Input
+                      placeholder='Enter specific academic field'
+                      size='large'
+                      style={{ fontSize: '16px' }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
 
             {/* Submit Button */}
-            <Row>
-              <Col xs={24} style={{ textAlign: 'right' }}>
+            <Row gutter={[8, 16]}>
+              <Col xs={24} sm={12} md={12} lg={12}>
                 <Button
-                  onClick={() => {
-                    form.resetFields();
-                    setLogoFile(null);
+                  onClick={handleReset}
+                  style={buttonStyles.reset}
+                  size='large'
+                  onMouseEnter={(e) => {
+                    Object.assign(e.currentTarget.style, {
+                      ...buttonStyles.reset,
+                      ...buttonStyles.resetHover,
+                    });
                   }}
-                  style={{ marginRight: '8px' }}
+                  onMouseLeave={(e) => {
+                    Object.assign(e.currentTarget.style, buttonStyles.reset);
+                  }}
                 >
                   Reset
                 </Button>
+              </Col>
+              <Col xs={24} sm={12} md={12} lg={12}>
                 <Button
                   type='primary'
                   htmlType='submit'
                   loading={loading}
                   icon={<SaveOutlined />}
                   size='large'
+                  style={buttonStyles.save}
+                  onMouseEnter={(e) => {
+                    if (!loading) {
+                      Object.assign(e.currentTarget.style, {
+                        ...buttonStyles.save,
+                        ...buttonStyles.saveHover,
+                      });
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    Object.assign(e.currentTarget.style, buttonStyles.save);
+                  }}
                 >
-                  {loading ? 'Creating...' : 'Create University'}
+                  {loading ? 'Creating...' : 'Save'}
                 </Button>
               </Col>
             </Row>
