@@ -10,8 +10,8 @@ import {
   PhoneIcon,
   Contact,
 } from 'lucide-react';
-import React, { useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { University } from '@app/interface/university.interface';
 
@@ -76,8 +76,11 @@ const getStudentSizeInfo = (studentPopulation: number | undefined) => {
 };
 
 const UniversityDetail: React.FC = () => {
-  const [university, setUniversity] = React.useState<University | null>(null);
+  const [university, setUniversity] = useState<University | null>(null);
   const { id } = useParams<{ id: string }>();
+
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUniversity = async () => {
@@ -91,6 +94,11 @@ const UniversityDetail: React.FC = () => {
     fetchUniversity();
   }, [id]);
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   if (!university) {
     return (
       <div className='min-h-screen w-full px-4 py-6 flex items-center justify-center'>
@@ -98,7 +106,7 @@ const UniversityDetail: React.FC = () => {
           <div className='text-gray-400 text-6xl mb-4'>🏫</div>
           <h2 className='text-2xl font-semibold text-gray-700 mb-4'>University Not Found</h2>
           <Link
-            to='/'
+            to={`/universities${location.search}`}
             className='text-orange-500 hover:text-orange-600 flex items-center justify-center gap-2'
           >
             <ArrowLeft className='w-4 h-4' />
@@ -117,13 +125,14 @@ const UniversityDetail: React.FC = () => {
       <div className='mx-auto max-w-7xl'>
         {/* Header */}
         <div className='pt-4 mb-6'>
-          <Link
-            to='/'
-            className='inline-flex items-center gap-2 text-[#595858] font-[500] hover:text-gray-600 mb-4 relative top-1 text-lg'
+          <button
+            type='button'
+            onClick={() => navigate(-1)}
+            className='inline-flex items-center gap-2 text-[#595858] font-[500] mb-4 relative top-1 text-lg bg-transparent border-0 hover:bg-gray-100 hover:text-orange-500 transition-colors'
           >
             <ArrowLeft className='w-5 h-5' />
             Home
-          </Link>
+          </button>
 
           {/* About and Map Section */}
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
@@ -167,7 +176,7 @@ const UniversityDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats Row */}
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
             <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
               <div className='flex items-center justify-center gap-2 mb-2'>
