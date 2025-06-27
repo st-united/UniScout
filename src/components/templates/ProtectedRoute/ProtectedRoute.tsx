@@ -1,10 +1,7 @@
 import { FC, ReactNode } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
 
-import { getStorageStringData } from '@app/config';
-import { ACCESS_TOKEN, NAVIGATE_URL, REFRESH_TOKEN } from '@app/constants';
-import { logout } from '@app/redux/features/auth/authSlice';
 import { RootState } from '@app/redux/store';
 
 // eslint-disable-next-line react/prop-types
