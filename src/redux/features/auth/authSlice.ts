@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-import { getStorageData } from '@app/config';
+import { getStorageStringData } from '@app/config';
 import { ACCESS_TOKEN } from '@app/constants';
 import { UserProfile } from '@app/interface/user.interface';
 
@@ -10,7 +10,11 @@ interface AuthState {
   permissions: string[];
 }
 
-const checkAuth = (): boolean => Boolean(getStorageData(ACCESS_TOKEN));
+const checkAuth = (): boolean => {
+  const token = getStorageStringData(ACCESS_TOKEN);
+  console.log('checkAuth called. Token found:', Boolean(token));
+  return Boolean(token);
+};
 
 const initialState: AuthState = {
   isAuth: checkAuth(),
