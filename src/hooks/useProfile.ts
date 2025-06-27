@@ -13,7 +13,7 @@ import {
   uploadAvatarApi,
 } from '@app/services';
 
-export const useGetProfile = () => {
+export const useGetProfile = (enabled: boolean) => {
   const dispatch = useDispatch();
 
   return useQuery(
@@ -23,9 +23,14 @@ export const useGetProfile = () => {
       return data.data;
     },
     {
+      enabled: enabled,
       onSuccess(data) {
         dispatch(setAuth(data));
       },
+      onError(error) {
+        console.error('useGetProfile fetch error:', error);
+      },
+      retry: false, // Prevent retries on failed authentication
     },
   );
 };
