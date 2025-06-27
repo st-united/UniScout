@@ -34,7 +34,7 @@ const ProtectedRoute: FC<ProtectedRouteProps> = ({ children }) => {
 
   // If the user IS authenticated, render the protected content (children).
   // console.log('ProtectedRoute: User authenticated, rendering protected content.');
-  return children;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
