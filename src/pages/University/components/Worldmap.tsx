@@ -16,9 +16,10 @@ interface CountryData {
 
 interface WorldMapProps {
   className?: string;
+  onCountryClick?: (country: string) => void;
 }
 
-const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
+const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) => {
   const [countryData, setCountryData] = useState<CountryData[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,6 +103,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '' }) => {
 
   const handleCountryClick = (country: string) => {
     setSelectedCountry((prev) => (prev === country ? null : country));
+    if (onCountryClick) {
+      onCountryClick(country);
+    }
   };
 
   // These are % relative to the original container.

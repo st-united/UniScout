@@ -6,8 +6,8 @@ import EditUniversity from '@app/pages/admin/EditUniversity';
 import ManagePage from '@app/pages/admin/ManagePage';
 import UniversityListPage from '@app/pages/admin/UniversityListPage';
 import ContactPage from '@app/pages/Contact/ContactPage';
+import SignIn from '@app/pages/SignIn/SignIn';
 import UniversityDetail from '@app/pages/University/components/UniversityDetail';
-import WorldMap from '@app/pages/University/components/Worldmap';
 import University from '@app/pages/University/University';
 
 const routes = [
@@ -27,8 +27,8 @@ const routes = [
         element: <UniversityDetail />,
       },
       {
-        path: 'worldmap',
-        element: <WorldMap />,
+        path: 'login',
+        element: <SignIn />,
       },
     ],
   },

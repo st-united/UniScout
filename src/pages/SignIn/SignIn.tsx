@@ -1,4 +1,4 @@
-import { Col, Row } from 'antd';
+import { Row } from 'antd';
 import { FC, lazy, useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { RootState } from '@app/redux/store';
 import './SignIn.scss';
 
 const SignInForm = lazy(() => import('./SignInForm'));
+const SignInBackground = lazy(() => import('./SignInBackground'));
 
 const SignIn: FC = () => {
   const navigate = useNavigate();
@@ -26,11 +27,12 @@ const SignIn: FC = () => {
   }, []);
 
   return (
-    <Row className='container-box-login'>
-      <Col xs={24} sm={24} md={12} lg={9} className='login-box'>
+    <div className='min-h-screen bg-gray-100'>
+      <Row className='min-h-screen'>
+        <SignInBackground />
         <SignInForm onInputChange={onInputChange} previousValue={previousValue} />
-      </Col>
-    </Row>
+      </Row>
+    </div>
   );
 };
 
