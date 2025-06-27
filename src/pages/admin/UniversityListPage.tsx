@@ -21,12 +21,12 @@ import {
   Badge,
   Tag,
 } from 'antd';
+import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import AdminSearchFilter from '../../components/AdminSearchFilter';
 import type { ColumnsType } from 'antd/es/table';
-
 const { Option } = Select;
 const { Title } = Typography;
 
@@ -82,8 +82,30 @@ const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
 
   // State for university data
-  const [currentUniversityData, setCurrentUniversityData] =
+  /*const [currentUniversityData, setCurrentUniversityData] =
     useState<University[]>(mockUniversityData);
+  */
+  /////////////////////////////////////////////////////////////////////////////////////
+  const [currentUniversityData, setCurrentUniversityData] = useState<University[]>([]);
+
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      try {
+        const response = await axios.get('/universities');
+        const universityList = response.data.data; // 👈 C'est ça le tableau d'universités
+
+        console.log('Universités récupérées:', universityList);
+
+        setCurrentUniversityData(universityList);
+      } catch (error) {
+        console.error('Erreur API:', error);
+      }
+    };
+    fetchUniversities();
+  }, []);
+
+  /////////////////////////////////////////////////////////////////////////////////////
+
   const [loading] = useState(false);
 
   const [filters, setFilters] = useState<Record<FilterKey, string>>({
@@ -300,7 +322,7 @@ const UniversityListPage: React.FC = () => {
   const columns: ColumnsType<University> = [
     {
       title: 'University Name',
-      dataIndex: 'name',
+      dataIndex: 'university',
       key: 'name',
       sorter: true,
     },
