@@ -211,13 +211,13 @@ const AdminSearchFilter: React.FC<SearchNotificationBarProps> = ({
       </div>
 
       {/* Search Results Info */}
-      {searchValue && (
+      {/*searchValue && (
         <div className='max-w-7xl mx-auto mt-3'>
           <Text className='text-sm text-orange-700'>
             Searching for: &quot;<span className='font-medium'>{searchValue}</span>&quot;
           </Text>
         </div>
-      )}
+      )*/}
     </div>
   );
 };
