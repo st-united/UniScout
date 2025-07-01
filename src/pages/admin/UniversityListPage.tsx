@@ -28,7 +28,6 @@ import { useNavigate } from 'react-router-dom';
 
 import AdminSearchFilter from '../../components/AdminSearchFilter';
 import type { ColumnsType } from 'antd/es/table';
-
 const { Option } = Select;
 const { Title } = Typography;
 
@@ -71,6 +70,17 @@ interface NotificationItem {
   timestamp: string;
   isRead: boolean;
 }
+// Custom hook for debouncing input values
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 const sortOptions = [
   { label: 'High to Low Rank', value: 'rank-desc' },
@@ -78,9 +88,7 @@ const sortOptions = [
   { label: 'A-Z Name', value: 'name-asc' },
   { label: 'Z-A Name', value: 'name-desc' },
 ];
-
 type FilterKey = 'country' | 'region' | 'type' | 'size' | 'department' | 'search';
-
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -98,11 +106,47 @@ const UniversityListPage: React.FC = () => {
     department: '',
     search: '',
   });
+  const debouncedFilters = useDebounce(filters, 400);
 
+  const [sortBy, setSortBy] = useState('name-asc');
   const [searchInput, setSearchInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
-  const [sortBy, setSortBy] = useState('rank-desc');
+
+  useEffect(() => {
+    const fetchUniversities = async () => {
+      try {
+        const response = await axios.get('/admin/universities', {
+          params: {
+            search: filters.search || undefined,
+            type: filters.type || undefined,
+            country: filters.country || undefined,
+            size: filters.size || undefined,
+            fieldNames:
+              filters.department && filters.department !== 'all' ? [filters.department] : undefined,
+
+            sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
+            page: currentPage,
+            limit: pageSize,
+          },
+        });
+        setCurrentUniversityData(response.data.data);
+        // setTotalCount(response.data.totalCount);
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.error('Erreur API:', {
+            status: error.response?.status,
+            message: error.response?.data?.message,
+            data: error.response?.data,
+            config: error.config,
+          });
+        } else {
+          console.error('Unexpected Error:', error);
+        }
+      }
+    };
+    fetchUniversities();
+  }, [debouncedFilters, sortBy, currentPage, pageSize]);
 
   // Multi-select state
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -157,11 +201,11 @@ const UniversityListPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const debounce = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, search: searchInput }));
-      setCurrentPage(1);
-    }, 300);
-    return () => clearTimeout(debounce);
+    setFilters((prevFilters) => {
+      if (prevFilters.search === searchInput) return prevFilters;
+      return { ...prevFilters, search: searchInput };
+    });
+    setCurrentPage(1);
   }, [searchInput]);
 
   // Handle search from AdminSearchFilter component
@@ -580,6 +624,21 @@ const UniversityListPage: React.FC = () => {
       </Col>
     </Row>
   );
+  const itemRender = (_: any, type: string, originalElement: React.ReactNode) => {
+    const commonStyle = { color: '#ff7a00', background: 'none', border: 'none', cursor: 'pointer' };
+
+    if (type === 'prev') {
+      return <button style={commonStyle}>Previous</button>;
+    }
+    if (type === 'next') {
+      return <button style={commonStyle}>Next</button>;
+    }
+    return (
+      <button style={commonStyle}>
+        {React.isValidElement(originalElement) ? originalElement.props.children : originalElement}
+      </button>
+    );
+  };
 
   // Error state
   if (error && currentUniversityData.length === 0) {
@@ -677,6 +736,7 @@ const UniversityListPage: React.FC = () => {
                     size='small'
                     onClick={handleResetFilters}
                     style={{
+                      visibility: hasActiveFilters ? 'visible' : 'hidden',
                       color: '#ff7a00',
                       fontSize: '12px',
                       padding: '0 4px',
@@ -748,15 +808,15 @@ const UniversityListPage: React.FC = () => {
           </Row>
 
           {/* Search Results Info */}
-          {/* {searchInput && (
-            <Row style={{ marginBottom: 16 }}>
+          {searchInput && (
+            <Row style={{ position: 'relative', marginBottom: 16, minHeight: '24px' }}>
               <Col>
-                <div style={{ fontSize: '14px', color: '#666' }}>
-                  Showing {sortedUniversities.length} results for &quot;{searchInput}&quot;
+                <div style={{ fontSize: '14px', color: '#000' }}>
+                  Results for &quot;<b>{searchInput}</b>&quot;:
                 </div>
               </Col>
             </Row>
-          )} */}
+          )}
 
           {/* Table */}
           <Table
@@ -850,6 +910,21 @@ const UniversityListPage: React.FC = () => {
             scroll={{ x: 800 }}
             style={{ marginBottom: 16 }}
           />
+
+          {/* Custom Pagination */}
+          <Row justify='center'>
+            <Pagination
+              current={currentPage}
+              total={universityData?.totalCount || 0}
+              pageSize={pageSize}
+              onChange={(page, size) => {
+                setCurrentPage(page);
+                setPageSize(size || 12);
+              }}
+              showSizeChanger={false}
+              itemRender={itemRender}
+            />
+          </Row>
         </Card>
       </div>
 
