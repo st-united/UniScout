@@ -16,7 +16,6 @@ import {
   Row,
   Col,
   Typography,
-  Pagination,
   Modal,
   Drawer,
   Badge,
@@ -146,7 +145,17 @@ const UniversityListPage: React.FC = () => {
       }
     };
     fetchUniversities();
-  }, [debouncedFilters, sortBy, currentPage, pageSize]);
+  }, [
+    debouncedFilters,
+    sortBy,
+    currentPage,
+    pageSize,
+    filters.search,
+    filters.type,
+    filters.country,
+    filters.size,
+    filters.department,
+  ]);
 
   // Multi-select state
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -198,7 +207,7 @@ const UniversityListPage: React.FC = () => {
   // Fetch universities on component mount
   useEffect(() => {
     fetchUniversities();
-  }, []);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     setFilters((prevFilters) => {
@@ -263,7 +272,9 @@ const UniversityListPage: React.FC = () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
         // API call to delete single university
-        await axios.delete(`/api/universities/admin/${universityToDelete.id}`);
+        await axios.delete(`/api/universities/admin/${universityToDelete.id}`, {
+          params: { confirm_deletion: true },
+        });
 
         setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
         message.success('University deleted successfully');
@@ -273,7 +284,7 @@ const UniversityListPage: React.FC = () => {
       } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
         // API call to delete multiple universities
         await axios.delete('/api/universities/admin/bulk', {
-          data: { ids: selectedRowKeys },
+          data: { ids: selectedRowKeys, confirm_deletion: true },
         });
 
         const universitiesToDelete = currentUniversityData.filter((uni) =>
@@ -624,21 +635,6 @@ const UniversityListPage: React.FC = () => {
       </Col>
     </Row>
   );
-  const itemRender = (_: any, type: string, originalElement: React.ReactNode) => {
-    const commonStyle = { color: '#ff7a00', background: 'none', border: 'none', cursor: 'pointer' };
-
-    if (type === 'prev') {
-      return <button style={commonStyle}>Previous</button>;
-    }
-    if (type === 'next') {
-      return <button style={commonStyle}>Next</button>;
-    }
-    return (
-      <button style={commonStyle}>
-        {React.isValidElement(originalElement) ? originalElement.props.children : originalElement}
-      </button>
-    );
-  };
 
   // Error state
   if (error && currentUniversityData.length === 0) {
@@ -686,7 +682,7 @@ const UniversityListPage: React.FC = () => {
       <div style={{ padding: isMobile ? '16px' : '24px' }}>
         <Card>
           {/* Mobile Filter Button */}
-          {/* {isMobile && (
+          {isMobile && (
             <Row style={{ marginBottom: 16 }}>
               <Col span={24}>
                 <Button
@@ -702,13 +698,13 @@ const UniversityListPage: React.FC = () => {
                 </Button>
               </Col>
             </Row>
-          )} */}
+          )}
 
           {/* Desktop Filter Section */}
-          {/* {!isMobile && <FilterSection />} */}
+          {!isMobile && <FilterSection />}
 
           {/* Floating Active Filters */}
-          {/* {hasActiveFilters && (
+          {hasActiveFilters && (
             <Row style={{ marginBottom: 16 }}>
               <Col span={24}>
                 <Space wrap>
@@ -749,7 +745,7 @@ const UniversityListPage: React.FC = () => {
                 </Space>
               </Col>
             </Row>
-          )} */}
+          )}
 
           {/* Header Section */}
           <Row justify='space-between' align='middle' style={{ marginBottom: 16 }}>
@@ -837,65 +833,78 @@ const UniversityListPage: React.FC = () => {
               showQuickJumper: false,
               className: 'custom-pagination',
               itemRender: (page, type, originalElement) => {
+                const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
+
+                const baseStyle: React.CSSProperties = {
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'color 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                };
+
                 if (type === 'prev') {
                   const isDisabled = currentPage === 1;
                   return (
                     <span
                       style={{
+                        ...baseStyle,
                         color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                        fontWeight: '500',
                         cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        transition: 'color 0.2s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
                       }}
                       onMouseEnter={(e) => {
-                        if (!isDisabled) {
-                          e.currentTarget.style.color = '#ffb366';
-                        }
+                        if (!isDisabled) e.currentTarget.style.color = '#ffb366';
                       }}
                       onMouseLeave={(e) => {
-                        if (!isDisabled) {
-                          e.currentTarget.style.color = '#ff7a00';
-                        }
+                        if (!isDisabled) e.currentTarget.style.color = '#ff7a00';
                       }}
                     >
                       &lt; Previous
                     </span>
                   );
                 }
+
                 if (type === 'next') {
-                  const isDisabled = currentPage >= Math.ceil(sortedUniversities.length / pageSize);
+                  const isDisabled = currentPage >= totalPages;
                   return (
                     <span
                       style={{
+                        ...baseStyle,
                         color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                        fontWeight: '500',
                         cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        transition: 'color 0.2s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
                       }}
                       onMouseEnter={(e) => {
-                        if (!isDisabled) {
-                          e.currentTarget.style.color = '#ffb366';
-                        }
+                        if (!isDisabled) e.currentTarget.style.color = '#ffb366';
                       }}
                       onMouseLeave={(e) => {
-                        if (!isDisabled) {
-                          e.currentTarget.style.color = '#ff7a00';
-                        }
+                        if (!isDisabled) e.currentTarget.style.color = '#ff7a00';
                       }}
                     >
                       Next &gt;
                     </span>
                   );
                 }
+
+                if (type === 'page') {
+                  const isCurrent = page === currentPage;
+                  return (
+                    <span
+                      style={{
+                        ...baseStyle,
+                        color: '#ff7a00',
+                        fontWeight: isCurrent ? 'bold' : 500,
+                      }}
+                    >
+                      {page}
+                    </span>
+                  );
+                }
+
                 if (type === 'jump-prev' || type === 'jump-next') {
                   return <span style={{ color: '#999' }}>•••</span>;
                 }
+
                 return originalElement;
               },
               style: {
@@ -910,21 +919,6 @@ const UniversityListPage: React.FC = () => {
             scroll={{ x: 800 }}
             style={{ marginBottom: 16 }}
           />
-
-          {/* Custom Pagination */}
-          <Row justify='center'>
-            <Pagination
-              current={currentPage}
-              total={universityData?.totalCount || 0}
-              pageSize={pageSize}
-              onChange={(page, size) => {
-                setCurrentPage(page);
-                setPageSize(size || 12);
-              }}
-              showSizeChanger={false}
-              itemRender={itemRender}
-            />
-          </Row>
         </Card>
       </div>
 
