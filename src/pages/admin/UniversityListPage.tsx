@@ -22,7 +22,7 @@ import {
   Tag,
 } from 'antd';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import AdminSearchFilter from '../../components/AdminSearchFilter';
@@ -112,38 +112,38 @@ const UniversityListPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
 
-  useEffect(() => {
-    const fetchUniversities = async () => {
-      try {
-        const response = await axios.get('/admin/universities', {
-          params: {
-            search: filters.search || undefined,
-            type: filters.type || undefined,
-            country: filters.country || undefined,
-            size: filters.size || undefined,
-            fieldNames:
-              filters.department && filters.department !== 'all' ? [filters.department] : undefined,
+  const fetchUniversities = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get<UniversityApiResponse>('/universities/admin', {
+        params: {
+          search: filters.search || undefined,
+          type: filters.type || undefined,
+          country: filters.country || undefined,
+          size: filters.size || undefined,
+          fieldNames:
+            filters.department && filters.department !== 'all' ? [filters.department] : undefined,
 
-            sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
-            page: currentPage,
-            limit: pageSize,
-          },
-        });
-        setCurrentUniversityData(response.data.data);
-        // setTotalCount(response.data.totalCount);
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          console.error('Erreur API:', {
-            status: error.response?.status,
-            message: error.response?.data?.message,
-            data: error.response?.data,
-            config: error.config,
-          });
-        } else {
-          console.error('Unexpected Error:', error);
-        }
-      }
-    };
+          sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
+          page: currentPage,
+          limit: pageSize,
+        },
+      });
+      setCurrentUniversityData(response.data.data);
+      setUniversityData(response.data);
+    } catch (err) {
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message || 'Failed to fetch universities'
+        : 'An unexpected error occurred';
+      setError(errorMessage);
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, sortBy, currentPage, pageSize]);
+
+  useEffect(() => {
     fetchUniversities();
   }, [
     debouncedFilters,
@@ -155,6 +155,7 @@ const UniversityListPage: React.FC = () => {
     filters.country,
     filters.size,
     filters.department,
+    fetchUniversities,
   ]);
 
   // Multi-select state
@@ -170,28 +171,6 @@ const UniversityListPage: React.FC = () => {
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
 
   // API function to fetch universities
-  const fetchUniversities = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get<UniversityApiResponse>('/universities/admin', {
-        params: {
-          limit: 12,
-          page: currentPage,
-        },
-      });
-      setCurrentUniversityData(response.data.data);
-      setUniversityData(response.data);
-    } catch (err) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message || 'Failed to fetch universities'
-        : 'An unexpected error occurred';
-      setError(errorMessage);
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Check screen size
   useEffect(() => {
@@ -207,7 +186,7 @@ const UniversityListPage: React.FC = () => {
   // Fetch universities on component mount
   useEffect(() => {
     fetchUniversities();
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, fetchUniversities]);
 
   useEffect(() => {
     setFilters((prevFilters) => {
@@ -271,9 +250,13 @@ const UniversityListPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
-        // API call to delete single university
-        await axios.delete(`/api/universities/admin/${universityToDelete.id}`, {
-          params: { confirm_deletion: true },
+        console.log('Deleting university ID:', universityToDelete.id);
+
+        await axios.delete(`/universities/${universityToDelete.id}`, {
+          data: { confirm_deletion: true },
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
 
         setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
@@ -282,9 +265,16 @@ const UniversityListPage: React.FC = () => {
           `AUDIT: Deleted university ${universityToDelete.university} (ID: ${universityToDelete.id})`,
         );
       } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
-        // API call to delete multiple universities
-        await axios.delete('/api/universities/admin/bulk', {
-          data: { ids: selectedRowKeys, confirm_deletion: true },
+        console.log('Deleting multiple universities:', selectedRowKeys);
+
+        await axios.delete('/universities/admin/bulk', {
+          data: {
+            ids: selectedRowKeys,
+            confirm_deletion: true,
+          },
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
 
         const universitiesToDelete = currentUniversityData.filter((uni) =>
@@ -386,7 +376,7 @@ const UniversityListPage: React.FC = () => {
 
   const getUniqueDepartments = () => {
     const allDepartments = currentUniversityData.flatMap((u) =>
-      u.strength.split(',').map((dept) => dept.trim()),
+      (u.strength || '').split(',').map((dept) => dept.trim()),
     );
     return [...new Set(allDepartments)].filter(Boolean).sort();
   };
@@ -669,14 +659,14 @@ const UniversityListPage: React.FC = () => {
   }
 
   return (
-    <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
       {/* Search and Notification Bar */}
-      {/* <AdminSearchFilter
+      <AdminSearchFilter
         onSearch={handleGlobalSearch}
         onNotificationClick={handleNotificationClick}
         onMarkAllAsRead={handleMarkAllAsRead}
         placeholder='Search by university name, location, or field...'
-      /> */}
+      />
 
       {/* Main Content */}
       <div style={{ padding: isMobile ? '16px' : '24px' }}>
