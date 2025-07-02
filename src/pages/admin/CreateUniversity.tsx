@@ -48,6 +48,7 @@ const CreateUniversity = () => {
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [showOtherField, setShowOtherField] = useState(false);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [showSubjectsField, setShowSubjectsField] = useState(false);
 
   // Button styles with hover effects
@@ -91,187 +92,192 @@ const CreateUniversity = () => {
 
   // Updated academic fields to match API enum
   const academicFieldsOptions = [
-    { value: 'agricultural_veterinary_science', label: 'Agricultural & Veterinary Science' },
-    { value: 'arts_humanities', label: 'Arts & Humanities' },
-    { value: 'business_economics', label: 'Business & Economics' },
-    { value: 'computer_science_it', label: 'Computer Science & IT' },
-    { value: 'education', label: 'Education' },
+    { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
+    { value: 'arts_design', label: 'Arts & Design' },
+    { value: 'business_management_law', label: 'Business, Management & Law' },
+    { value: 'education_training', label: 'Education & Training' },
     { value: 'engineering_technology', label: 'Engineering & Technology' },
-    { value: 'environmental_science', label: 'Environmental Science' },
     { value: 'health_medicine', label: 'Health & Medicine' },
-    { value: 'law', label: 'Law' },
-    { value: 'mathematics_statistics', label: 'Mathematics & Statistics' },
+    { value: 'humanities_languages', label: 'Humanities & Languages' },
+    { value: 'ict', label: 'Information & Communication Technology (ICT)' },
     { value: 'natural_sciences', label: 'Natural Sciences' },
-    { value: 'psychology', label: 'Psychology' },
-    { value: 'social_sciences', label: 'Social Sciences' },
+    { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
+    {
+      value: 'transport_safety_security_military',
+      label: 'Transport, Safety, Security & Military',
+    },
     { value: 'other', label: 'Other' },
   ];
 
   // Valid subjects for each academic field
   const academicFieldSubjects: { [key: string]: string[] } = {
-    agricultural_veterinary_science: [
+    agricultural_veterinary_sciences: [
       'Agriculture',
-      'Veterinary Medicine',
+      'Agricultural Biotechnology',
       'Animal Science',
-      'Plant Science',
-      'Soil Science',
+      'Plant Protection',
+      'Livestock Management',
+      'Horticultural Science',
+      'Veterinary Medicine',
       'Agricultural Engineering',
-      'Food Science',
       'Forestry',
       'Aquaculture',
-      'Livestock Management',
     ],
-    arts_humanities: [
-      'Literature',
-      'Philosophy',
-      'History',
-      'Art History',
+    arts_design: [
+      'Fine Art',
+      'Performing Art',
+      'Visual Art',
+      'Industrial Design',
+      'Graphic Design',
+      'Photography',
       'Music',
-      'Theater',
-      'Creative Writing',
-      'Cultural Studies',
-      'Linguistics',
-      'Religious Studies',
-      'Archaeology',
-      'Fine Arts',
+      'Design',
+      'Film and Television',
+      'Theatre and Film',
     ],
-    business_economics: [
+    business_management_law: [
       'Business Administration',
-      'Economics',
-      'Finance',
-      'Marketing',
       'Management',
+      'Marketing',
       'Accounting',
+      'Finance',
+      'Economics',
       'International Business',
-      'Entrepreneurship',
+      'Commerce',
       'Operations Management',
-      'Supply Chain Management',
+      'Law',
+      'Tax Law',
+      'Corporate Law',
+      'Criminal Law',
+      'Civil Law',
     ],
-    computer_science_it: [
-      'Computer Science',
-      'Software Engineering',
-      'Information Technology',
-      'Data Science',
-      'Cybersecurity',
-      'Artificial Intelligence',
-      'Machine Learning',
-      'Web Development',
-      'Database Management',
-      'Network Administration',
-      'Mobile App Development',
-    ],
-    education: [
+    education_training: [
+      'Teacher Training',
+      'Primary Education',
+      'Early Childhood Education',
+      'Educational Psychology',
+      'Educational Science',
+      'Educational Leadership',
+      'Special Education',
+      'Adult Education',
+      'Curriculum Development',
       'Elementary Education',
       'Secondary Education',
-      'Special Education',
-      'Educational Psychology',
-      'Curriculum Development',
-      'Educational Leadership',
-      'Early Childhood Education',
-      'Adult Education',
-      'Educational Technology',
-      'Teaching Methodology',
     ],
     engineering_technology: [
       'Mechanical Engineering',
-      'Electrical Engineering',
       'Civil Engineering',
+      'Electrical Engineering',
       'Chemical Engineering',
-      'Aerospace Engineering',
-      'Industrial Engineering',
-      'Biomedical Engineering',
+      'Computer Engineering',
       'Environmental Engineering',
-      'Materials Engineering',
-      'Petroleum Engineering',
-    ],
-    environmental_science: [
-      'Environmental Science',
-      'Ecology',
-      'Climate Science',
-      'Conservation Biology',
-      'Environmental Chemistry',
-      'Renewable Energy',
-      'Sustainability Studies',
-      'Environmental Policy',
-      'Marine Biology',
-      'Atmospheric Science',
+      'Aerospace Engineering',
+      'Architectural Engineering',
+      'Industrial Engineering',
+      'Materials Science and Engineering',
+      'Mechatronics Engineering',
+      'Software Engineering',
+      'Telecommunications Engineering',
+      'Structural Engineering',
+      'Mining Engineering',
+      'Precision Engineering',
+      'Energy Systems Engineering',
+      'Energy Science and Engineering',
+      'Supercomputer Education and Research Centre',
     ],
     health_medicine: [
       'Medicine',
-      'Nursing',
-      'Pharmacy',
       'Dentistry',
-      'Physical Therapy',
+      'Pharmacy',
+      'Nursing',
       'Public Health',
-      'Medical Technology',
+      'Physiotherapy',
+      'Occupational Therapy',
+      'Speech Pathology',
+      'Medical Imaging',
       'Radiology',
       'Nutrition',
-      'Occupational Therapy',
+      'Health Science',
+      'Biomedical Engineering',
+      'Paramedicine',
       'Psychology',
     ],
-    law: [
-      'Constitutional Law',
-      'Criminal Law',
-      'Civil Law',
-      'International Law',
-      'Corporate Law',
-      'Environmental Law',
-      'Human Rights Law',
-      'Intellectual Property Law',
-      'Tax Law',
-      'Family Law',
+    humanities_languages: [
+      'Liberal Art',
+      'History',
+      'Philosophy',
+      'Literature',
+      'Linguistics',
+      'Other Languages and Literatures',
+      'Urdu',
+      'Persian',
+      'Hindi',
+      'Sanskrit',
+      'Art and Archaeology',
+      'Religious Studies',
     ],
-    mathematics_statistics: [
-      'Mathematics',
-      'Statistics',
-      'Applied Mathematics',
-      'Pure Mathematics',
-      'Actuarial Science',
-      'Mathematical Modeling',
-      'Probability Theory',
-      'Numerical Analysis',
-      'Operations Research',
+    ict: [
+      'Information Technology',
+      'Computer Science',
+      'Software Engineering',
+      'Cybersecurity',
+      'Information and Communication Engineering',
+      'Electrical and Computer Systems Engineering',
+      'Web Development',
+      'Data Science',
+      'Mobile App Development',
+      'Computer Systems Engineering',
+      'Computer Science and Automation',
+      'Information Engineering',
+      'Network Administration',
+      'Artificial Intelligence',
+      'Machine Learning',
+      'Business Information Systems',
     ],
     natural_sciences: [
       'Physics',
       'Chemistry',
       'Biology',
+      'Mathematics',
+      'Statistics',
+      'Applied Physics',
+      'Applied Chemistry',
+      'Genetics',
+      'Botany',
+      'Zoology',
+      'Oceanography',
+      'Meteorology',
       'Geology',
       'Astronomy',
       'Biochemistry',
-      'Botany',
-      'Zoology',
+      'Environmental Chemistry',
+      'Health Science',
       'Microbiology',
-      'Genetics',
-      'Oceanography',
-      'Meteorology',
     ],
-    psychology: [
-      'Clinical Psychology',
-      'Cognitive Psychology',
-      'Developmental Psychology',
-      'Social Psychology',
-      'Behavioral Psychology',
-      'Neuropsychology',
-      'Educational Psychology',
-      'Counseling Psychology',
-      'Forensic Psychology',
-      'Health Psychology',
-    ],
-    social_sciences: [
-      'Sociology',
+    social_behavioral_sciences: [
       'Anthropology',
+      'Sociology',
       'Political Science',
       'International Relations',
-      'Geography',
-      'Social Work',
       'Criminology',
+      'Psychology',
+      'Geography',
+      'Educational Psychology',
+      'Social and Human Science',
       'Urban Planning',
       'Public Administration',
       'Gender Studies',
+      'Management Studies',
     ],
-    other: [], // Any subject is valid for 'other'
+    transport_safety_security_military: [
+      'Aeronautics and Astronautics',
+      'Nuclear and Quantum Engineering',
+      'Systems and Control Engineering',
+      'Robotics',
+    ],
+    other: [], // any custom subject user types manually
   };
+  //
 
   const universityTypes = [
     { value: 'public', label: 'Public' },
@@ -316,29 +322,19 @@ const CreateUniversity = () => {
     if (!hasOther) {
       form.setFieldsValue({ otherField: undefined });
     }
-    // Clear subjects when academic fields change
+
+    // Clear subjects
     form.setFieldsValue({ subjects: [] });
-  };
 
-  // Get available subjects based on selected academic fields
-  const getAvailableSubjects = () => {
-    const selectedFields = form.getFieldValue('academicFields') || [];
-    const availableSubjects: string[] = [];
-
-    selectedFields.forEach((field: string) => {
-      if (academicFieldSubjects[field]) {
-        availableSubjects.push(...academicFieldSubjects[field]);
-      }
-    });
-
-    // Remove duplicates
-    return [...new Set(availableSubjects)];
+    // Compute available subjects based on all selected academic fields
+    const allSubjects = selectedFields.flatMap((field) => academicFieldSubjects[field] || []);
+    const uniqueSubjects = Array.from(new Set(allSubjects));
+    setAvailableSubjects(uniqueSubjects);
   };
 
   // Validate subjects belong to selected academic fields
   const validateSubjects = (subjects: string[]) => {
     const selectedFields = form.getFieldValue('academicFields') || [];
-    const availableSubjects = getAvailableSubjects();
 
     if (selectedFields.includes('other')) {
       return true; // Any subject is valid when 'other' is selected
@@ -416,7 +412,7 @@ const CreateUniversity = () => {
       }
 
       // Submit with multipart/form-data
-      const response = await axios.post('/universities', formData, {
+      const response = await axios.post('/admin/universities', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -945,7 +941,7 @@ const CreateUniversity = () => {
                     style={{ width: '100%' }}
                     size='large'
                     maxTagCount='responsive'
-                    options={getAvailableSubjects().map((subject) => ({
+                    options={availableSubjects.map((subject) => ({
                       label: subject,
                       value: subject,
                     }))}

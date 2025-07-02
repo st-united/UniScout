@@ -34,6 +34,7 @@ const { Title } = Typography;
 interface University {
   id: string;
   university: string;
+  abbreviation: string;
   latitude: number;
   longitude: number;
   logo: string;
@@ -49,7 +50,8 @@ interface University {
   strength: string;
   description: string;
   exchange: string | null;
-  academicFields: string[];
+  fieldNames: string[];
+  subjectNames: string[];
   size: string;
 }
 
@@ -116,7 +118,7 @@ const UniversityListPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get<UniversityApiResponse>('/universities/admin', {
+      const response = await axios.get<UniversityApiResponse>('/admin/universities', {
         params: {
           search: filters.search || undefined,
           type: filters.type || undefined,
@@ -307,7 +309,7 @@ const UniversityListPage: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const response = await axios.get('/api/universities/admin/export', {
+      const response = await axios.get('/admin/universities/export', {
         responseType: 'blob',
       });
 
@@ -461,10 +463,10 @@ const UniversityListPage: React.FC = () => {
     },
     {
       title: 'Broad field',
-      dataIndex: 'academicFields',
-      key: 'academicFields',
+      dataIndex: 'academicFieldsCommaSeparated',
+      key: 'academicFieldsCommaSeparated',
       width: 200,
-      render: (academicFields: string) => (
+      render: (academicFieldsCommaSeparated: string) => (
         <div
           style={{
             maxWidth: '180px',
@@ -473,7 +475,7 @@ const UniversityListPage: React.FC = () => {
             whiteSpace: 'nowrap',
           }}
         >
-          {academicFields}
+          {academicFieldsCommaSeparated}
         </div>
       ),
     },
