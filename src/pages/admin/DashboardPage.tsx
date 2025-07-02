@@ -1,5 +1,6 @@
+import axios from 'axios';
 import { Filter, ChevronRight } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -44,55 +45,88 @@ const dashboardData = {
     { month: 'Nov', pending: 130, inProgress: 110, completed: 85, rejected: 40 },
     { month: 'Dec', pending: 160, inProgress: 125, completed: 95, rejected: 45 },
   ],
-  trafficByLocation: [
-    { name: 'United States', value: 52.1, color: '#3B82F6' },
-    { name: 'Viet Nam', value: 22.8, color: '#10B981' },
-    { name: 'Australia', value: 13.9, color: '#F59E0B' },
-    { name: 'Korea', value: 13.9, color: '#EF4444' },
-    { name: 'Japan', value: 52.1, color: '#8B5CF6' },
-    { name: 'India', value: 52.1, color: '#06B6D4' },
-  ],
-  topUniversities: [
-    {
-      rank: 1,
-      name: 'Massachusetts Institute of Technology',
-      location: 'London, United Kingdom',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MIT_logo.svg/100px-MIT_logo.svg.png',
-    },
-    {
-      rank: 2,
-      name: 'Massachusetts Institute of Technology',
-      location: 'London, United Kingdom',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MIT_logo.svg/100px-MIT_logo.svg.png',
-    },
-    {
-      rank: 3,
-      name: 'Massachusetts Institute of Technology',
-      location: 'London, United Kingdom',
-      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/MIT_logo.svg/100px-MIT_logo.svg.png',
-    },
-    {
-      rank: 4,
-      name: 'Massachusetts Institute of Technology',
-      location: 'London, United Kingdom',
-      logo: null,
-    },
-    {
-      rank: 5,
-      name: 'Massachusetts Institute of Technology',
-      location: 'London, United Kingdom',
-      logo: null,
-    },
-  ],
 };
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 const DashboardPage = () => {
-  const [activeTab, setActiveTab] = React.useState('Manage University');
-  const hasData = dashboardData.totalUniversities > 0 || dashboardData.totalContactRequests > 0;
+  const [summary, setSummary] = useState<{ universityCount: number; contactCount: number } | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await axios.get('/dashboard/summary');
+        setSummary({
+          universityCount: res.data.universityCount,
+          contactCount: res.data.contactCount,
+        });
+      } catch (error) {
+        console.error('Error :', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!hasData) {
+    fetchSummary();
+  }, []);
+
+  const [trafficData, setTrafficData] = useState<{ country: string; count: number }[]>([]);
+  const [trafficLoading, setTrafficLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTraffic = async () => {
+      try {
+        const res = await axios.get('/dashboard/country-distribution');
+        setTrafficData(res.data);
+      } catch (err) {
+        console.error('Erreur chargement trafic par pays :', err);
+      } finally {
+        setTrafficLoading(false);
+      }
+    };
+
+    fetchTraffic();
+  }, []);
+  type TopSearchItem = {
+    name: string;
+    logo?: string | null;
+    country?: string;
+    count: number;
+  };
+  const [topSearch, setTopSearch] = useState<TopSearchItem[]>([]);
+
+  useEffect(() => {
+    const fetchTopSearch = async () => {
+      try {
+        const res = await axios.get('/dashboard/top-searched');
+        setTopSearch(res.data);
+      } catch (error) {
+        console.error('Erreur chargement top search :', error);
+      }
+    };
+
+    fetchTopSearch();
+  }, []);
+
+  const totalTraffic = trafficData.reduce((sum, item) => sum + Number(item.count), 0);
+
+  const trafficByLocation = trafficData.map((item) => ({
+    name: item.country,
+    value: Number(((Number(item.count) / totalTraffic) * 100).toFixed(1)),
+  }));
+
+  const [activeTab, setActiveTab] = React.useState('Manage University');
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-full'>
+        <p className='text-gray-500'>Chargement des données...</p>
+      </div>
+    );
+  }
+
+  if (!summary || (!summary.universityCount && !summary.contactCount)) {
     return (
       <div className='flex items-center justify-center h-full bg-gray-50'>
         <div className='text-center'>
@@ -120,12 +154,12 @@ const DashboardPage = () => {
           <div className='bg-blue-50 p-6 rounded-lg border border-blue-100'>
             <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Universities</h3>
             <p className='text-3xl font-bold text-gray-900'>
-              {dashboardData.totalUniversities.toLocaleString()}
+              {summary.universityCount.toLocaleString()}
             </p>
           </div>
           <div className='bg-orange-50 p-6 rounded-lg border border-orange-100'>
             <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Contact Request</h3>
-            <p className='text-3xl font-bold text-gray-900'>{dashboardData.totalContactRequests}</p>
+            <p className='text-3xl font-bold text-gray-900'>{summary.contactCount}</p>
           </div>
         </div>
 
@@ -178,41 +212,45 @@ const DashboardPage = () => {
               <h3 className='text-lg font-semibold text-gray-800'>Traffic by Location</h3>
               <Filter className='w-4 h-4 text-gray-400' />
             </div>
-            <div className='flex items-center justify-between'>
-              <div className='w-48 h-48'>
-                <ResponsiveContainer width='100%' height='100%'>
-                  <PieChart>
-                    <Pie
-                      data={dashboardData.trafficByLocation}
-                      cx='50%'
-                      cy='50%'
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={2}
-                      dataKey='value'
-                    >
-                      {dashboardData.trafficByLocation.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className='flex-1 ml-6 space-y-3'>
-                {dashboardData.trafficByLocation.map((item, index) => (
-                  <div key={item.name} className='flex justify-between items-center'>
-                    <div className='flex items-center space-x-3'>
-                      <div
-                        className='w-3 h-3 rounded-full'
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      ></div>
-                      <span className='text-sm text-gray-700'>{item.name}</span>
+            {trafficLoading ? (
+              <p className='text-gray-500'>Chargement...</p>
+            ) : (
+              <div className='flex items-center justify-between'>
+                <div className='w-48 h-48'>
+                  <ResponsiveContainer width='100%' height='100%'>
+                    <PieChart>
+                      <Pie
+                        data={trafficByLocation}
+                        cx='50%'
+                        cy='50%'
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={2}
+                        dataKey='value'
+                      >
+                        {trafficByLocation.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className='flex-1 ml-6 space-y-3'>
+                  {trafficByLocation.map((item, index) => (
+                    <div key={item.name} className='flex justify-between items-center'>
+                      <div className='flex items-center space-x-3'>
+                        <div
+                          className='w-3 h-3 rounded-full'
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        ></div>
+                        <span className='text-sm text-gray-700'>{item.name}</span>
+                      </div>
+                      <span className='text-sm font-medium text-gray-900'>{item.value}%</span>
                     </div>
-                    <span className='text-sm font-medium text-gray-900'>{item.value}%</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -262,28 +300,34 @@ const DashboardPage = () => {
           <div className='bg-white p-6 rounded-lg shadow-sm border'>
             <h3 className='text-lg font-semibold text-gray-800 mb-6'>Top Search University</h3>
             <div className='space-y-4'>
-              {dashboardData.topUniversities.map((university) => (
+              {topSearch.map((item, index) => (
                 <div
-                  key={university.rank}
+                  key={index}
                   className='flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors'
                 >
                   <div className='flex items-center space-x-4'>
-                    <div className='text-lg font-bold text-gray-400'>#{university.rank}</div>
+                    <div className='text-lg font-bold text-gray-400'>#{index + 1}</div>
                     <div className='w-12 h-12 bg-red-600 rounded flex items-center justify-center flex-shrink-0'>
-                      {university.logo ? (
-                        <img src={university.logo} alt='University logo' className='w-8 h-8' />
+                      {item.logo ? (
+                        <img
+                          src={item.logo}
+                          alt='University logo'
+                          className='w-8 h-8 object-contain'
+                        />
                       ) : (
-                        <span className='text-white font-bold text-sm'>
-                          {university.rank === 4 ? 'IMPERIAL' : 'MIT'}
+                        <span className='text-white font-bold text-xs'>
+                          {item.name.slice(0, 4).toUpperCase()}
                         </span>
                       )}
                     </div>
                     <div>
-                      <h4 className='font-medium text-gray-900 text-sm'>{university.name}</h4>
-                      <p className='text-yellow-500 text-xs'>{university.location}</p>
+                      <h4 className='font-medium text-gray-900 text-sm'>{item.name}</h4>
+                      <p className='text-yellow-500 text-xs'>{item.country || 'Unknown'}</p>
                     </div>
                   </div>
-                  <ChevronRight className='w-5 h-5 text-gray-400' />
+                  <div className='text-sm text-gray-500 font-medium'>
+                    {item.count} search{item.count > 1 ? 'es' : ''}
+                  </div>
                 </div>
               ))}
             </div>
