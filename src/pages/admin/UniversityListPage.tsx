@@ -304,7 +304,7 @@ const UniversityListPage: React.FC = () => {
   };
 
   const handleEdit = (universityId: string) => {
-    navigate(`/admin/edit-university/${universityId}`);
+    navigate(`/edit-university/${universityId}`);
   };
 
   const handleExport = async () => {
@@ -770,7 +770,7 @@ const UniversityListPage: React.FC = () => {
                 <Button
                   type='primary'
                   icon={<PlusOutlined />}
-                  onClick={() => navigate('/admin/create-university')}
+                  onClick={() => navigate('/create-university')}
                   style={{
                     backgroundColor: '#ff7a00',
                     borderColor: '#ff7a00',

@@ -39,6 +39,10 @@ const routes = [
     ),
     children: [
       {
+        index: true,
+        element: <DashboardPage />,
+      },
+      {
         path: 'universities',
         element: <UniversityListPage />,
       },
@@ -53,10 +57,6 @@ const routes = [
       {
         path: 'edit-university',
         element: <EditUniversity />,
-      },
-      {
-        path: 'dashboard',
-        element: <DashboardPage />,
       },
       {
         path: 'manage',
