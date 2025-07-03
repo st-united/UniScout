@@ -10,8 +10,13 @@ import DashboardPage from '@app/pages/admin/DashboardPage';
 import EditUniversity from '@app/pages/admin/EditUniversity';
 import ManagePage from '@app/pages/admin/ManagePage';
 import UniversityListPage from '@app/pages/admin/UniversityListPage';
+import SignIn from '@app/pages/SignIn/SignIn';
 
 const routes = [
+  {
+    path: 'login',
+    element: <SignIn />,
+  },
   {
     element: <PrivateLayout />,
     children: [
@@ -26,7 +31,7 @@ const routes = [
     ],
   },
   {
-    path: 'admin',
+    path: '/',
     element: (
       <ProtectedRoute>
         <AdminLayout />
@@ -36,6 +41,10 @@ const routes = [
       {
         path: 'universities',
         element: <UniversityListPage />,
+      },
+      {
+        index: true,
+        element: <div>Home</div>,
       },
       {
         path: 'create-university',
