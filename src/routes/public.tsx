@@ -26,6 +26,10 @@ const routes = [
         path: 'login',
         element: <SignIn />,
       },
+      {
+        path: 'admin/login',
+        element: <SignIn />,
+      },
     ],
   },
 ];
