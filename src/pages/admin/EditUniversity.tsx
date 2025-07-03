@@ -1,369 +1,463 @@
+import { InboxOutlined, ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
+import {
+  Form,
+  Input,
+  Select,
+  Button,
+  Upload,
+  Card,
+  Row,
+  Col,
+  message,
+  Typography,
+  InputNumber,
+  Spin,
+} from 'antd';
 import axios from 'axios';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import Sidebar from '../../components/Sidebar';
+const { TextArea } = Input;
+const { Option } = Select;
+const { Title } = Typography;
+const { Dragger } = Upload;
 
-const fieldsOptions = [
-  'Agriculture & Food Science',
-  'Arts & Design',
-  'Economics, Business & Management',
-  'Engineering',
-  'Law & Political Science',
-  'Medicine, Pharmacy & Health Sciences',
-  'Physical Science',
-  'Social Sciences & Humanities',
-  'Sports & Physical Education',
-  'Technology',
-  'Other',
-];
+interface UniversityData {
+  universityName: string;
+  country: string;
+  location: string;
+  latitude?: string;
+  longitude?: string;
+  type: string;
+  numberOfStudents?: number;
+  rank?: number;
+  phone: string;
+  email: string;
+  website: string;
+  description?: string;
+  fields: string[];
+  other?: string;
+  logo?: File;
+  logoUrl?: string; // For displaying existing logo
+}
 
-const EditUniversity: React.FC = () => {
+const EditUniversity = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const fieldsRef = useRef<HTMLDivElement>(null);
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string>('');
+  const [isEditable, setIsEditable] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    location: '',
-    coordinates: '',
-    type: '',
-    numberOfStudents: '',
-    ranking: '',
-    phone: '',
-    email: '',
-    website: '',
-    description: '',
-    fields: [] as string[],
-    other: '',
-  });
+  const fieldsOptions = [
+    'Science & Engineering',
+    'Economics, Business & Management',
+    'Social Sciences & Humanities',
+    'Medicine, Pharmacy & Health Sciences',
+    'Arts & Design',
+    'Law & Political Science',
+    'Agriculture & Food Science',
+    'Sports & Physical Education',
+    'Emerging Technologies & Interdisciplinary Studies',
+    'Other',
+  ];
 
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [fieldsOpen, setFieldsOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState('');
+  const universityTypes = [
+    { value: 'Public', label: 'Public' },
+    { value: 'Private', label: 'Private' },
+    { value: 'Academy', label: 'Academy' },
+    { value: 'International', label: 'International' },
+  ];
 
+  // Fetch university data on component mount
   useEffect(() => {
     const fetchUniversity = async () => {
       try {
-        const response = await axios.get(`/api/universities/${id}`);
-        setFormData(response.data);
+        setPageLoading(true);
+        const response = await axios.get(`/universities/${id}`);
+        const universityData = response.data;
+        if (!universityData) {
+          message.error('University not found');
+          navigate('/admin/universities'); // Redirect if not found
+          return;
+        }
+        // Map the data to match the form structure
+        const formData = {
+          universityName:
+            universityData.name || universityData.universityName || universityData.university || '',
+          country: universityData.country || '',
+          location: universityData.location || '',
+          latitude: universityData.latitude || '',
+          longitude: universityData.longitude || '',
+          type: universityData.type || '',
+          numberOfStudents:
+            universityData.studentPopulation || universityData.numberOfStudents || undefined,
+          rank: universityData.rank || universityData.ranking || undefined,
+          phone: universityData.contact || universityData.phone || '',
+          email: universityData.email || '',
+          website: universityData.website || 'https://',
+          description: universityData.description || '',
+          fields: universityData.academicFields || [],
+          other: universityData.other || '',
+        };
+
+        // Set form values
+        form.setFieldsValue(formData);
+
+        // Set existing logo URL if available
+        if (universityData.logoUrl || universityData.logo) {
+          setExistingLogoUrl(universityData.logoUrl || universityData.logo);
+        }
       } catch (error) {
-        console.error('Failed to fetch university data', error);
+        message.error('Failed to load university data');
+        navigate('/admin/universities'); // Redirect back if fetch fails
+      } finally {
+        setPageLoading(false);
       }
     };
 
-    fetchUniversity();
+    if (id) {
+      fetchUniversity();
+    }
+  }, [id, form, navigate]);
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (fieldsRef.current && !fieldsRef.current.contains(e.target as Node)) {
-        setFieldsOpen(false);
+  const uploadProps = {
+    name: 'logo',
+    multiple: false,
+    accept: 'image/*',
+    beforeUpload: (file: File) => {
+      const isImage = file.type.startsWith('image/');
+      const isLt5M = file.size / 1024 / 1024 < 5;
+
+      if (!isImage) {
+        message.error('You can only upload image files!');
+        return false;
       }
-    };
+      if (!isLt5M) {
+        message.error('Image must be smaller than 5MB!');
+        return false;
+      }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [id]);
+      setLogoFile(file);
+      form.setFieldsValue({ logo: file.name });
+      message.success(`${file.name} selected successfully`);
+      return false; // Prevent auto upload
+    },
+    onRemove: () => {
+      setLogoFile(null);
+      form.setFieldsValue({ logo: undefined });
+    },
+  };
 
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.location.trim()) newErrors.location = 'Location is required';
-    if (!formData.type) newErrors.type = 'University type is required';
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email';
+  // Handle form submission
+  const onFinish = async (values: UniversityData) => {
+    setLoading(true);
+
+    const dto = mapToUpdateDto(values);
+    const formData = new FormData();
+
+    // Append form values to FormData
+    Object.entries(dto).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((v) => formData.append(`${key}[]`, v != null ? String(v) : ''));
+      } else if (value !== undefined && value !== null) {
+        formData.append(key, typeof value === 'number' ? String(value) : value);
+      }
+    });
+    // Append logo file if it exists
+    if (logoFile) {
+      formData.append('logo', logoFile);
     }
-    if (formData.website && !/^https?:\/\/.+\..+/.test(formData.website)) {
-      newErrors.website = 'Invalid URL';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFieldToggle = (field: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      fields: prev.fields.includes(field)
-        ? prev.fields.filter((f) => f !== field)
-        : [...prev.fields, field],
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
+    // Append university ID
     try {
-      setIsSubmitting(true);
-      await axios.put(`/api/universities/${id}`, formData);
-      setSubmitMessage('University updated successfully!');
-      setTimeout(() => navigate('/admin/universities'), 1500);
-    } catch (error) {
-      console.error(error);
-      setSubmitMessage('Failed to update university.');
+      const response = await axios.patch(`/universities/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      message.success('University updated successfully!');
+      navigate('/admin/universities');
+    } catch (error: any) {
+      console.error('Error updating university:', error);
+      if (error.response?.data?.message) {
+        message.error(
+          Array.isArray(error.response.data.message)
+            ? error.response.data.message.join(', ')
+            : error.response.data.message,
+        );
+      } else {
+        message.error('Failed to update university');
+      }
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const [activeTab, setActiveTab] = useState<string>('universities');
+  const handleReset = () => {
+    // Reset form to original values by refetching data
+    const fetchUniversityForReset = async () => {
+      try {
+        const response = await axios.get(`/universities/${id}`);
+        const universityData = response.data;
+
+        const formData = {
+          universityName: universityData.name || universityData.universityName || '',
+          country: universityData.country || '',
+          location: universityData.location || '',
+          latitude: universityData.latitude || '',
+          longitude: universityData.longitude || '',
+          type: universityData.type || '',
+          numberOfStudents: universityData.numberOfStudents || undefined,
+          rank: universityData.rank || universityData.ranking || undefined,
+          phone: universityData.phone || '',
+          email: universityData.email || '',
+          website: universityData.website || 'https://',
+          description: universityData.description || '',
+          fields: universityData.fields || [],
+          other: universityData.other || '',
+        };
+
+        form.setFieldsValue(formData);
+        setLogoFile(null);
+        message.info('Form reset to original values');
+      } catch (error) {
+        message.error('Failed to reset form');
+      }
+    };
+
+    fetchUniversityForReset();
+  };
+
+  // Show loading spinner while fetching data
+  if (pageLoading) {
+    return (
+      <div
+        style={{
+          padding: '24px',
+          backgroundColor: '#f5f5f5',
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Spin size='large' />
+      </div>
+    );
+  }
+  // Map form values to DTO structure
+  const mapToUpdateDto = (values: UniversityData) => {
+    return {
+      university: values.universityName,
+      country: Array.isArray(values.country) ? values.country : [values.country],
+      location: values.location,
+      latitude: values.latitude ? Number(values.latitude) : undefined,
+      longitude: values.longitude ? Number(values.longitude) : undefined,
+      type: values.type?.toLowerCase(),
+      studentPopulation: values.numberOfStudents,
+      rank: values.rank,
+      contact: values.phone,
+      email: values.email,
+      website: values.website.startsWith('http') ? values.website : `https://${values.website}`,
+      description: values.description,
+      academicFields: values.fields || [],
+      strength: values.other,
+    };
+  };
 
   return (
-    <div className='flex h-screen overflow-hidden'>
-      <div className='flex flex-col flex-1 overflow-y-auto'>
-        <main className='flex-1 p-6 bg-gray-50'>
-          <div className='max-w-7xl mx-auto bg-white p-6 rounded-md shadow'>
-            <h1 className='text-2xl font-semibold mb-6'>Edit University</h1>
-            <form onSubmit={handleSubmit} className='space-y-6'>
-              {/* Text Inputs */}
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <div>
-                  <label htmlFor='name' className='block mb-1'>
-                    Name *
-                  </label>
-                  <input
-                    id='name'
-                    type='text'
-                    name='name'
-                    value={formData.name}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.name ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.name && <p className='text-red-500 text-sm mt-1'>{errors.name}</p>}
-                </div>
-                <div>
-                  <label htmlFor='location' className='block mb-1'>
-                    Location *
-                  </label>
-                  <input
-                    id='location'
-                    type='text'
-                    name='location'
-                    value={formData.location}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.location ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.location && (
-                    <p className='text-red-500 text-sm mt-1'>{errors.location}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor='coordinates' className='block mb-1'>
-                    Coordinates
-                  </label>
-                  <input
-                    id='coordinates'
-                    type='text'
-                    name='coordinates'
-                    value={formData.coordinates}
-                    onChange={handleChange}
-                    placeholder='e.g. 40.7128, -74.0060'
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
-                </div>
-              </div>
+    <div className='p-6 bg-gray-100 min-h-screen'>
+      <div className='max-w-7xl mx-auto'>
+        <div className='mb-6'>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/admin/universities')}
+            className='mb-4'
+          >
+            Back to Universities
+          </Button>
+          <Title level={2}>Edit University</Title>
+        </div>
 
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <div>
-                  <label htmlFor='university-type' className='block mb-1'>
-                    University Type *
-                  </label>
-                  <select
-                    id='university-type'
-                    name='type'
-                    value={formData.type}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.type ? 'border-red-500' : 'border-gray-300'
-                    }`}
+        <div className='bg-white rounded-lg shadow p-6'>
+          <Form
+            form={form}
+            layout='vertical'
+            onFinish={onFinish}
+            initialValues={{ website: 'https://', fields: [] }}
+          >
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              {/* Col 1 */}
+              <div className='md:col-span-2'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <Form.Item
+                    label='University Name'
+                    name='universityName'
+                    aria-label='universityName'
+                    rules={[{ required: true }]}
                   >
-                    <option value=''>Select type</option>
-                    <option value='Public'>Public</option>
-                    <option value='Private'>Private</option>
-                    <option value='Community'>Community</option>
-                    <option value='For-profit'>For-profit</option>
-                  </select>
-                  {errors.type && <p className='text-red-500 text-sm mt-1'>{errors.type}</p>}
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item
+                    label='Country'
+                    name='country'
+                    aria-label='country'
+                    rules={[{ required: true }]}
+                  >
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
                 </div>
-                <div>
-                  <label htmlFor='numberOfStudents' className='block mb-1'>
-                    Number of Students
-                  </label>
-                  <input
-                    id='numberOfStudents'
-                    type='number'
+
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  <Form.Item
+                    label='Location'
+                    name='location'
+                    aria-label='location'
+                    rules={[{ required: true }]}
+                  >
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item label='Latitude' name='latitude' aria-label='latitude'>
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item label='Longitude' name='longitude' aria-label='longitude'>
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                </div>
+
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4' aria-label='universityType'>
+                  <Form.Item label='University Type' name='type' rules={[{ required: true }]}>
+                    <Select disabled={!isEditable}>
+                      {universityTypes.map((type) => (
+                        <Option key={type.value} value={type.value}>
+                          {type.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label='Number of Students'
                     name='numberOfStudents'
-                    value={formData.numberOfStudents}
-                    onChange={handleChange}
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
+                    rules={[{ required: true, message: 'Please enter the number of students' }]}
+                  >
+                    <InputNumber
+                      className='w-full'
+                      disabled={!isEditable}
+                      formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    />
+                  </Form.Item>
+                  <Form.Item label='Ranking' name='rank'>
+                    <InputNumber className='w-full' disabled={!isEditable} />
+                  </Form.Item>
                 </div>
-                <div>
-                  <label htmlFor='ranking' className='block mb-1'>
-                    Ranking
-                  </label>
-                  <input
-                    id='ranking'
-                    type='number'
-                    name='ranking'
-                    value={formData.ranking}
-                    onChange={handleChange}
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
-                </div>
-              </div>
 
-              {/* Contact */}
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <div>
-                  <label htmlFor='phone' className='block mb-1'>
-                    Phone
-                  </label>
-                  <input
-                    id='phone'
-                    type='text'
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <Form.Item
+                    label='Phone'
                     name='phone'
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
-                </div>
-                <div>
-                  <label htmlFor='email' className='block mb-1'>
-                    Email
-                  </label>
-                  <input
-                    id='email'
-                    type='email'
+                    rules={[
+                      { required: true, message: 'Please enter a phone number' },
+                      { pattern: /^\+?[1-9]\d{1,14}$/, message: 'Invalid phone number' },
+                    ]}
+                  >
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item
+                    label='Email'
                     name='email'
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.email ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.email && <p className='text-red-500 text-sm mt-1'>{errors.email}</p>}
+                    aria-label='email'
+                    rules={[
+                      { required: true, message: 'Please enter an email' },
+                      { type: 'email', message: 'Invalid email address' },
+                    ]}
+                  >
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
                 </div>
-                <div>
-                  <label htmlFor='website' className='block mb-1'>
-                    Website
-                  </label>
-                  <input
-                    id='website'
-                    type='text'
-                    name='website'
-                    value={formData.website}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.website ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.website && <p className='text-red-500 text-sm mt-1'>{errors.website}</p>}
-                </div>
-              </div>
 
-              {/* Description */}
-              <div>
-                <label htmlFor='description' className='block mb-1'>
-                  Description
-                </label>
-                <textarea
-                  id='description'
-                  name='description'
-                  value={formData.description}
-                  onChange={handleChange}
-                  className='w-full border border-gray-300 rounded px-3 py-2'
-                  rows={4}
-                />
-              </div>
+                <Form.Item label='Website' name='website' rules={[{ required: true }]}>
+                  <Input disabled={!isEditable} />
+                </Form.Item>
 
-              {/* Fields of Study */}
-              <div ref={fieldsRef} className='relative max-w-md'>
-                <label
-                  htmlFor='fields-dropdown'
-                  className='block text-sm font-medium text-gray-700 mb-2'
-                >
-                  Fields of Study
-                </label>
-                <button
-                  id='fields-dropdown'
-                  type='button'
-                  onClick={() => setFieldsOpen((open) => !open)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md text-left focus:outline-none'
-                >
-                  {formData.fields.length === 0 ? (
-                    <span className='text-gray-400'>Select fields of study...</span>
-                  ) : (
-                    formData.fields.join(', ')
-                  )}
-                </button>
-                {fieldsOpen && (
-                  <ul className='absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto'>
-                    {fieldsOptions.map((option) => (
-                      <button
-                        key={option}
-                        type='button'
-                        onClick={() => handleFieldToggle(option)}
-                        className={`w-full text-left px-3 py-2 cursor-pointer hover:bg-blue-100 ${
-                          formData.fields.includes(option) ? 'bg-blue-200 font-semibold' : ''
-                        }`}
-                        tabIndex={0}
-                      >
-                        {option}
-                      </button>
+                <Form.Item label='Description' name='description'>
+                  <TextArea rows={4} showCount maxLength={1000} disabled={!isEditable} />
+                </Form.Item>
+
+                <Form.Item label='Academic Fields' name='fields'>
+                  <Select mode='multiple' disabled={!isEditable} className='w-full'>
+                    {fieldsOptions.map((field) => (
+                      <Option key={field} value={field}>
+                        {field}
+                      </Option>
                     ))}
-                  </ul>
+                  </Select>
+                </Form.Item>
+
+                <Form.Item label='Other Information' name='other'>
+                  <TextArea rows={4} showCount maxLength={500} disabled={!isEditable} />
+                </Form.Item>
+                {/* Action Buttons */}
+                <div className='flex justify-end space-x-4 mt-6'>
+                  {!isEditable ? (
+                    <Button
+                      onClick={() => setIsEditable(true)}
+                      typeof='button'
+                      className='bg-[#ff7a00] border-[#ff7a00] text-white 
+                      hover:!bg-[#ff7a00] hover:!border-[#ff7a00] hover:!text-white
+                      focus:!shadow-none focus:!bg-[#ff7a00] focus:!border-[#ff7a00] focus:!text-white rounded-md'
+                    >
+                      Edit
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        onClick={handleReset}
+                        className='bg-gray-200 border-gray-300 text-gray-800'
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        htmlType='submit'
+                        loading={loading}
+                        icon={<SaveOutlined />}
+                        className='bg-[#ff7a00] border-[#ff7a00] text-white 
+                          hover:!bg-[#ff7a00] hover:!border-[#ff7a00] hover:!text-white
+                          focus:!shadow-none focus:!bg-[#ff7a00] focus:!border-[#ff7a00] focus:!text-white'
+                      >
+                        {loading ? 'Updating...' : 'Update University'}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Col 2: Logo Upload */}
+              <div className='flex flex-col items-center'>
+                <Form.Item label='Logo' name='logo'>
+                  <Dragger {...uploadProps} disabled={!isEditable}>
+                    <p className='ant-upload-drag-icon'>
+                      <InboxOutlined />
+                    </p>
+                    <p className='ant-upload-text'>Click or drag file to upload</p>
+                    <p className='ant-upload-hint'>Upload new logo (optional)</p>
+                  </Dragger>
+                </Form.Item>
+
+                {existingLogoUrl && !logoFile && (
+                  <div className='mt-4 text-center'>
+                    <img
+                      src={existingLogoUrl}
+                      alt='Current logo'
+                      className='h-16 object-contain mx-auto'
+                    />
+                    <div className='text-xs text-gray-500 mt-1'>Current logo</div>
+                  </div>
                 )}
               </div>
-
-              {/* Other */}
-              <div>
-                <label htmlFor='other' className='block mb-1'>
-                  Other
-                </label>
-                <textarea
-                  id='other'
-                  name='other'
-                  value={formData.other}
-                  onChange={handleChange}
-                  className='w-full border border-gray-300 rounded px-3 py-2'
-                  rows={3}
-                />
-              </div>
-
-              <div className='flex justify-end'>
-                <button
-                  type='submit'
-                  disabled={isSubmitting}
-                  className='px-8 py-3 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50'
-                >
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-
-              {submitMessage && (
-                <p
-                  className={`text-sm mt-4 ${
-                    submitMessage.includes('successfully') ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {submitMessage}
-                </p>
-              )}
-            </form>
-          </div>
-        </main>
+            </div>
+          </Form>
+        </div>
       </div>
     </div>
   );
