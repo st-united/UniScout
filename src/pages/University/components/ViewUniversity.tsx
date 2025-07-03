@@ -1,6 +1,8 @@
-import { Pagination } from 'antd';
+import { Pagination, Input, Select, Tag, Button } from 'antd';
 import axios from 'axios';
+import { Search } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import UniversityCard from './UniversityCard';
 import UniversityFilter, { FilterOptions } from './UniversityFilter';
@@ -36,8 +38,11 @@ const ViewUniversity = () => {
     field: [],
     sortOrder: 'asc',
   });
+  const [searchInput, setSearchInput] = useState('');
 
   const fetchControllerRef = React.useRef(new AbortController());
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const mapRawToUniversity = useCallback((rawUniversity: RawUniversity): UniversityCustom => {
     return {
@@ -167,12 +172,79 @@ const ViewUniversity = () => {
 
   const onPageChange = useCallback((page: number) => {
     setCurrentPage(page);
+    window.scrollTo({ top: 200, behavior: 'smooth' });
   }, []);
+
+  const handleMapCountryClick = (country: string) => {
+    setActiveFilters({
+      search: '',
+      country: [country],
+      type: [],
+      size: [],
+      field: [],
+      sortOrder: 'asc',
+    });
+    setCurrentPage(1);
+    window.scrollTo({ top: 200, behavior: 'smooth' });
+  };
+
+  // Helper to remove a filter chip
+  const removeFilter = (key: keyof FilterOptions, value: string) => {
+    setActiveFilters((prev) => {
+      if (Array.isArray(prev[key])) {
+        return { ...prev, [key]: (prev[key] as string[]).filter((v) => v !== value) };
+      }
+      return prev;
+    });
+    setCurrentPage(1);
+  };
+
+  // Helper to capitalize first letter
+  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+
+  useEffect(() => {
+    setSearchInput(activeFilters.search || '');
+  }, [activeFilters.search]);
+
+  // On mount, initialize state from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const page = parseInt(params.get('page') || '1', 10);
+    const search = params.get('search') || '';
+    const country = params.getAll('country');
+    const type = params.getAll('type');
+    const size = params.getAll('size');
+    const field = params.getAll('field');
+    const sortOrder = params.get('sortOrder') || 'asc';
+    setCurrentPage(page);
+    setActiveFilters((prev) => ({
+      ...prev,
+      search,
+      country,
+      type,
+      size,
+      field,
+      sortOrder: sortOrder === 'desc' ? 'desc' : 'asc',
+    }));
+  }, []);
+
+  // Sync state to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('page', currentPage.toString());
+    if (activeFilters.search) params.set('search', activeFilters.search);
+    activeFilters.country.forEach((c) => params.append('country', c));
+    activeFilters.type.forEach((t) => params.append('type', t));
+    activeFilters.size.forEach((s) => params.append('size', s));
+    activeFilters.field.forEach((f) => params.append('field', f));
+    if (activeFilters.sortOrder) params.set('sortOrder', activeFilters.sortOrder);
+    navigate({ search: params.toString() }, { replace: true });
+  }, [currentPage, activeFilters, navigate]);
 
   return (
     <div className='min-h-screen w-full px-4 py-6'>
-      <WorldMap />
-      <h2 className='text-center text-4xl font-bold mt-6 mb-12'>DISCOVER UNIVERSITIES</h2>
+      <WorldMap onCountryClick={handleMapCountryClick} />
+      <h2 className='text-center text-4xl font-bold mt-6 mb-6'>DISCOVER UNIVERSITIES</h2>
       <div className='flex justify-center mt-6'>
         <div className='w-full max-w-screen-xl flex flex-col lg:flex-row gap-6'>
           <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0'>
@@ -184,6 +256,102 @@ const ViewUniversity = () => {
             />
           </div>
           <div className='flex-1 min-h-[700px] relative'>
+            {/* Search, filter chips, and sort bar aligned with cards */}
+            <div className='mb-6 flex flex-col gap-2'>
+              <div className='flex flex-row items-center gap-4 w-full'>
+                {/* Search bar */}
+                <Input.Search
+                  allowClear
+                  placeholder='Search'
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onSearch={(value) => {
+                    handleFiltersUpdate({ ...activeFilters, search: value });
+                    setCurrentPage(1);
+                  }}
+                  enterButton={
+                    <Button
+                      type='primary'
+                      style={{ background: '#EA7A1D', borderColor: '#EA7A1D' }}
+                      icon={<Search className='w-4 h-4' />}
+                    />
+                  }
+                  size='large'
+                  className='w-full'
+                  style={{ flex: 1 }}
+                />
+                {/* Sort dropdown */}
+                <Select
+                  value={
+                    activeFilters.sortOrder === 'asc'
+                      ? 'Sort by: low to high'
+                      : 'Sort by: high to low'
+                  }
+                  onChange={(val) =>
+                    handleFiltersUpdate({
+                      ...activeFilters,
+                      sortOrder: val === 'Sort by: low to high' ? 'asc' : 'desc',
+                    })
+                  }
+                  className='min-w-[120px]'
+                  options={[
+                    { value: 'Sort by: high to low', label: 'Sort by: high to low' },
+                    { value: 'Sort by: low to high', label: 'Sort by: low to high' },
+                  ]}
+                />
+              </div>
+              {/* Filter chips */}
+              <div className='flex flex-wrap gap-2 mb-2'>
+                {activeFilters.country.map((c) => (
+                  <Tag
+                    key={c}
+                    closable
+                    onClose={() => removeFilter('country', c)}
+                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                  >
+                    {capitalize(c)}
+                  </Tag>
+                ))}
+                {activeFilters.type.map((t) => (
+                  <Tag
+                    key={t}
+                    closable
+                    onClose={() => removeFilter('type', t)}
+                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                  >
+                    {capitalize(t)}
+                  </Tag>
+                ))}
+                {activeFilters.size.map((s) => (
+                  <Tag
+                    key={s}
+                    closable
+                    onClose={() => removeFilter('size', s)}
+                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                  >
+                    {capitalize(s)}
+                  </Tag>
+                ))}
+                {activeFilters.field.map((f) => (
+                  <Tag
+                    key={f}
+                    closable
+                    onClose={() => removeFilter('field', f)}
+                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                  >
+                    {capitalize(f)}
+                  </Tag>
+                ))}
+              </div>
+              {/* Results for ... */}
+              {activeFilters.search && (
+                <div className='mb-2'>
+                  <span className='italic text-lg'>
+                    Results for <b>&quot;{activeFilters.search}&quot;</b>:
+                  </span>
+                </div>
+              )}
+            </div>
             {loading && (
               <div className='absolute inset-0 bg-white/80 z-20 flex items-center justify-center'>
                 <div className='text-center p-8 bg-white rounded-xl shadow-lg border border-gray-200'>

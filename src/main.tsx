@@ -5,7 +5,6 @@ import ReactDOM from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import { Provider } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
-import 'antd/dist/antd.css';
 
 import store from './redux/store';
 import i18n from '@app/config/i18n';
