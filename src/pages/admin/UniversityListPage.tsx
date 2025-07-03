@@ -1,22 +1,87 @@
 import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Funnel,
-  ChevronDown,
-  Edit,
-  Trash,
-  ArrowRightFromLine,
-  EllipsisVertical,
-  MapPinned,
-  X,
-  Check,
-} from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+  PlusOutlined,
+  ExportOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CloseOutlined,
+  ExclamationCircleFilled,
+} from '@ant-design/icons';
+import {
+  Table,
+  Button,
+  Select,
+  Space,
+  message,
+  Card,
+  Row,
+  Col,
+  Typography,
+  Modal,
+  Drawer,
+  Badge,
+  Tag,
+} from 'antd';
+import axios from 'axios';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import Sidebar from '../../components/Sidebar';
-import { universityData } from '../../data/universityData';
+import AdminSearchFilter from '../../components/AdminSearchFilter';
+import type { ColumnsType } from 'antd/es/table';
+const { Option } = Select;
+const { Title } = Typography;
+
+// Updated interface to match API response
+interface University {
+  id: string;
+  university: string;
+  abbreviation: string;
+  latitude: number;
+  longitude: number;
+  logo: string;
+  rank: number;
+  type: string;
+  country: string;
+  location: string;
+  studentPopulation: number;
+  year: number;
+  contact: string;
+  email: string;
+  website: string;
+  strength: string;
+  description: string;
+  exchange: string | null;
+  fieldNames: string[];
+  subjectNames: string[];
+  size: string;
+}
+
+// API Response interface
+interface UniversityApiResponse {
+  message: string;
+  data: University[];
+  totalCount: number;
+}
+
+// Interface for notification items (imported from AdminSearchFilter)
+interface NotificationItem {
+  id: number;
+  type: 'join_request';
+  title: string;
+  description: string;
+  timestamp: string;
+  isRead: boolean;
+}
+// Custom hook for debouncing input values
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 const sortOptions = [
   { label: 'High to Low Rank', value: 'rank-desc' },
@@ -24,19 +89,15 @@ const sortOptions = [
   { label: 'A-Z Name', value: 'name-asc' },
   { label: 'Z-A Name', value: 'name-desc' },
 ];
-
 type FilterKey = 'country' | 'region' | 'type' | 'size' | 'department' | 'search';
-
-const filterFieldMap: Record<'country' | 'region', keyof (typeof universityData)[0]> = {
-  country: 'location',
-  region: 'region',
-};
-
-const UniversityListPage = () => {
+const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
 
   // State for university data
-  const [currentUniversityData, setCurrentUniversityData] = useState(universityData);
+  const [universityData, setUniversityData] = useState<UniversityApiResponse>();
+  const [currentUniversityData, setCurrentUniversityData] = useState<University[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<Record<FilterKey, string>>({
     country: '',
@@ -46,44 +107,113 @@ const UniversityListPage = () => {
     department: '',
     search: '',
   });
+  const debouncedFilters = useDebounce(filters, 400);
 
+  const [sortBy, setSortBy] = useState('name-asc');
   const [searchInput, setSearchInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilter, setShowFilter] = useState(false);
-  const [sortBy, setSortBy] = useState('rank-desc');
+  const [pageSize, setPageSize] = useState(12);
+
+  const fetchUniversities = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get<UniversityApiResponse>('/admin/universities', {
+        params: {
+          search: filters.search || undefined,
+          type: filters.type || undefined,
+          country: filters.country || undefined,
+          size: filters.size || undefined,
+          fieldNames:
+            filters.department && filters.department !== 'all' ? [filters.department] : undefined,
+
+          sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
+          page: currentPage,
+          limit: pageSize,
+        },
+      });
+      setCurrentUniversityData(response.data.data);
+      setUniversityData(response.data);
+    } catch (err) {
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message || 'Failed to fetch universities'
+        : 'An unexpected error occurred';
+      setError(errorMessage);
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, sortBy, currentPage, pageSize]);
+
+  useEffect(() => {
+    fetchUniversities();
+  }, [
+    debouncedFilters,
+    sortBy,
+    currentPage,
+    pageSize,
+    filters.search,
+    filters.type,
+    filters.country,
+    filters.size,
+    filters.department,
+    fetchUniversities,
+  ]);
 
   // Multi-select state
-  const [selectedUniversities, setSelectedUniversities] = useState(new Set<number>());
-  const [selectAll, setSelectAll] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  // Delete confirmation state
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Delete confirmation modal state
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteType, setDeleteType] = useState<'single' | 'multiple'>('single');
-  const [universityToDelete, setUniversityToDelete] = useState<number | null>(null);
+  const [universityToDelete, setUniversityToDelete] = useState<University | null>(null);
 
-  // Success message state
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
+  // Mobile responsive states
+  const [isMobile, setIsMobile] = useState(false);
+  const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
 
-  const itemsPerPage = 12;
+  // API function to fetch universities
+
+  // Check screen size
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Fetch universities on component mount
+  useEffect(() => {
+    fetchUniversities();
+  }, [currentPage, pageSize, fetchUniversities]);
 
   useEffect(() => {
-    const debounce = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, search: searchInput }));
-    }, 300);
-    return () => clearTimeout(debounce);
+    setFilters((prevFilters) => {
+      if (prevFilters.search === searchInput) return prevFilters;
+      return { ...prevFilters, search: searchInput };
+    });
+    setCurrentPage(1);
   }, [searchInput]);
 
-  // Auto-hide success message
-  useEffect(() => {
-    if (showSuccess) {
-      const timer = setTimeout(() => {
-        setShowSuccess(false);
-        setSuccessMessage('');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccess]);
+  // Handle search from AdminSearchFilter component
+  const handleGlobalSearch = (searchValue: string) => {
+    setSearchInput(searchValue);
+  };
+
+  const handleNotificationClick = (notification: NotificationItem) => {
+    // Navigate to join request management page or show details
+    console.log('Notification clicked:', notification);
+    message.info(`Viewing join request: ${notification.description}`);
+    // Example: navigate('/admin/join-requests/' + notification.id);
+  };
+
+  // Handle mark all notifications as read
+  const handleMarkAllAsRead = () => {
+    message.success('All notifications marked as read');
+  };
 
   const handleResetFilters = () => {
     setFilters({
@@ -96,6 +226,8 @@ const UniversityListPage = () => {
     });
     setSearchInput('');
     setCurrentPage(1);
+    setSelectedRowKeys([]);
+    // Note: sortBy is NOT reset here, so it maintains the current sort option
   };
 
   const handleFilterChange = (field: FilterKey, value: string) => {
@@ -103,123 +235,116 @@ const UniversityListPage = () => {
     setCurrentPage(1);
   };
 
-  // Multi-select handlers
-  const handleSelectUniversity = (universityId: number) => {
-    const newSelected = new Set(selectedUniversities);
-    if (newSelected.has(universityId)) {
-      newSelected.delete(universityId);
-    } else {
-      newSelected.add(universityId);
-    }
-    setSelectedUniversities(newSelected);
-    setSelectAll(
-      newSelected.size === paginatedUniversities.length && paginatedUniversities.length > 0,
-    );
+  // Remove individual filter
+  const removeFilter = (field: FilterKey) => {
+    setFilters({ ...filters, [field]: '' });
+    setCurrentPage(1);
   };
 
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedUniversities(new Set());
-      setSelectAll(false);
-    } else {
-      const allIds = new Set(paginatedUniversities.map((uni) => uni.id));
-      setSelectedUniversities(allIds);
-      setSelectAll(true);
-    }
+  // Show delete confirmation modal
+  const showDeleteModal = (type: 'single' | 'multiple', university?: University) => {
+    setDeleteType(type);
+    setUniversityToDelete(university || null);
+    setDeleteModalVisible(true);
   };
 
-  // Delete handlers
-  const handleDeleteSingle = (universityId: number) => {
-    setUniversityToDelete(universityId);
-    setDeleteType('single');
-    setShowDeleteConfirm(true);
-  };
-
-  const handleDeleteMultiple = () => {
-    if (selectedUniversities.size === 0) return;
-    setDeleteType('multiple');
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDelete = () => {
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
-        // Check if university exists
-        const university = currentUniversityData.find((uni) => uni.id === universityToDelete);
-        if (!university) {
-          throw new Error('University not found');
-        }
+        console.log('Deleting university ID:', universityToDelete.id);
 
-        // Mock check for existing references
-        const hasReferences = Math.random() < 0.1; // 10% chance of having references
-        if (hasReferences) {
-          throw new Error('Cannot delete university due to existing references.');
-        }
+        await axios.delete(`/universities/${universityToDelete.id}`, {
+          data: { confirm_deletion: true },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-        // Delete single university
-        setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete));
-        setSuccessMessage('Successfully.');
+        setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
+        message.success('University deleted successfully');
+        console.log(
+          `AUDIT: Deleted university ${universityToDelete.university} (ID: ${universityToDelete.id})`,
+        );
+      } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
+        console.log('Deleting multiple universities:', selectedRowKeys);
 
-        // Log for auditing
-        console.log(`AUDIT: Deleted university ${university.name} (ID: ${universityToDelete})`);
-      } else if (deleteType === 'multiple') {
-        // Delete multiple universities
+        await axios.delete('/universities/admin/bulk', {
+          data: {
+            ids: selectedRowKeys,
+            confirm_deletion: true,
+          },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
         const universitiesToDelete = currentUniversityData.filter((uni) =>
-          selectedUniversities.has(uni.id),
+          selectedRowKeys.includes(uni.id),
         );
 
-        // Mock check for references
-        const hasReferences = Math.random() < 0.1;
-        if (hasReferences) {
-          throw new Error('Cannot delete university due to existing references.');
-        }
-
-        setCurrentUniversityData((prev) => prev.filter((uni) => !selectedUniversities.has(uni.id)));
-        setSelectedUniversities(new Set());
-        setSelectAll(false);
-        setSuccessMessage('Successfully.');
-
-        // Log for auditing
+        setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
+        setSelectedRowKeys([]);
+        message.success(`${selectedRowKeys.length} universities deleted successfully`);
         console.log(
           `AUDIT: Deleted ${universitiesToDelete.length} universities:`,
-          universitiesToDelete.map((u) => u.name),
+          universitiesToDelete.map((u) => u.university),
         );
       }
-
-      setShowSuccess(true);
     } catch (error) {
-      // Show error message
-      if (error instanceof Error) {
-        alert(error.message);
-      } else {
-        alert(String(error));
-      }
+      const errorMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message || 'Delete failed'
+        : 'Delete failed';
+      message.error(errorMessage);
+      console.error('Delete error:', error);
+    } finally {
+      setDeleteModalVisible(false);
+      setUniversityToDelete(null);
     }
-
-    setShowDeleteConfirm(false);
-    setUniversityToDelete(null);
   };
 
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
-    setUniversityToDelete(null);
+  const handleEdit = (universityId: string) => {
+    navigate(`/admin/edit-university/${universityId}`);
   };
 
-  const handleEdit = (universityId: number) => {
-    navigate(`/edit-university/${universityId}`);
+  const handleExport = async () => {
+    try {
+      const response = await axios.get('/admin/universities/export', {
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'universities.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      message.success('Universities exported successfully');
+    } catch (error) {
+      message.error('Export failed');
+      console.error('Export error:', error);
+    }
   };
 
+  // Enhanced filter function to include university name, location, and strength search
   const filteredUniversities = currentUniversityData.filter((u) => {
+    const searchMatch =
+      !filters.search ||
+      u.university.toLowerCase().includes(filters.search.toLowerCase()) ||
+      u.location.toLowerCase().includes(filters.search.toLowerCase()) ||
+      u.country.toLowerCase().includes(filters.search.toLowerCase()) ||
+      u.strength.toLowerCase().includes(filters.search.toLowerCase());
+
     return (
-      (!filters.country || u.location === filters.country) &&
-      (!filters.region || u.region === filters.region) &&
-      (!filters.department || u.department === filters.department) &&
-      (!filters.type ||
-        (filters.type === 'Public' || filters.type === 'Private'
-          ? u.status === filters.type
-          : u.type === filters.type)) &&
+      searchMatch &&
+      (!filters.country || u.country === filters.country) &&
+      (!filters.type || u.type === filters.type) &&
       (!filters.size || u.size === filters.size) &&
-      (!filters.search || u.name.toLowerCase().includes(filters.search.toLowerCase()))
+      (!filters.department || u.strength.includes(filters.department))
     );
   });
 
@@ -230,426 +355,698 @@ const UniversityListPage = () => {
       case 'rank-desc':
         return a.rank - b.rank;
       case 'name-asc':
-        return a.name.localeCompare(b.name);
+        return a.university.localeCompare(b.university);
       case 'name-desc':
-        return b.name.localeCompare(a.name);
+        return b.university.localeCompare(a.university);
       default:
         return 0;
     }
   });
 
-  const totalPages = Math.ceil(sortedUniversities.length / itemsPerPage);
-  const paginatedUniversities = sortedUniversities.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  // Get unique values for filter options
+  const getUniqueCountries = () => {
+    return [...new Set(currentUniversityData.map((u) => u.country))].filter(Boolean).sort();
+  };
 
-  const getDeleteConfirmationMessage = () => {
+  const getUniqueTypes = () => {
+    return [...new Set(currentUniversityData.map((u) => u.type))].filter(Boolean).sort();
+  };
+
+  const getUniqueSizes = () => {
+    return [...new Set(currentUniversityData.map((u) => u.size))].filter(Boolean).sort();
+  };
+
+  const getUniqueDepartments = () => {
+    const allDepartments = currentUniversityData.flatMap((u) =>
+      (u.strength || '').split(',').map((dept) => dept.trim()),
+    );
+    return [...new Set(allDepartments)].filter(Boolean).sort();
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = Object.values(filters).some((value) => value !== '');
+
+  // Get active filters for floating display
+  const getActiveFilters = () => {
+    const activeFilters: Array<{ key: FilterKey; label: string; value: string }> = [];
+
+    if (filters.country) {
+      activeFilters.push({ key: 'country', label: 'Country', value: filters.country });
+    }
+    if (filters.type) {
+      activeFilters.push({ key: 'type', label: 'Type', value: filters.type });
+    }
+    if (filters.size) {
+      activeFilters.push({ key: 'size', label: 'Size', value: filters.size });
+    }
+    if (filters.department) {
+      activeFilters.push({ key: 'department', label: 'Field', value: filters.department });
+    }
+
+    return activeFilters;
+  };
+
+  // Table columns configuration
+  const columns: ColumnsType<University> = [
+    {
+      title: 'University Name',
+      dataIndex: 'university',
+      key: 'university',
+      width: 400,
+      sorter: true,
+      render: (text: string) => <span>{text}</span>,
+    },
+    {
+      title: 'Rank',
+      dataIndex: 'rank',
+      key: 'rank',
+      width: 80,
+      sorter: true,
+    },
+    {
+      title: 'Country',
+      dataIndex: 'country',
+      key: 'country',
+      width: 120,
+    },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      width: 100,
+      render: (type: string) => (
+        <Tag color={type === 'public' ? 'blue' : 'green'}>
+          {type.charAt(0).toUpperCase() + type.slice(1)}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Size',
+      dataIndex: 'size',
+      key: 'size',
+      width: 100,
+      render: (size: string) => (
+        <Tag
+          color={
+            size === 'small'
+              ? 'orange'
+              : size === 'medium'
+              ? 'yellow'
+              : size === 'large'
+              ? 'blue'
+              : 'purple'
+          }
+        >
+          {size.charAt(0).toUpperCase() + size.slice(1)}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Broad field',
+      dataIndex: 'academicFieldsCommaSeparated',
+      key: 'academicFieldsCommaSeparated',
+      width: 200,
+      render: (academicFieldsCommaSeparated: string) => (
+        <div
+          style={{
+            maxWidth: '180px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {academicFieldsCommaSeparated}
+        </div>
+      ),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Button
+            type='text'
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record.id)}
+            style={{ color: '#ff7a00' }}
+          />
+          <Button
+            type='text'
+            icon={<DeleteOutlined />}
+            onClick={() => showDeleteModal('single', record)}
+            style={{ color: '#ff7a00' }}
+          />
+        </Space>
+      ),
+    },
+  ];
+
+  // Row selection configuration
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+    onSelectAll: (selected: boolean, selectedRows: University[], changeRows: University[]) => {
+      console.log(selected, selectedRows, changeRows);
+    },
+  };
+
+  // Get confirmation message
+  const getConfirmationMessage = () => {
     if (deleteType === 'single' && universityToDelete) {
-      const university = currentUniversityData.find((uni) => uni.id === universityToDelete);
-      return `Are you sure delete ${university?.name}?`;
+      return `Are you sure delete ${universityToDelete.university}?`;
     } else if (deleteType === 'multiple') {
       return 'Are you sure delete all selected fields?';
     }
     return '';
   };
 
+  // Filter component for desktop with adjusted widths
+  const FilterSection = () => (
+    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Col xs={24} sm={12} md={6} lg={4}>
+        <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Country</div>
+        <Select
+          value={filters.country || 'all'}
+          onChange={(value) => handleFilterChange('country', value === 'all' ? '' : value)}
+          style={{ width: '100%' }}
+        >
+          <Option value='all'>All Countries</Option>
+          {getUniqueCountries().map((country) => (
+            <Option key={country} value={country}>
+              {country}
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} sm={12} md={6} lg={4}>
+        <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Type</div>
+        <Select
+          value={filters.type || 'all'}
+          onChange={(value) => handleFilterChange('type', value === 'all' ? '' : value)}
+          style={{ width: '100%' }}
+        >
+          <Option value='all'>All Types</Option>
+          {getUniqueTypes().map((type) => (
+            <Option key={type} value={type}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} sm={12} md={6} lg={4}>
+        <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Size</div>
+        <Select
+          value={filters.size || 'all'}
+          onChange={(value) => handleFilterChange('size', value === 'all' ? '' : value)}
+          style={{ width: '100%' }}
+        >
+          <Option value='all'>All Sizes</Option>
+          {getUniqueSizes().map((size) => (
+            <Option key={size} value={size}>
+              {size.charAt(0).toUpperCase() + size.slice(1)}
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} sm={12} md={8} lg={6}>
+        <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Fields</div>
+        <Select
+          value={filters.department || 'all'}
+          onChange={(value) => handleFilterChange('department', value === 'all' ? '' : value)}
+          style={{ width: '100%' }}
+        >
+          <Option value='all'>All Fields</Option>
+          {getUniqueDepartments().map((dept) => (
+            <Option key={dept} value={dept}>
+              {dept}
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} sm={24} md={6} lg={6}>
+        <div
+          style={{
+            fontSize: '12px',
+            marginBottom: '4px',
+            color: '#666',
+            textAlign: isMobile ? 'left' : 'right',
+          }}
+        >
+          <button
+            onClick={handleResetFilters}
+            style={{
+              color: '#ff7a00',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 500,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              outline: 'none',
+            }}
+            type='button'
+            tabIndex={0}
+          >
+            Reset Filter
+          </button>
+        </div>
+        <Select value={sortBy} onChange={setSortBy} style={{ width: '100%' }}>
+          {sortOptions.map((option) => (
+            <Option key={option.value} value={option.value}>
+              {option.label}
+            </Option>
+          ))}
+        </Select>
+      </Col>
+    </Row>
+  );
+
+  // Error state
+  if (error && currentUniversityData.length === 0) {
+    return (
+      <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
+        <AdminSearchFilter
+          onSearch={handleGlobalSearch}
+          onNotificationClick={handleNotificationClick}
+          onMarkAllAsRead={handleMarkAllAsRead}
+          placeholder='Search by university name, location, or field...'
+        />
+        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+          <Card>
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <Title level={4} style={{ color: '#ff4d4f' }}>
+                Failed to load universities
+              </Title>
+              <p style={{ color: '#666', marginBottom: '20px' }}>{error}</p>
+              <Button
+                type='primary'
+                onClick={fetchUniversities}
+                loading={loading}
+                style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+              >
+                Retry
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className='flex bg-[#FFFDF9] min-h-screen'>
-      {/* Main content with proper left margin to account for sidebar */}
-      <main className='flex-1 flex flex-col'>
-        {/* Success Message */}
-        {showSuccess && (
-          <div className='fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2'>
-            <Check className='w-5 h-5 text-green-600' />
-            <span>{successMessage}</span>
-            <button
-              onClick={() => setShowSuccess(false)}
-              className='ml-2 text-green-600 hover:text-green-800'
-            >
-              <X className='w-4 h-4' />
-            </button>
-          </div>
-        )}
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
+      {/* Search and Notification Bar */}
+      <AdminSearchFilter
+        onSearch={handleGlobalSearch}
+        onNotificationClick={handleNotificationClick}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        placeholder='Search by university name, location, or field...'
+      />
 
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && (
-          <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-            <div className='bg-white rounded-lg p-6 max-w-md w-full mx-4'>
-              <div className='flex items-center gap-3 mb-4'>
-                <div className='w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center'>
-                  <span className='text-yellow-600 text-xl'>!</span>
-                </div>
-                <h3 className='text-lg font-semibold text-gray-900'>Confirm Delete</h3>
-              </div>
-              <p className='text-gray-600 mb-6'>{getDeleteConfirmationMessage()}</p>
-              <div className='flex justify-end gap-3'>
-                <button
-                  onClick={cancelDelete}
-                  className='px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors'
+      {/* Main Content */}
+      <div style={{ padding: isMobile ? '16px' : '24px' }}>
+        <Card>
+          {/* Mobile Filter Button */}
+          {isMobile && (
+            <Row style={{ marginBottom: 16 }}>
+              <Col span={24}>
+                <Button
+                  onClick={() => setFilterDrawerVisible(true)}
+                  type='default'
+                  className='w-full flex items-center justify-center h-10 border border-gray-300 rounded-md
+                   transition duration-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-500'
                 >
-                  No
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className='px-4 py-2 bg-blue-600 hover:bg-orange-700 text-white rounded-md transition-colors'
-                >
-                  Yes
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Search Input */}
-        <div className='w-full relative max-w-2xl mx-auto'>
-          <Search className='absolute top-2.5 left-3 text-gray-400 w-4 h-4' />
-          <input
-            type='text'
-            placeholder='Search for universities...'
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className='w-full pl-10 pr-4 py-2 bg-[#FFF4E9] rounded-md border border-orange-200 focus:outline-none'
-          />
-        </div>
-
-        {/* Header Controls */}
-        <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full'>
-          <div className='text-sm text-gray-600 whitespace-nowrap'>
-            <span className='font-medium'>Result:</span> {filteredUniversities.length} Universities
-            Found
-          </div>
-
-          <div className='flex flex-wrap sm:flex-nowrap items-center justify-between sm:justify-end gap-2 w-full'>
-            {/* Filter and Sort Controls */}
-            <div className='flex items-center gap-2'>
-              <button
-                onClick={() => setShowFilter(!showFilter)}
-                className='flex items-center justify-center text-white bg-orange-400 hover:bg-orange-300 rounded-md p-2 border-0'
-                aria-label={showFilter ? 'Hide Filters' : 'Show Filters'}
-                title={showFilter ? 'Hide Filters' : 'Show Filters'}
-              >
-                <Funnel className='w-5 h-5' />
-              </button>
-              <div className='relative w-full sm:w-[240px]'>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className='appearance-none w-full pl-3 pr-8 py-2 text-sm bg-white text-black rounded-md border border-orange-300 cursor-pointer'
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className='absolute right-2 top-2.5 text-orange-600 w-4 h-4 pointer-events-none' />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className='flex flex-wrap gap-2 w-full sm:w-auto'>
-              {selectedUniversities.size > 0 && (
-                <button
-                  onClick={handleDeleteMultiple}
-                  className='bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-md shadow whitespace-nowrap flex items-center gap-2 border-0'
-                >
-                  <Trash className='w-4 h-4' />
-                  Delete Selected ({selectedUniversities.size})
-                </button>
-              )}
-              <button
-                onClick={() => navigate('/create-university')}
-                className='bg-orange-500 hover:bg-orange-600 text-white text-sm px-6 py-2 rounded-md shadow whitespace-nowrap border-0 w-full sm:w-auto'
-              >
-                + Create
-              </button>
-              <button className='bg-orange-500 hover:bg-orange-600 text-white text-sm px-6 py-2 rounded-md shadow whitespace-nowrap flex items-center gap-2 border-0 w-full sm:w-auto justify-center'>
-                <ArrowRightFromLine className='w-4 h-4' />
-                Export
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Table */}
-        <div className='flex flex-col lg:flex-row relative gap-6'>
-          <div className='flex-1 overflow-x-auto'>
-            <div className='bg-white rounded-md shadow-sm border w-full overflow-auto'>
-              <table className='w-full text-sm min-w-[640px]'>
-                <thead className='bg-gray-50 text-left text-gray-500 text-xs'>
-                  <tr>
-                    <th className='p-4 w-12'>
-                      <input
-                        type='checkbox'
-                        checked={selectAll}
-                        onChange={handleSelectAll}
-                        className='accent-orange-500 w-4 h-4'
-                      />
-                    </th>
-                    <th className='p-4'>Name</th>
-                    <th className='p-4'>Ranking</th>
-                    <th className='p-4'>Country</th>
-                    <th className='p-4'>Main Fields</th>
-                    <th className='p-4'>Size</th>
-                    <th className='p-4 text-center'>
-                      <EllipsisVertical className='mx-auto w-5 h-5 text-gray-500' />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedUniversities.map((uni) => (
-                    <tr key={uni.id} className='hover:bg-gray-50 border-b'>
-                      <td className='p-4'>
-                        <input
-                          type='checkbox'
-                          checked={selectedUniversities.has(uni.id)}
-                          onChange={() => handleSelectUniversity(uni.id)}
-                          className='accent-orange-500 w-4 h-4'
-                        />
-                      </td>
-                      <td className='p-4 text-gray-700'>{uni.name}</td>
-                      <td className='p-4 font-medium text-gray-900'>{uni.rank}</td>
-                      <td className='p-4 text-gray-500'>{uni.location}</td>
-                      <td className='p-4 text-gray-500'>{uni.department}</td>
-                      <td className='p-4 text-gray-500'>{uni.size}</td>
-                      <td className='p-4'>
-                        <div className='flex items-center justify-center gap-7'>
-                          <button
-                            onClick={() => handleEdit(uni.id)}
-                            className='text-orange-500 hover:text-orange-700 transition-colors bg-transparent border-none p-1'
-                          >
-                            <Edit className='w-4 h-4' />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSingle(uni.id)}
-                            className='text-orange-500 hover:text-red-600 transition-colors bg-transparent border-none p-1'
-                          >
-                            <Trash className='w-4 h-4' />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className='flex items-center justify-center gap-4 text-sm mt-4 flex-wrap'>
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className='flex items-center space-x-1 text-orange-400 hover:text-orange-400 disabled:opacity-50 bg-transparent border-0'
-              >
-                <ChevronLeft className='w-4 h-4' />
-                <span>Previous</span>
-              </button>
-
-              <div className='flex flex-wrap justify-center gap-1'>
-                {Array.from({ length: totalPages }).map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentPage(idx + 1)}
-                    className={`w-8 h-8 rounded ${
-                      currentPage === idx + 1
-                        ? 'bg-orange-400 text-white'
-                        : 'bg-white border text-gray-700'
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className='flex items-center space-x-1 text-orange-400 hover:text-orange-400 disabled:opacity-50 bg-transparent border-0'
-              >
-                <span>Next</span>
-                <ChevronRight className='w-4 h-4' />
-              </button>
-            </div>
-          </div>
-
-          {/* Filters (Right Sidebar) */}
-          {showFilter && (
-            <div className='w-full lg:max-w-sm pt-4 pb-1 px-4 bg-white rounded-xl shadow border text-sm relative space-y-4 max-h-screen overflow-y-auto'>
-              <div className='flex justify-between items-center mb-2'>
-                <span className='text-orange-500 font-semibold text-base'>Filter</span>
-                <button
-                  onClick={handleResetFilters}
-                  className='text-gray-400 hover:text-gray-600 text-sm font-medium underline'
-                >
-                  Reset filter
-                </button>
-              </div>
-
-              {(['country', 'region'] as const).map((field) => {
-                const dataKey = filterFieldMap[field];
-                return (
-                  <div key={field} className='border border-gray-300 rounded-md p-4 bg-white'>
-                    <label className='block text-base font-bold text-gray-800 mb-3'>
-                      {field.charAt(0).toUpperCase() + field.slice(1)}
-                    </label>
-                    <div className='relative'>
-                      <span className='absolute inset-y-0 left-3 flex items-center text-gray-400'>
-                        <MapPinned className='w-4 h-4' />
-                      </span>
-                      <select
-                        value={filters[field]}
-                        onChange={(e) => handleFilterChange(field, e.target.value)}
-                        className='w-full pl-9 pr-8 py-2 border border-gray-300 rounded-md text-sm bg-white appearance-none'
-                      >
-                        <option value=''>Select...</option>
-                        {[...new Set(currentUniversityData.map((u) => u[dataKey]))]
-                          .filter(Boolean)
-                          .map((val) => (
-                            <option key={val} value={val}>
-                              {val}
-                            </option>
-                          ))}
-                      </select>
-                      <ChevronDown className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none' />
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className='border border-gray-300 rounded-md p-4 bg-white'>
-                <label
-                  htmlFor='university-type-all'
-                  className='block text-base font-bold text-gray-800 mb-3'
-                >
-                  University Type
-                </label>
-                <div className='grid grid-cols-2 gap-3'>
-                  {['Public', 'Private', 'Academy', 'International'].map((type) => (
-                    <label
-                      key={type}
-                      htmlFor={`university-type-${type.toLowerCase()}`}
-                      className={`flex items-center gap-2 text-sm cursor-pointer ${
-                        filters.type === type ? 'text-orange-600 font-semibold' : 'text-gray-700'
-                      }`}
-                    >
-                      <input
-                        id={`university-type-${type.toLowerCase()}`}
-                        type='radio'
-                        name='type'
-                        value={type}
-                        checked={filters.type === type}
-                        onChange={() => handleFilterChange('type', type)}
-                        className='accent-orange-500'
-                      />
-                      {type}
-                    </label>
-                  ))}
-                  {/* Add "All" option to clear the filter */}
-                  <label
-                    htmlFor='university-type-all'
-                    className={`flex items-center gap-2 text-sm cursor-pointer ${
-                      filters.type === '' ? 'text-orange-600 font-semibold' : 'text-gray-700'
-                    }`}
-                  >
-                    <input
-                      id='university-type-all'
-                      type='radio'
-                      name='type'
-                      value=''
-                      checked={filters.type === ''}
-                      onChange={() => handleFilterChange('type', '')}
-                      className='accent-orange-500'
-                    />
-                    All
-                  </label>
-                </div>
-              </div>
-
-              <div className='border border-gray-300 rounded-md p-4 bg-white'>
-                <label
-                  htmlFor='size-small'
-                  className='block text-base font-bold text-gray-800 mb-3'
-                >
-                  Size
-                </label>
-                <div className='grid grid-cols-4 gap-3'>
-                  {[
-                    { label: 'S', value: 'Small' },
-                    { label: 'M', value: 'Medium' },
-                    { label: 'L', value: 'Large' },
-                    { label: 'XL', value: 'XL' },
-                  ].map(({ label, value }, idx) => (
-                    <label
-                      key={value}
-                      htmlFor={`size-${value.toLowerCase()}`}
-                      className={`flex items-center gap-2 text-sm cursor-pointer ${
-                        filters.size === value ? 'text-orange-600 font-semibold' : 'text-gray-700'
-                      }`}
-                    >
-                      <input
-                        id={`size-${value.toLowerCase()}`}
-                        type='radio'
-                        name='size'
-                        value={value}
-                        checked={filters.size === value}
-                        onChange={() => handleFilterChange('size', value)}
-                        className='accent-orange-500'
-                      />
-                      {label}
-                    </label>
-                  ))}
-                  {/* Add "All" option to clear the filter */}
-                  <label
-                    htmlFor='size-all'
-                    className={`flex items-center gap-2 text-sm cursor-pointer ${
-                      filters.size === '' ? 'text-orange-600 font-semibold' : 'text-gray-700'
-                    }`}
-                  >
-                    <input
-                      id='size-all'
-                      type='radio'
-                      name='size'
-                      value=''
-                      checked={filters.size === ''}
-                      onChange={() => handleFilterChange('size', '')}
-                      className='accent-orange-500'
-                    />
-                    All
-                  </label>
-                </div>
-              </div>
-
-              <div className='border border-gray-300 rounded-md p-4 bg-white'>
-                <label
-                  htmlFor='department-select'
-                  className='block text-base font-bold text-gray-800 mb-3'
-                >
-                  Fields
-                </label>
-                <div className='relative'>
-                  <select
-                    id='department-select'
-                    value={filters.department}
-                    onChange={(e) => handleFilterChange('department', e.target.value)}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white appearance-none'
-                  >
-                    <option value=''>Select...</option>
-                    {[...new Set(currentUniversityData.map((u) => u.department))]
-                      .filter(Boolean)
-                      .map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                  </select>
-                  <ChevronDown className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none' />
-                </div>
-              </div>
-            </div>
+                  <Space>
+                    Filters
+                    {hasActiveFilters && <Badge dot />}
+                  </Space>
+                </Button>
+              </Col>
+            </Row>
           )}
+
+          {/* Desktop Filter Section */}
+          {!isMobile && <FilterSection />}
+
+          {/* Floating Active Filters */}
+          {hasActiveFilters && (
+            <Row style={{ marginBottom: 16 }}>
+              <Col span={24}>
+                <Space wrap>
+                  {getActiveFilters().map((filter) => (
+                    <Tag
+                      key={filter.key}
+                      closable
+                      onClose={() => removeFilter(filter.key)}
+                      closeIcon={<CloseOutlined />}
+                      style={{
+                        backgroundColor: '#fff7e6',
+                        borderColor: '#ff7a00',
+                        color: '#ff7a00',
+                        fontSize: '12px',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      {filter.label}: {filter.value}
+                    </Tag>
+                  ))}
+                  <Button
+                    type='text'
+                    size='small'
+                    onClick={handleResetFilters}
+                    style={{
+                      visibility: hasActiveFilters ? 'visible' : 'hidden',
+                      color: '#ff7a00',
+                      fontSize: '12px',
+                      padding: '0 4px',
+                      height: '24px',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Clear all
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
+          )}
+
+          {/* Header Section */}
+          <Row justify='space-between' align='middle' style={{ marginBottom: 16 }}>
+            <Col xs={24} sm={12}>
+              <Title
+                level={4}
+                style={{ margin: 0, color: '#333', fontSize: isMobile ? '18px' : '20px' }}
+              >
+                List of universities ({universityData?.totalCount || 0})
+              </Title>
+            </Col>
+            <Col
+              xs={24}
+              sm={12}
+              style={{ textAlign: isMobile ? 'left' : 'right', marginTop: isMobile ? 12 : 0 }}
+            >
+              <Space
+                direction={isMobile ? 'vertical' : 'horizontal'}
+                style={{ width: isMobile ? '100%' : 'auto' }}
+              >
+                {selectedRowKeys.length > 0 && (
+                  <Button
+                    danger
+                    onClick={() => showDeleteModal('multiple')}
+                    style={{ width: isMobile ? '100%' : 'auto' }}
+                  >
+                    Delete Selected ({selectedRowKeys.length})
+                  </Button>
+                )}
+                <Button
+                  type='primary'
+                  icon={<PlusOutlined />}
+                  onClick={() => navigate('/admin/create-university')}
+                  style={{
+                    backgroundColor: '#ff7a00',
+                    borderColor: '#ff7a00',
+                    width: isMobile ? '100%' : 'auto',
+                  }}
+                >
+                  Create
+                </Button>
+                <Button
+                  icon={<ExportOutlined />}
+                  onClick={handleExport}
+                  style={{
+                    backgroundColor: '#ff7a00',
+                    borderColor: '#ff7a00',
+                    color: 'white',
+                    width: isMobile ? '100%' : 'auto',
+                  }}
+                >
+                  Export
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+
+          {/* Search Results Info */}
+          {searchInput && (
+            <Row style={{ position: 'relative', marginBottom: 16, minHeight: '24px' }}>
+              <Col>
+                <div style={{ fontSize: '14px', color: '#000' }}>
+                  Results for &quot;<b>{searchInput}</b>&quot;:
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {/* Table */}
+          <Table
+            columns={columns}
+            dataSource={sortedUniversities}
+            rowKey='id'
+            rowSelection={rowSelection}
+            loading={loading}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: universityData?.totalCount || 0,
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size || 12);
+              },
+              showSizeChanger: false,
+              showQuickJumper: false,
+              className: 'custom-pagination',
+              itemRender: (page, type, originalElement) => {
+                const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
+
+                const baseStyle: React.CSSProperties = {
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'color 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                };
+
+                if (type === 'prev') {
+                  const isDisabled = currentPage === 1;
+                  return (
+                    <span
+                      style={{
+                        ...baseStyle,
+                        color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ffb366';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ff7a00';
+                      }}
+                    >
+                      &lt; Previous
+                    </span>
+                  );
+                }
+
+                if (type === 'next') {
+                  const isDisabled = currentPage >= totalPages;
+                  return (
+                    <span
+                      style={{
+                        ...baseStyle,
+                        color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ffb366';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ff7a00';
+                      }}
+                    >
+                      Next &gt;
+                    </span>
+                  );
+                }
+
+                if (type === 'page') {
+                  const isCurrent = page === currentPage;
+                  return (
+                    <span
+                      style={{
+                        ...baseStyle,
+                        color: '#ff7a00',
+                        fontWeight: isCurrent ? 'bold' : 500,
+                      }}
+                    >
+                      {page}
+                    </span>
+                  );
+                }
+
+                if (type === 'jump-prev' || type === 'jump-next') {
+                  return <span style={{ color: '#999' }}>•••</span>;
+                }
+
+                return originalElement;
+              },
+              style: {
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                marginTop: '24px',
+                marginBottom: '16px',
+              },
+            }}
+            scroll={{ x: 800 }}
+            style={{ marginBottom: 16 }}
+          />
+        </Card>
+      </div>
+
+      {/* Mobile Filter Drawer */}
+      <Drawer
+        title='Filters'
+        placement='bottom'
+        height='auto'
+        onClose={() => setFilterDrawerVisible(false)}
+        open={filterDrawerVisible}
+        bodyStyle={{ padding: '16px' }}
+      >
+        <Space direction='vertical' style={{ width: '100%' }} size='large'>
+          <div>
+            <div style={{ fontSize: '14px', marginBottom: '8px', color: '#666', fontWeight: 500 }}>
+              Country
+            </div>
+            <Select
+              value={filters.country || 'all'}
+              onChange={(value) => handleFilterChange('country', value === 'all' ? '' : value)}
+              style={{ width: '100%' }}
+              size='large'
+            >
+              <Option value='all'>All Countries</Option>
+              {getUniqueCountries().map((country) => (
+                <Option key={country} value={country}>
+                  {country}
+                </Option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '14px', marginBottom: '8px', color: '#666', fontWeight: 500 }}>
+              Type
+            </div>
+            <Select
+              value={filters.type || 'all'}
+              onChange={(value) => handleFilterChange('type', value === 'all' ? '' : value)}
+              style={{ width: '100%' }}
+              size='large'
+            >
+              <Option value='all'>All Types</Option>
+              {getUniqueTypes().map((type) => (
+                <Option key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '14px', marginBottom: '8px', color: '#666', fontWeight: 500 }}>
+              Size
+            </div>
+            <Select
+              value={filters.size || 'all'}
+              onChange={(value) => handleFilterChange('size', value === 'all' ? '' : value)}
+              style={{ width: '100%' }}
+              size='large'
+            >
+              <Option value='all'>All Sizes</Option>
+              {getUniqueSizes().map((size) => (
+                <Option key={size} value={size}>
+                  {size.charAt(0).toUpperCase() + size.slice(1)}
+                </Option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '14px', marginBottom: '8px', color: '#666', fontWeight: 500 }}>
+              Fields
+            </div>
+            <Select
+              value={filters.department || 'all'}
+              onChange={(value) => handleFilterChange('department', value === 'all' ? '' : value)}
+              style={{ width: '100%' }}
+              size='large'
+            >
+              <Option value='all'>All Fields</Option>
+              {getUniqueDepartments().map((dept) => (
+                <Option key={dept} value={dept}>
+                  {dept}
+                </Option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '14px', marginBottom: '8px', color: '#666', fontWeight: 500 }}>
+              Sort By
+            </div>
+            <Select value={sortBy} onChange={setSortBy} style={{ width: '100%' }} size='large'>
+              {sortOptions.map((option) => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button
+              onClick={handleResetFilters}
+              style={{ color: '#ff7a00', borderColor: '#ff7a00' }}
+            >
+              Reset Filters
+            </Button>
+            <Button
+              type='primary'
+              onClick={() => setFilterDrawerVisible(false)}
+              style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+            >
+              Apply
+            </Button>
+          </div>
+        </Space>
+      </Drawer>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title='Confirm Action'
+        visible={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => setDeleteModalVisible(false)}
+        okText='Yes'
+        cancelText='No'
+        okButtonProps={{
+          type: 'primary', // blue button
+        }}
+      >
+        <div className='flex items-start gap-2'>
+          <ExclamationCircleFilled className='text-yellow-300 text-lg relative -top-0.5' />
+          <p className='text-sm text-gray-700 m-0'>{getConfirmationMessage()}</p>
         </div>
-      </main>
+      </Modal>
     </div>
   );
 };

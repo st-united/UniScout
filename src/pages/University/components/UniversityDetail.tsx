@@ -15,7 +15,7 @@ import {
   Contact,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { University as UniversityBase } from '@app/interface/university.interface';
 
@@ -241,9 +241,17 @@ const UniversityDetail: React.FC = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const { id } = useParams<{ id: string }>();
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   useEffect(() => {
     axios.get(`/universities/${id}`).then((res) => setUniversity(res.data));
   }, [id]);
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
 
   if (!university) return <div className='p-8 text-center'>Loading...</div>;
 
@@ -255,73 +263,79 @@ const UniversityDetail: React.FC = () => {
   return (
     <div className='min-h-screen w-full px-4 py-6 bg-gray-50'>
       <div className='mx-auto max-w-7xl'>
-        <Link
-          to='/'
-          className='inline-flex items-center gap-2 text-[#595858] font-[500] hover:text-gray-600 mb-4 relative top-1 text-lg'
-        >
-          <ArrowLeft className='w-5 h-5' /> Home
-        </Link>
+        {/* Header */}
+        <div className='pt-4 mb-6'>
+          <button
+            type='button'
+            onClick={() => navigate(-1)}
+            className='inline-flex items-center gap-2 text-[#595858] font-[500] mb-4 relative top-1 text-lg bg-transparent border-0 hover:bg-gray-100 hover:text-orange-500 transition-colors'
+          >
+            <ArrowLeft className='w-5 h-5' />
+            Home
+          </button>
 
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
-          <div className='bg-white rounded-lg shadow-sm p-6'>
-            <div className='flex items-start gap-4'>
-              <img
-                src={university.logo}
-                alt={university.university}
-                className='w-16 h-16 rounded-lg object-cover flex-shrink-0'
-              />
-              <div className='flex-1'>
-                <h1 className='text-4xl font-bold text-blue-900 mb-2'>
-                  About {university.university}
-                </h1>
-                <div className='text-base flex items-center gap-2 text-orange-500 mb-3'>
-                  <MapPin className='w-4 h-4' />
-                  <span>{university.country}</span>
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
+            <div className='bg-white rounded-lg shadow-sm p-6'>
+              <div className='flex items-start gap-4'>
+                <img
+                  src={university.logo}
+                  alt={university.university}
+                  className='w-16 h-16 rounded-lg object-cover flex-shrink-0'
+                />
+                <div className='flex-1'>
+                  <h1 className='text-4xl font-bold text-blue-900 mb-2'>
+                    About {university.university}
+                  </h1>
+                  <div className='text-base flex items-center gap-2 text-orange-500 mb-3'>
+                    <MapPin className='w-4 h-4' />
+                    <span>{university.country}</span>
+                  </div>
+                  <p className='text-gray-600 text-sm italic'>{university.description}</p>
                 </div>
-                <p className='text-gray-600 text-sm italic'>{university.description}</p>
+              </div>
+            </div>
+            <div className='bg-white rounded-lg shadow-sm p-6'>
+              <div className='w-full h-64 bg-gray-100 rounded-lg overflow-hidden'>
+                <iframe
+                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&q=${university.latitude},${university.longitude}&zoom=15`}
+                  width='100%'
+                  height='100%'
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading='lazy'
+                  referrerPolicy='no-referrer-when-downgrade'
+                  title='University Location'
+                />
               </div>
             </div>
           </div>
-          <div className='bg-white rounded-lg shadow-sm p-6'>
-            <div className='w-full h-64 bg-gray-100 rounded-lg overflow-hidden'>
-              <iframe
-                src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao&q=${university.latitude},${university.longitude}&zoom=15`}
-                width='100%'
-                height='100%'
-                style={{ border: 0 }}
-                allowFullScreen
-                loading='lazy'
-                referrerPolicy='no-referrer-when-downgrade'
-                title='University Location'
-              />
-            </div>
-          </div>
-        </div>
 
-        <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
-          <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
-            <div className='flex items-center justify-center gap-2 mb-2'>
-              <Star className='w-5 h-5 text-white' />
-              <span className='text-sm font-medium text-white'>Ranking</span>
+          {/* Stats Row */}
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
+            <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
+              <div className='flex items-center justify-center gap-2 mb-2'>
+                <Star className='w-5 h-5 text-white' />
+                <span className='text-sm font-medium text-white'>Ranking</span>
+              </div>
+              <div className='text-3xl font-bold text-white'>{university.rank ?? 'N/A'}</div>
             </div>
-            <div className='text-3xl font-bold text-white'>{university.rank ?? 'N/A'}</div>
-          </div>
-          <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
-            <div className='flex items-center justify-center gap-2 mb-2'>
-              <Users className='w-5 h-5 text-white' />
-              <span className='text-sm font-medium text-white'>Size</span>
+            <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
+              <div className='flex items-center justify-center gap-2 mb-2'>
+                <Users className='w-5 h-5 text-white' />
+                <span className='text-sm font-medium text-white'>Size</span>
+              </div>
+              <div className='text-3xl font-bold text-white'>{studentSizeInfo.size}</div>
+              <div className='text-xs text-white mt-1'>{studentSizeInfo.description}</div>
             </div>
-            <div className='text-3xl font-bold text-white'>{studentSize.size}</div>
-            <div className='text-xs text-white mt-1'>{studentSize.population} students</div>
-          </div>
-          <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
-            <div className='flex items-center justify-center gap-2 mb-2'>
-              <Building2 className='w-5 h-5 text-white' />
-              <span className='text-sm font-medium text-white'>Type</span>
-            </div>
-            <div className='text-3xl font-bold text-white'>
-              {university.type?.[0].toUpperCase() + university.type?.slice(1).toLowerCase() ||
-                'N/A'}
+            <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center min-h-[120px]'>
+              <div className='flex items-center justify-center gap-2 mb-2'>
+                <Building2 className='w-5 h-5 text-white' />
+                <span className='text-sm font-medium text-white'>Type</span>
+              </div>
+              <div className='text-3xl font-bold text-white'>
+                {university.type?.charAt(0).toUpperCase() +
+                  university.type?.slice(1).toLowerCase() || 'N/A'}
+              </div>
             </div>
           </div>
         </div>

@@ -1,6 +1,13 @@
+import { message } from 'antd';
+import axios from 'axios';
 import { LayoutDashboard, GraduationCap, FileText, User, LogOut, Menu, X } from 'lucide-react';
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+
+import { removeStorageData } from '@app/config/storage';
+import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
+import { logout } from '@app/redux/features/auth/authSlice';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,6 +17,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const menuItems = [
     {
@@ -52,30 +60,74 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     setIsOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('Logout clicked');
-    // navigate('/login');
+    try {
+      await axios.get('/api/auth/logout', {
+        headers: {
+          Authorization: '',
+        },
+      });
+      removeStorageData(ACCESS_TOKEN);
+      removeStorageData(REFRESH_TOKEN);
+
+      dispatch(logout());
+
+      message.success('Logged out successfully!');
+      console.log('Frontend logout complete. Redirecting to /login.');
+
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        message.error(error.response.data.message || 'Logout failed. Please try again.');
+      } else {
+        message.error('An unexpected error occurred during logout.');
+      }
+
+      removeStorageData(ACCESS_TOKEN);
+      removeStorageData(REFRESH_TOKEN);
+      dispatch(logout());
+      window.location.href = '/login';
+    } finally {
+      setIsOpen(false);
+    }
+  };
+
+  const isParentActive = (item: (typeof menuItems)[number]): boolean => {
+    if (item.id === activeTab) return true;
+    if (item.children) {
+      return item.children.some((child) => child.id === activeTab);
+    }
+    return false;
   };
 
   return (
     <>
-      <div className='lg:hidden p-4'>
-        <button onClick={() => setIsOpen(true)} className='text-gray-700'>
+      {/* Mobile menu button */}
+      <div className='lg:hidden fixed top-4 left-4 z-50'>
+        <button
+          onClick={() => setIsOpen(true)}
+          className='p-2 bg-white rounded-lg shadow-md text-gray-700 hover:bg-gray-50'
+        >
           <Menu className='w-6 h-6' />
         </button>
       </div>
 
+      {/* Sidebar */}
       <div
-        className={`z-50 w-64 bg-white h-full flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
-          isOpen ? 'inset-y-0 left-0 translate-x-0' : 'inset-y-0 left-0 -translate-x-full'
-        } lg:inset-y-0 lg:left-0 lg:translate-x-0`}
+        className={`fixed lg:static z-50 w-64 bg-white h-full flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
       >
+        {/* Mobile close button */}
         <div className='lg:hidden flex justify-end p-4'>
-          <button onClick={() => setIsOpen(false)}>
+          <button onClick={() => setIsOpen(false)} className='p-1 hover:bg-gray-100 rounded'>
             <X className='w-6 h-6 text-gray-700' />
           </button>
         </div>
 
+        {/* User profile section */}
         <div className='p-6 pt-8'>
           <div className='flex items-center space-x-3'>
             <div className='w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center'>
@@ -85,11 +137,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
 
+        {/* Navigation */}
         <nav className='flex-1 py-4 overflow-y-auto'>
           <ul className='space-y-2 px-4 list-none'>
             {menuItems.map((item) => {
               const IconComponent = item.icon;
-              const isActiveParent = activeTab === item.id;
+              const isActiveParent = isParentActive(item);
 
               return (
                 <li key={item.id}>
@@ -118,6 +171,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     </div>
                   )}
 
+                  {/* Child menu items */}
                   {item.children && (
                     <ul className='ml-6 mt-2 space-y-1 list-none'>
                       {item.children.map((child) => {
@@ -151,7 +205,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </ul>
         </nav>
 
-        {/* Logo at Bottom */}
         <div className='p-6 border-t border-gray-200'>
           <div className='flex items-center space-x-2'>
             <div className='w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center'>
@@ -162,7 +215,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         </div>
       </div>
 
-      {/* Overlay for mobile */}
+      {/* Mobile overlay */}
       {isOpen && (
         <div
           role='button'

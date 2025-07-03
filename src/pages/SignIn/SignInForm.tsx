@@ -4,12 +4,15 @@ import { Rule } from 'antd/lib/form';
 import axios from 'axios';
 import { FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import * as yup from 'yup';
 
 import i18n from '@app/config/i18n';
+import { setStorageStringData } from '@app/config/storage';
 import { yupSync } from '@app/helpers/yupSync';
-
+import { login } from '@app/redux/features/auth/authSlice';
+import store from '@app/redux/store';
 type ISignInForm = {
   email: string;
   password: string;
@@ -40,31 +43,44 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
   const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate(); // ✅ needed for redirect
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const validator = [yupSync(signInSchema)] as unknown as Rule[];
 
   const handleSubmit = async (values: ISignInForm) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await axios.post('/auth/login', {
         email: values.email,
         password: values.password,
       });
 
-      const { token } = response.data;
+      const { accessToken, refreshToken, name } = response.data.data;
 
-      if (token) {
-        localStorage.setItem('token', token); // ✅ store token
-        message.success('Login successful');
-        navigate('/'); // ✅ redirect after login
+      if (accessToken && refreshToken) {
+        setStorageStringData('accessToken', accessToken);
+        setStorageStringData('refreshToken', refreshToken);
+
+        dispatch(login());
+        message.success('Login successful!');
+        console.log(
+          'SignInForm: Login successful. Redux isAuth after dispatch:',
+          store.getState().auth.isAuth,
+        );
+        console.log('SignInForm: Redirecting to /admin/dashboard');
+        navigate('/admin/dashboard');
       } else {
-        throw new Error('No token received');
+        throw new Error('Authentication tokens not received from the server.');
       }
     } catch (error: any) {
-      const errorMsg =
-        error.response?.data?.message || 'Login failed. Please check your credentials.';
-      message.error(errorMsg);
+      if (axios.isAxiosError(error) && error.response) {
+        const errorMessage =
+          error.response.data.message || 'Login failed. Please check your credentials.';
+        message.error(errorMessage);
+      } else {
+        message.error('An unexpected error occurred during login. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -80,20 +96,15 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
       className={`bg-[#e2e3e3] flex items-center justify-center min-h-screen px-8 ${className}`}
     >
       <div className='w-full max-w-md'>
-        {/* Mobile Menu Icon */}
         <div className='flex justify-end mb-8 md:hidden'>
           <MenuOutlined className='text-2xl text-gray-600' />
         </div>
-
-        {/* Welcome Header */}
         <div className='text-center mb-8'>
           <Title level={1} className='text-4xl font-bold text-gray-900 mb-2'>
             Welcome Back !
           </Title>
           <Paragraph className='text-lg text-orange-500 font-medium'>Login to continue</Paragraph>
         </div>
-
-        {/* Login Form */}
         <Form
           form={form}
           onFinish={handleSubmit}
@@ -101,7 +112,6 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
           className='space-y-6'
           initialValues={previousValue}
         >
-          {/* Email Field */}
           <Form.Item
             name='email'
             label={<span className='text-gray-900 font-semibold text-base'>Email</span>}
@@ -114,8 +124,6 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
               onChange={(e) => onInputChange('email', e.target.value)}
             />
           </Form.Item>
-
-          {/* Password Field */}
           <Form.Item
             name='password'
             label={<span className='text-gray-900 font-semibold text-base'>Password</span>}
@@ -129,8 +137,6 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
               onChange={(e) => onInputChange('password', e.target.value)}
             />
           </Form.Item>
-
-          {/* Forgot Password Link */}
           <div className='text-right mb-6'>
             <button
               type='button'
@@ -139,8 +145,6 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
               Forgot Password?
             </button>
           </div>
-
-          {/* Login Button */}
           <Form.Item className='mb-0'>
             <Button
               type='primary'
