@@ -1,11 +1,9 @@
-import {
-  PlusOutlined,
-  ExportOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  CloseOutlined,
-  ExclamationCircleFilled,
-} from '@ant-design/icons';
+import CloseOutlined from '@ant-design/icons/CloseOutlined';
+import DeleteOutlined from '@ant-design/icons/DeleteOutlined';
+import EditOutlined from '@ant-design/icons/EditOutlined';
+import ExclamationCircleFilled from '@ant-design/icons/ExclamationCircleFilled';
+import ExportOutlined from '@ant-design/icons/ExportOutlined';
+import PlusOutlined from '@ant-design/icons/PlusOutlined';
 import {
   Table,
   Button,
@@ -530,7 +528,7 @@ const UniversityListPage: React.FC = () => {
         <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Country</div>
         <Select
           value={filters.country || 'all'}
-          onChange={(value) => handleFilterChange('country', value === 'all' ? '' : value)}
+          onChange={(value: string) => handleFilterChange('country', value === 'all' ? '' : value)}
           style={{ width: '100%' }}
         >
           <Option value='all'>All Countries</Option>
@@ -546,7 +544,7 @@ const UniversityListPage: React.FC = () => {
         <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Type</div>
         <Select
           value={filters.type || 'all'}
-          onChange={(value) => handleFilterChange('type', value === 'all' ? '' : value)}
+          onChange={(value: string) => handleFilterChange('type', value === 'all' ? '' : value)}
           style={{ width: '100%' }}
         >
           <Option value='all'>All Types</Option>
@@ -562,7 +560,7 @@ const UniversityListPage: React.FC = () => {
         <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Size</div>
         <Select
           value={filters.size || 'all'}
-          onChange={(value) => handleFilterChange('size', value === 'all' ? '' : value)}
+          onChange={(value: string) => handleFilterChange('size', value === 'all' ? '' : value)}
           style={{ width: '100%' }}
         >
           <Option value='all'>All Sizes</Option>
@@ -578,7 +576,9 @@ const UniversityListPage: React.FC = () => {
         <div style={{ fontSize: '12px', marginBottom: '7px', color: '#666' }}>Fields</div>
         <Select
           value={filters.department || 'all'}
-          onChange={(value) => handleFilterChange('department', value === 'all' ? '' : value)}
+          onChange={(value: string) =>
+            handleFilterChange('department', value === 'all' ? '' : value)
+          }
           style={{ width: '100%' }}
         >
           <Option value='all'>All Fields</Option>
@@ -817,14 +817,25 @@ const UniversityListPage: React.FC = () => {
               current: currentPage,
               pageSize: pageSize,
               total: universityData?.totalCount || 0,
-              onChange: (page, size) => {
+              onChange: (page: React.SetStateAction<number>, size: any) => {
                 setCurrentPage(page);
                 setPageSize(size || 12);
               },
               showSizeChanger: false,
               showQuickJumper: false,
               className: 'custom-pagination',
-              itemRender: (page, type, originalElement) => {
+              itemRender: (
+                page:
+                  | string
+                  | number
+                  | boolean
+                  | React.ReactElement<any, string | React.JSXElementConstructor<any>>
+                  | Iterable<React.ReactNode>
+                  | null
+                  | undefined,
+                type: string,
+                originalElement: any,
+              ) => {
                 const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
 
                 const baseStyle: React.CSSProperties = {
@@ -930,7 +941,9 @@ const UniversityListPage: React.FC = () => {
             </div>
             <Select
               value={filters.country || 'all'}
-              onChange={(value) => handleFilterChange('country', value === 'all' ? '' : value)}
+              onChange={(value: string) =>
+                handleFilterChange('country', value === 'all' ? '' : value)
+              }
               style={{ width: '100%' }}
               size='large'
             >
@@ -949,7 +962,7 @@ const UniversityListPage: React.FC = () => {
             </div>
             <Select
               value={filters.type || 'all'}
-              onChange={(value) => handleFilterChange('type', value === 'all' ? '' : value)}
+              onChange={(value: string) => handleFilterChange('type', value === 'all' ? '' : value)}
               style={{ width: '100%' }}
               size='large'
             >
@@ -968,7 +981,7 @@ const UniversityListPage: React.FC = () => {
             </div>
             <Select
               value={filters.size || 'all'}
-              onChange={(value) => handleFilterChange('size', value === 'all' ? '' : value)}
+              onChange={(value: string) => handleFilterChange('size', value === 'all' ? '' : value)}
               style={{ width: '100%' }}
               size='large'
             >
@@ -987,7 +1000,9 @@ const UniversityListPage: React.FC = () => {
             </div>
             <Select
               value={filters.department || 'all'}
-              onChange={(value) => handleFilterChange('department', value === 'all' ? '' : value)}
+              onChange={(value: string) =>
+                handleFilterChange('department', value === 'all' ? '' : value)
+              }
               style={{ width: '100%' }}
               size='large'
             >
