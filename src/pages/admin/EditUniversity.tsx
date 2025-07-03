@@ -1,19 +1,7 @@
 import { InboxOutlined, ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
-import {
-  Form,
-  Input,
-  Select,
-  Button,
-  Upload,
-  Card,
-  Row,
-  Col,
-  message,
-  Typography,
-  InputNumber,
-  Spin,
-} from 'antd';
+import { Form, Input, Select, Button, Upload, message, Typography, InputNumber, Spin } from 'antd';
 import axios from 'axios';
+import { Pencil } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -22,6 +10,7 @@ const { Option } = Select;
 const { Title } = Typography;
 const { Dragger } = Upload;
 
+// Types
 interface UniversityData {
   universityName: string;
   country: string;
@@ -38,8 +27,47 @@ interface UniversityData {
   fields: string[];
   other?: string;
   logo?: File;
-  logoUrl?: string; // For displaying existing logo
+  logoUrl?: string;
 }
+
+// Mapping helpers
+const mapApiToFormData = (data: any): UniversityData => ({
+  universityName: data.name || data.university || '',
+  country: data.country || '',
+  location: data.location || '',
+  latitude: data.latitude?.toString() || '',
+  longitude: data.longitude?.toString() || '',
+  type: data.type || '',
+  numberOfStudents: data.studentPopulation || undefined,
+  rank: data.rank || data.ranking || undefined,
+  phone: data.contact || '',
+  email: data.email || '',
+  website: data.website || 'https://',
+  description: data.description || '',
+  fields:
+    typeof data.academicFieldsCommaSeparated === 'string'
+      ? data.academicFieldsCommaSeparated.split(',').map((f: string) => f.trim())
+      : [],
+  other: data.other || data.strength || '',
+  logoUrl: data.logoUrl || data.logo || '',
+});
+
+const mapToUpdateDto = (values: UniversityData) => ({
+  university: values.universityName,
+  country: values.country,
+  location: values.location,
+  latitude: values.latitude ? Number(values.latitude) : undefined,
+  longitude: values.longitude ? Number(values.longitude) : undefined,
+  type: values.type?.toLowerCase(),
+  studentPopulation: values.numberOfStudents,
+  rank: values.rank,
+  contact: values.phone,
+  email: values.email,
+  website: values.website.startsWith('http') ? values.website : `https://${values.website}`,
+  description: values.description,
+  academicFields: values.fields || [],
+  strength: values.other,
+});
 
 const EditUniversity = () => {
   const { id } = useParams();
@@ -50,79 +78,47 @@ const EditUniversity = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [existingLogoUrl, setExistingLogoUrl] = useState<string>('');
   const [isEditable, setIsEditable] = useState(false);
+  const [availableFields, setAvailableFields] = useState<string[]>([]);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
 
-  const fieldsOptions = [
-    'Science & Engineering',
-    'Economics, Business & Management',
-    'Social Sciences & Humanities',
-    'Medicine, Pharmacy & Health Sciences',
-    'Arts & Design',
-    'Law & Political Science',
-    'Agriculture & Food Science',
-    'Sports & Physical Education',
-    'Emerging Technologies & Interdisciplinary Studies',
-    'Other',
-  ];
-
-  const universityTypes = [
-    { value: 'Public', label: 'Public' },
-    { value: 'Private', label: 'Private' },
-    { value: 'Academy', label: 'Academy' },
-    { value: 'International', label: 'International' },
-  ];
-
-  // Fetch university data on component mount
+  // Load initial university data
   useEffect(() => {
     const fetchUniversity = async () => {
       try {
         setPageLoading(true);
-        const response = await axios.get(`/universities/${id}`);
-        const universityData = response.data;
-        if (!universityData) {
-          message.error('University not found');
-          navigate('/admin/universities'); // Redirect if not found
-          return;
-        }
-        // Map the data to match the form structure
-        const formData = {
-          universityName:
-            universityData.name || universityData.universityName || universityData.university || '',
-          country: universityData.country || '',
-          location: universityData.location || '',
-          latitude: universityData.latitude || '',
-          longitude: universityData.longitude || '',
-          type: universityData.type || '',
-          numberOfStudents:
-            universityData.studentPopulation || universityData.numberOfStudents || undefined,
-          rank: universityData.rank || universityData.ranking || undefined,
-          phone: universityData.contact || universityData.phone || '',
-          email: universityData.email || '',
-          website: universityData.website || 'https://',
-          description: universityData.description || '',
-          fields: universityData.academicFields || [],
-          other: universityData.other || '',
-        };
-
-        // Set form values
+        const { data } = await axios.get(`/admin/universities/${id}`);
+        const formData = mapApiToFormData(data);
         form.setFieldsValue(formData);
-
-        // Set existing logo URL if available
-        if (universityData.logoUrl || universityData.logo) {
-          setExistingLogoUrl(universityData.logoUrl || universityData.logo);
-        }
-      } catch (error) {
+        if (formData.logoUrl) setExistingLogoUrl(formData.logoUrl);
+      } catch (err) {
         message.error('Failed to load university data');
-        navigate('/admin/universities'); // Redirect back if fetch fails
+        navigate('/admin/universities');
       } finally {
         setPageLoading(false);
       }
     };
 
-    if (id) {
-      fetchUniversity();
-    }
+    if (id) fetchUniversity();
   }, [id, form, navigate]);
 
+  // Load meta (types, fields)
+  useEffect(() => {
+    const fetchMeta = async () => {
+      try {
+        const [fieldsRes, typesRes] = await Promise.all([
+          axios.get('/universities/academic-fields'),
+          axios.get('/universities/types'),
+        ]);
+        setAvailableFields(fieldsRes.data?.data || []);
+        setAvailableTypes(typesRes.data?.data || []);
+      } catch {
+        message.error('Failed to load metadata');
+      }
+    };
+    fetchMeta();
+  }, []);
+
+  // Upload config
   const uploadProps = {
     name: 'logo',
     multiple: false,
@@ -130,20 +126,17 @@ const EditUniversity = () => {
     beforeUpload: (file: File) => {
       const isImage = file.type.startsWith('image/');
       const isLt5M = file.size / 1024 / 1024 < 5;
-
       if (!isImage) {
-        message.error('You can only upload image files!');
+        message.error('Only image files allowed!');
         return false;
       }
       if (!isLt5M) {
-        message.error('Image must be smaller than 5MB!');
+        message.error('Image must be < 5MB!');
         return false;
       }
-
       setLogoFile(file);
       form.setFieldsValue({ logo: file.name });
-      message.success(`${file.name} selected successfully`);
-      return false; // Prevent auto upload
+      return false;
     },
     onRemove: () => {
       setLogoFile(null);
@@ -151,120 +144,56 @@ const EditUniversity = () => {
     },
   };
 
-  // Handle form submission
+  // Submit form
   const onFinish = async (values: UniversityData) => {
     setLoading(true);
-
     const dto = mapToUpdateDto(values);
     const formData = new FormData();
 
-    // Append form values to FormData
     Object.entries(dto).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(`${key}[]`, v != null ? String(v) : ''));
+        value.forEach((v) => formData.append(`${key}[]`, v ?? ''));
       } else if (value !== undefined && value !== null) {
-        formData.append(key, typeof value === 'number' ? String(value) : value);
+        formData.append(key, String(value));
       }
     });
-    // Append logo file if it exists
-    if (logoFile) {
-      formData.append('logo', logoFile);
-    }
-    // Append university ID
+
+    if (logoFile) formData.append('logo', logoFile);
+
     try {
-      const response = await axios.patch(`/universities/${id}`, formData, {
+      await axios.patch(`/admin/universities/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-
       message.success('University updated successfully!');
       navigate('/admin/universities');
-    } catch (error: any) {
-      console.error('Error updating university:', error);
-      if (error.response?.data?.message) {
-        message.error(
-          Array.isArray(error.response.data.message)
-            ? error.response.data.message.join(', ')
-            : error.response.data.message,
-        );
-      } else {
-        message.error('Failed to update university');
-      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Update failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReset = () => {
-    // Reset form to original values by refetching data
-    const fetchUniversityForReset = async () => {
-      try {
-        const response = await axios.get(`/universities/${id}`);
-        const universityData = response.data;
-
-        const formData = {
-          universityName: universityData.name || universityData.universityName || '',
-          country: universityData.country || '',
-          location: universityData.location || '',
-          latitude: universityData.latitude || '',
-          longitude: universityData.longitude || '',
-          type: universityData.type || '',
-          numberOfStudents: universityData.numberOfStudents || undefined,
-          rank: universityData.rank || universityData.ranking || undefined,
-          phone: universityData.phone || '',
-          email: universityData.email || '',
-          website: universityData.website || 'https://',
-          description: universityData.description || '',
-          fields: universityData.fields || [],
-          other: universityData.other || '',
-        };
-
-        form.setFieldsValue(formData);
-        setLogoFile(null);
-        message.info('Form reset to original values');
-      } catch (error) {
-        message.error('Failed to reset form');
-      }
-    };
-
-    fetchUniversityForReset();
+  // Reset form
+  const handleReset = async () => {
+    try {
+      const { data } = await axios.get(`/universities/${id}`);
+      form.setFieldsValue(mapApiToFormData(data));
+      setLogoFile(null);
+      message.info('Form reset');
+    } catch {
+      message.error('Reset failed');
+    }
   };
 
-  // Show loading spinner while fetching data
+  // Loading state
   if (pageLoading) {
     return (
-      <div
-        style={{
-          padding: '24px',
-          backgroundColor: '#f5f5f5',
-          minHeight: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
+      <div className='min-h-screen flex items-center justify-center bg-gray-100'>
         <Spin size='large' />
       </div>
     );
   }
-  // Map form values to DTO structure
-  const mapToUpdateDto = (values: UniversityData) => {
-    return {
-      university: values.universityName,
-      country: Array.isArray(values.country) ? values.country : [values.country],
-      location: values.location,
-      latitude: values.latitude ? Number(values.latitude) : undefined,
-      longitude: values.longitude ? Number(values.longitude) : undefined,
-      type: values.type?.toLowerCase(),
-      studentPopulation: values.numberOfStudents,
-      rank: values.rank,
-      contact: values.phone,
-      email: values.email,
-      website: values.website.startsWith('http') ? values.website : `https://${values.website}`,
-      description: values.description,
-      academicFields: values.fields || [],
-      strength: values.other,
-    };
-  };
 
   return (
     <div className='p-6 bg-gray-100 min-h-screen'>
@@ -288,50 +217,39 @@ const EditUniversity = () => {
             initialValues={{ website: 'https://', fields: [] }}
           >
             <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-              {/* Col 1 */}
+              {/* Form Fields */}
               <div className='md:col-span-2'>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                   <Form.Item
                     label='University Name'
                     name='universityName'
-                    aria-label='universityName'
                     rules={[{ required: true }]}
                   >
                     <Input disabled={!isEditable} />
                   </Form.Item>
-                  <Form.Item
-                    label='Country'
-                    name='country'
-                    aria-label='country'
-                    rules={[{ required: true }]}
-                  >
+                  <Form.Item label='Country' name='country' rules={[{ required: true }]}>
                     <Input disabled={!isEditable} />
                   </Form.Item>
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                  <Form.Item
-                    label='Location'
-                    name='location'
-                    aria-label='location'
-                    rules={[{ required: true }]}
-                  >
+                  <Form.Item label='Location' name='location' rules={[{ required: true }]}>
                     <Input disabled={!isEditable} />
                   </Form.Item>
-                  <Form.Item label='Latitude' name='latitude' aria-label='latitude'>
+                  <Form.Item label='Latitude' name='latitude'>
                     <Input disabled={!isEditable} />
                   </Form.Item>
-                  <Form.Item label='Longitude' name='longitude' aria-label='longitude'>
+                  <Form.Item label='Longitude' name='longitude'>
                     <Input disabled={!isEditable} />
                   </Form.Item>
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4' aria-label='universityType'>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <Form.Item label='University Type' name='type' rules={[{ required: true }]}>
                     <Select disabled={!isEditable}>
-                      {universityTypes.map((type) => (
-                        <Option key={type.value} value={type.value}>
-                          {type.label}
+                      {availableTypes.map((type) => (
+                        <Option key={type} value={type}>
+                          {type}
                         </Option>
                       ))}
                     </Select>
@@ -339,13 +257,9 @@ const EditUniversity = () => {
                   <Form.Item
                     label='Number of Students'
                     name='numberOfStudents'
-                    rules={[{ required: true, message: 'Please enter the number of students' }]}
+                    rules={[{ required: true }]}
                   >
-                    <InputNumber
-                      className='w-full'
-                      disabled={!isEditable}
-                      formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    />
+                    <InputNumber className='w-full' disabled={!isEditable} />
                   </Form.Item>
                   <Form.Item label='Ranking' name='rank'>
                     <InputNumber className='w-full' disabled={!isEditable} />
@@ -357,7 +271,7 @@ const EditUniversity = () => {
                     label='Phone'
                     name='phone'
                     rules={[
-                      { required: true, message: 'Please enter a phone number' },
+                      { required: true },
                       { pattern: /^\+?[1-9]\d{1,14}$/, message: 'Invalid phone number' },
                     ]}
                   >
@@ -366,11 +280,7 @@ const EditUniversity = () => {
                   <Form.Item
                     label='Email'
                     name='email'
-                    aria-label='email'
-                    rules={[
-                      { required: true, message: 'Please enter an email' },
-                      { type: 'email', message: 'Invalid email address' },
-                    ]}
+                    rules={[{ required: true }, { type: 'email' }]}
                   >
                     <Input disabled={!isEditable} />
                   </Form.Item>
@@ -381,12 +291,12 @@ const EditUniversity = () => {
                 </Form.Item>
 
                 <Form.Item label='Description' name='description'>
-                  <TextArea rows={4} showCount maxLength={1000} disabled={!isEditable} />
+                  <TextArea rows={4} maxLength={1000} showCount disabled={!isEditable} />
                 </Form.Item>
 
                 <Form.Item label='Academic Fields' name='fields'>
                   <Select mode='multiple' disabled={!isEditable} className='w-full'>
-                    {fieldsOptions.map((field) => (
+                    {availableFields.map((field) => (
                       <Option key={field} value={field}>
                         {field}
                       </Option>
@@ -395,35 +305,23 @@ const EditUniversity = () => {
                 </Form.Item>
 
                 <Form.Item label='Other Information' name='other'>
-                  <TextArea rows={4} showCount maxLength={500} disabled={!isEditable} />
+                  <TextArea rows={4} maxLength={500} showCount disabled={!isEditable} />
                 </Form.Item>
-                {/* Action Buttons */}
+
+                {/* Buttons */}
                 <div className='flex justify-end space-x-4 mt-6'>
                   {!isEditable ? (
-                    <Button
-                      onClick={() => setIsEditable(true)}
-                      typeof='button'
-                      className='bg-[#ff7a00] border-[#ff7a00] text-white 
-                      hover:!bg-[#ff7a00] hover:!border-[#ff7a00] hover:!text-white
-                      focus:!shadow-none focus:!bg-[#ff7a00] focus:!border-[#ff7a00] focus:!text-white rounded-md'
-                    >
+                    <Button onClick={() => setIsEditable(true)} className='bg-[#ff7a00] text-white'>
                       Edit
                     </Button>
                   ) : (
                     <>
-                      <Button
-                        onClick={handleReset}
-                        className='bg-gray-200 border-gray-300 text-gray-800'
-                      >
-                        Reset
-                      </Button>
+                      <Button onClick={handleReset}>Reset</Button>
                       <Button
                         htmlType='submit'
                         loading={loading}
                         icon={<SaveOutlined />}
-                        className='bg-[#ff7a00] border-[#ff7a00] text-white 
-                          hover:!bg-[#ff7a00] hover:!border-[#ff7a00] hover:!text-white
-                          focus:!shadow-none focus:!bg-[#ff7a00] focus:!border-[#ff7a00] focus:!text-white'
+                        className='bg-[#ff7a00] text-white'
                       >
                         {loading ? 'Updating...' : 'Update University'}
                       </Button>
@@ -432,28 +330,29 @@ const EditUniversity = () => {
                 </div>
               </div>
 
-              {/* Col 2: Logo Upload */}
-              <div className='flex flex-col items-center'>
+              {/* Logo Upload */}
+              <div className='flex flex-col items-center '>
                 <Form.Item label='Logo' name='logo'>
-                  <Dragger {...uploadProps} disabled={!isEditable}>
-                    <p className='ant-upload-drag-icon'>
-                      <InboxOutlined />
-                    </p>
-                    <p className='ant-upload-text'>Click or drag file to upload</p>
-                    <p className='ant-upload-hint'>Upload new logo (optional)</p>
-                  </Dragger>
+                  <Upload.Dragger
+                    {...uploadProps}
+                    showUploadList={false}
+                    disabled={!isEditable}
+                    className='!p-0 !border-none !bg-transparent !shadow-none !outline-none dragger-hidden'
+                  >
+                    <div className='relative w-32 h-32 group overflow-hidden border-none'>
+                      <img
+                        src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
+                        alt='Current logo'
+                        className='w-full h-full object-contain'
+                      />
+                      {isEditable && (
+                        <div className='absolute bottom-1 right-1 bg-[#ff7a00] rounded-full p-2 items-center justify-center flex'>
+                          <Pencil size={20} color='white' />
+                        </div>
+                      )}
+                    </div>
+                  </Upload.Dragger>
                 </Form.Item>
-
-                {existingLogoUrl && !logoFile && (
-                  <div className='mt-4 text-center'>
-                    <img
-                      src={existingLogoUrl}
-                      alt='Current logo'
-                      className='h-16 object-contain mx-auto'
-                    />
-                    <div className='text-xs text-gray-500 mt-1'>Current logo</div>
-                  </div>
-                )}
               </div>
             </div>
           </Form>
