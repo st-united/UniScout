@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      path: 'dashboard',
+      path: '',
     },
     {
       id: 'manage-university',
