@@ -94,6 +94,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     }
   };
 
+  const isParentActive = (item: (typeof menuItems)[number]): boolean => {
+    if (item.id === activeTab) return true;
+    if (item.children) {
+      return item.children.some((child) => child.id === activeTab);
+    }
+    return false;
+  };
+
   return (
     <>
       {/* Mobile menu button */}
