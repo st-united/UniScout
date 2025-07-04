@@ -165,7 +165,7 @@ const EditUniversity = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       message.success('University updated successfully!');
-      navigate('/universities');
+      setIsEditable(false);
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Update failed');
@@ -225,28 +225,28 @@ const EditUniversity = () => {
                     name='universityName'
                     rules={[{ required: true }]}
                   >
-                    <Input disabled={!isEditable} />
+                    <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                   <Form.Item label='Country' name='country' rules={[{ required: true }]}>
-                    <Input disabled={!isEditable} />
+                    <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <Form.Item label='Location' name='location' rules={[{ required: true }]}>
-                    <Input disabled={!isEditable} />
+                    <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                   <Form.Item label='Latitude' name='latitude'>
-                    <Input disabled={!isEditable} />
+                    <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                   <Form.Item label='Longitude' name='longitude'>
-                    <Input disabled={!isEditable} />
+                    <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <Form.Item label='University Type' name='type' rules={[{ required: true }]}>
-                    <Select disabled={!isEditable}>
+                    <Select disabled={!isEditable} className='rounded-md'>
                       {availableTypes.map((type) => (
                         <Option key={type} value={type}>
                           {type}
@@ -259,10 +259,10 @@ const EditUniversity = () => {
                     name='numberOfStudents'
                     rules={[{ required: true }]}
                   >
-                    <InputNumber className='w-full' disabled={!isEditable} />
+                    <InputNumber className='w-full rounded-md' disabled={!isEditable} />
                   </Form.Item>
                   <Form.Item label='Ranking' name='rank'>
-                    <InputNumber className='w-full' disabled={!isEditable} />
+                    <InputNumber className='w-full rounded-md' disabled={!isEditable} />
                   </Form.Item>
                 </div>
 
@@ -275,27 +275,33 @@ const EditUniversity = () => {
                       { pattern: /^\+?[1-9]\d{1,14}$/, message: 'Invalid phone number' },
                     ]}
                   >
-                    <Input disabled={!isEditable} />
+                    <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                   <Form.Item
                     label='Email'
                     name='email'
                     rules={[{ required: true }, { type: 'email' }]}
                   >
-                    <Input disabled={!isEditable} />
+                    <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                 </div>
 
                 <Form.Item label='Website' name='website' rules={[{ required: true }]}>
-                  <Input disabled={!isEditable} />
+                  <Input disabled={!isEditable} className='rounded-md' />
                 </Form.Item>
 
                 <Form.Item label='Description' name='description'>
-                  <TextArea rows={4} maxLength={1000} showCount disabled={!isEditable} />
+                  <TextArea
+                    rows={4}
+                    maxLength={1000}
+                    showCount
+                    disabled={!isEditable}
+                    className='rounded-md'
+                  />
                 </Form.Item>
 
                 <Form.Item label='Academic Fields' name='fields'>
-                  <Select mode='multiple' disabled={!isEditable} className='w-full'>
+                  <Select mode='multiple' disabled={!isEditable} className='w-full rounded-md'>
                     {availableFields.map((field) => (
                       <Option key={field} value={field}>
                         {field}
@@ -305,7 +311,13 @@ const EditUniversity = () => {
                 </Form.Item>
 
                 <Form.Item label='Other Information' name='other'>
-                  <TextArea rows={4} maxLength={500} showCount disabled={!isEditable} />
+                  <TextArea
+                    rows={4}
+                    maxLength={500}
+                    showCount
+                    disabled={!isEditable}
+                    className='rounded-md'
+                  />
                 </Form.Item>
 
                 {/* Buttons */}
