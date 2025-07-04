@@ -69,7 +69,7 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
           store.getState().auth.isAuth,
         );
         console.log('SignInForm: Redirecting to /admin/dashboard');
-        navigate('/admin/dashboard');
+        navigate('/dashboard');
       } else {
         throw new Error('Authentication tokens not received from the server.');
       }
