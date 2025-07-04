@@ -47,6 +47,11 @@ const dashboardData = {
   ],
 };
 
+const renderDot = (props, color) => {
+  const { x, y } = props;
+  return <circle cx={x + 6} cy={y + 3} r={6} fill={color} />;
+};
+
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 const DashboardPage = () => {
@@ -146,27 +151,26 @@ const DashboardPage = () => {
       {/* Main Content Area */}
       <div className='flex-1 p-6 overflow-y-auto w-full'>
         <div className='mb-6'>
-          <h1 className='text-2xl font-bold text-gray-800 mb-2'>Overview</h1>
+          <h1 className='text-xl font-bold text-gray-800 mb-2'>Overview</h1>
         </div>
 
         {/* Top Stats */}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
-          <div className='bg-blue-50 p-6 rounded-lg border border-blue-100'>
+          <div className='bg-blue-50 p-8 rounded-2xl border border-blue-100 h-32'>
             <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Universities</h3>
-            <p className='text-3xl font-bold text-gray-900'>
+            <p className='text-4xl font-bold text-gray-900'>
               {summary.universityCount.toLocaleString()}
             </p>
           </div>
-          <div className='bg-orange-50 p-6 rounded-lg border border-orange-100'>
+          <div className='bg-orange-50 p-8 rounded-2xl border border-orange-100 h-32'>
             <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Contact Request</h3>
-            <p className='text-3xl font-bold text-gray-900'>{summary.contactCount}</p>
+            <p className='text-4xl font-bold text-gray-900'>{summary.contactCount}</p>
           </div>
         </div>
-
-        {/* Charts */}
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
-          {/* Traffic Line Chart */}
-          <div className='bg-white p-6 rounded-lg shadow-sm border'>
+        {/* Charts Section */}
+        <div className='grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6'>
+          {/* Website Traffic - full width */}
+          <div className='col-span-1 xl:col-span-3 bg-white p-6 rounded-lg shadow-sm border'>
             <div className='flex justify-between items-center mb-4'>
               <h3 className='text-lg font-semibold text-orange-600'>Website traffic tracking</h3>
               <div className='flex items-center space-x-4'>
@@ -206,98 +210,128 @@ const DashboardPage = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Pie Chart - Traffic by Location */}
-          <div className='bg-white p-6 rounded-lg shadow-sm border'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-lg font-semibold text-gray-800'>Traffic by Location</h3>
-              <Filter className='w-4 h-4 text-gray-400' />
-            </div>
-            {trafficLoading ? (
-              <p className='text-gray-500'>Chargement...</p>
-            ) : (
-              <div className='flex items-center justify-between'>
-                <div className='w-48 h-48'>
-                  <ResponsiveContainer width='100%' height='100%'>
-                    <PieChart>
-                      <Pie
-                        data={trafficByLocation}
-                        cx='50%'
-                        cy='50%'
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={2}
-                        dataKey='value'
-                      >
-                        {trafficByLocation.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+          {/* Row for the two side-by-side charts */}
+
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
+            {/* Track number of contact requests */}
+            <div className='bg-white p-6 rounded-lg shadow-sm border'>
+              <div className='flex justify-between items-center mb-4'>
+                <h3 className='text-lg font-semibold text-gray-800'>
+                  Track number of contact requests
+                </h3>
+                <Filter className='w-4 h-4 text-gray-400' />
+              </div>
+              <ResponsiveContainer width='100%' height={200}>
+                <BarChart data={dashboardData.requestData} barCategoryGap={10} barGap={4}>
+                  <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
+                  <XAxis dataKey='month' axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 200]} axisLine={false} tickLine={false} />
+                  <Tooltip />
+
+                  <Bar
+                    dataKey='pending'
+                    stackId='a'
+                    fill='rgba(59, 130, 246, 0.5)'
+                    barSize={12}
+                    label={{ content: (props) => renderDot(props, 'rgba(59, 130, 246, 1)') }}
+                  />
+                  <Bar
+                    dataKey='inProgress'
+                    stackId='a'
+                    fill='rgba(16, 185, 129, 0.5)'
+                    barSize={12}
+                    label={{ content: (props) => renderDot(props, 'rgba(16, 185, 129, 1)') }}
+                  />
+                  <Bar
+                    dataKey='completed'
+                    stackId='a'
+                    fill='rgba(245, 158, 11, 0.5)'
+                    barSize={12}
+                    label={{ content: (props) => renderDot(props, 'rgba(245, 158, 11, 1)') }}
+                  />
+                  <Bar
+                    dataKey='rejected'
+                    stackId='a'
+                    fill='rgba(239, 68, 68, 0.5)'
+                    radius={[10, 10, 0, 0]}
+                    barSize={12}
+                    label={{
+                      content: (props) => renderDot(props, 'rgba(239, 68, 68, 0.5)'),
+                    }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+
+              <div className='flex justify-center space-x-6 mt-4'>
+                <div className='flex items-center space-x-2'>
+                  <div className='w-3 h-3 rounded-full bg-blue-500'></div>
+                  <span className='text-xs text-gray-600'>Pending</span>
                 </div>
-                <div className='flex-1 ml-6 space-y-3'>
-                  {trafficByLocation.map((item, index) => (
-                    <div key={item.name} className='flex justify-between items-center'>
-                      <div className='flex items-center space-x-3'>
-                        <div
-                          className='w-3 h-3 rounded-full'
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        ></div>
-                        <span className='text-sm text-gray-700'>{item.name}</span>
+                <div className='flex items-center space-x-2'>
+                  <div className='w-3 h-3 rounded-full bg-green-500'></div>
+                  <span className='text-xs text-gray-600'>In Progress</span>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <div className='w-3 h-3 rounded-full bg-yellow-500'></div>
+                  <span className='text-xs text-gray-600'>Completed</span>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <div className='w-3 h-3 rounded-full bg-red-500'></div>
+                  <span className='text-xs text-gray-600'>Rejected</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Traffic by Location */}
+            <div className='bg-white p-6 rounded-lg shadow-sm border'>
+              <div className='flex justify-between items-center mb-4'>
+                <h3 className='text-lg font-semibold text-gray-800'>Traffic by Location</h3>
+                <Filter className='w-4 h-4 text-gray-400' />
+              </div>
+              {trafficLoading ? (
+                <p className='text-gray-500'>Chargement...</p>
+              ) : (
+                <div className='flex items-center justify-between'>
+                  <div className='w-48 h-48'>
+                    <ResponsiveContainer width='100%' height='100%'>
+                      <PieChart>
+                        <Pie
+                          data={trafficByLocation}
+                          cx='50%'
+                          cy='50%'
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={2}
+                          dataKey='value'
+                        >
+                          {trafficByLocation.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className='flex-1 ml-6 space-y-3'>
+                    {trafficByLocation.map((item, index) => (
+                      <div key={item.name} className='flex justify-between items-center'>
+                        <div className='flex items-center space-x-3'>
+                          <div
+                            className='w-3 h-3 rounded-full'
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          ></div>
+                          <span className='text-sm text-gray-700'>{item.name}</span>
+                        </div>
+                        <span className='text-sm font-medium text-gray-900'>{item.value}%</span>
                       </div>
-                      <span className='text-sm font-medium text-gray-900'>{item.value}%</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Charts */}
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-          {/* Bar Chart - Contact Requests */}
-          <div className='bg-white p-6 rounded-lg shadow-sm border'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-lg font-semibold text-gray-800'>
-                Track number of contact requests
-              </h3>
-              <Filter className='w-4 h-4 text-gray-400' />
-            </div>
-            <ResponsiveContainer width='100%' height={300}>
-              <BarChart data={dashboardData.requestData}>
-                <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
-                <XAxis dataKey='month' axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip />
-                <Bar dataKey='pending' fill='#3B82F6' name='Pending' />
-                <Bar dataKey='inProgress' fill='#10B981' name='In Progress' />
-                <Bar dataKey='completed' fill='#F59E0B' name='Completed' />
-                <Bar dataKey='rejected' fill='#EF4444' name='Rejected' />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className='flex justify-center space-x-6 mt-4'>
-              <div className='flex items-center space-x-2'>
-                <div className='w-3 h-3 rounded-full bg-blue-500'></div>
-                <span className='text-xs text-gray-600'>Pending</span>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <div className='w-3 h-3 rounded-full bg-green-500'></div>
-                <span className='text-xs text-gray-600'>In Progress</span>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <div className='w-3 h-3 rounded-full bg-yellow-500'></div>
-                <span className='text-xs text-gray-600'>Completed</span>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <div className='w-3 h-3 rounded-full bg-red-500'></div>
-                <span className='text-xs text-gray-600'>Rejected</span>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Top Universities */}
-          <div className='bg-white p-6 rounded-lg shadow-sm border'>
+          {/* Top Search University - full width below, aligned left */}
+          <div className='col-span-1 xl:col-span-1 bg-white p-6 rounded-lg shadow-sm border'>
             <h3 className='text-lg font-semibold text-gray-800 mb-6'>Top Search University</h3>
             <div className='space-y-4'>
               {topSearch.map((item, index) => (
