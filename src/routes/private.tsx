@@ -55,7 +55,7 @@ const routes = [
         element: <CreateUniversity />,
       },
       {
-        path: 'edit-university',
+        path: 'edit-university/:id',
         element: <EditUniversity />,
       },
       {

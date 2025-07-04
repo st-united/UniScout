@@ -17,7 +17,7 @@ const SignIn: FC = () => {
     console.log('SignIn useEffect: isAuth changed to', isAuth);
     if (isAuth) {
       console.log('SignIn useEffect: Redirecting to /admin/dashboard');
-      navigate('/dashboard');
+      navigate('/');
     }
   }, [isAuth, navigate]);
 
