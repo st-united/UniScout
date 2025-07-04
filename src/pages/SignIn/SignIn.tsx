@@ -14,7 +14,11 @@ const SignIn: FC = () => {
 
   const { isAuth } = useSelector((state: RootState) => state.auth);
   useEffect(() => {
-    if (isAuth) navigate('/');
+    console.log('SignIn useEffect: isAuth changed to', isAuth);
+    if (isAuth) {
+      console.log('SignIn useEffect: Redirecting to /admin/dashboard');
+      navigate('/');
+    }
   }, [isAuth, navigate]);
 
   const [previousValue, setPreviousValue] = useState({

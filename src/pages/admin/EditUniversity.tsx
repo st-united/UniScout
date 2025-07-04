@@ -1,369 +1,362 @@
+import { InboxOutlined, ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
+import { Form, Input, Select, Button, Upload, message, Typography, InputNumber, Spin } from 'antd';
 import axios from 'axios';
-import React, { useEffect, useRef, useState } from 'react';
+import { Pencil } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import Sidebar from '../../components/Sidebar';
+const { TextArea } = Input;
+const { Option } = Select;
+const { Title } = Typography;
+const { Dragger } = Upload;
 
-const fieldsOptions = [
-  'Agriculture & Food Science',
-  'Arts & Design',
-  'Economics, Business & Management',
-  'Engineering',
-  'Law & Political Science',
-  'Medicine, Pharmacy & Health Sciences',
-  'Physical Science',
-  'Social Sciences & Humanities',
-  'Sports & Physical Education',
-  'Technology',
-  'Other',
-];
+// Types
+interface UniversityData {
+  universityName: string;
+  country: string;
+  location: string;
+  latitude?: string;
+  longitude?: string;
+  type: string;
+  numberOfStudents?: number;
+  rank?: number;
+  phone: string;
+  email: string;
+  website: string;
+  description?: string;
+  fields: string[];
+  other?: string;
+  logo?: File;
+  logoUrl?: string;
+}
 
-const EditUniversity: React.FC = () => {
+// Mapping helpers
+const mapApiToFormData = (data: any): UniversityData => ({
+  universityName: data.name || data.university || '',
+  country: data.country || '',
+  location: data.location || '',
+  latitude: data.latitude?.toString() || '',
+  longitude: data.longitude?.toString() || '',
+  type: data.type || '',
+  numberOfStudents: data.studentPopulation || undefined,
+  rank: data.rank || data.ranking || undefined,
+  phone: data.contact || '',
+  email: data.email || '',
+  website: data.website || 'https://',
+  description: data.description || '',
+  fields:
+    typeof data.academicFieldsCommaSeparated === 'string'
+      ? data.academicFieldsCommaSeparated.split(',').map((f: string) => f.trim())
+      : [],
+  other: data.other || data.strength || '',
+  logoUrl: data.logoUrl || data.logo || '',
+});
+
+const mapToUpdateDto = (values: UniversityData) => ({
+  university: values.universityName,
+  country: values.country,
+  location: values.location,
+  latitude: values.latitude ? Number(values.latitude) : undefined,
+  longitude: values.longitude ? Number(values.longitude) : undefined,
+  type: values.type?.toLowerCase(),
+  studentPopulation: values.numberOfStudents,
+  rank: values.rank,
+  contact: values.phone,
+  email: values.email,
+  website: values.website.startsWith('http') ? values.website : `https://${values.website}`,
+  description: values.description,
+  academicFields: values.fields || [],
+  strength: values.other,
+});
+
+const EditUniversity = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const fieldsRef = useRef<HTMLDivElement>(null);
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string>('');
+  const [isEditable, setIsEditable] = useState(false);
+  const [availableFields, setAvailableFields] = useState<string[]>([]);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    location: '',
-    coordinates: '',
-    type: '',
-    numberOfStudents: '',
-    ranking: '',
-    phone: '',
-    email: '',
-    website: '',
-    description: '',
-    fields: [] as string[],
-    other: '',
-  });
-
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [fieldsOpen, setFieldsOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState('');
-
+  // Load initial university data
   useEffect(() => {
     const fetchUniversity = async () => {
       try {
-        const response = await axios.get(`/api/universities/${id}`);
-        setFormData(response.data);
-      } catch (error) {
-        console.error('Failed to fetch university data', error);
+        setPageLoading(true);
+        const { data } = await axios.get(`/admin/universities/${id}`);
+        const formData = mapApiToFormData(data);
+        form.setFieldsValue(formData);
+        if (formData.logoUrl) setExistingLogoUrl(formData.logoUrl);
+      } catch (err) {
+        message.error('Failed to load university data');
+        navigate('/universities');
+      } finally {
+        setPageLoading(false);
       }
     };
 
-    fetchUniversity();
+    if (id) fetchUniversity();
+  }, [id, form, navigate]);
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (fieldsRef.current && !fieldsRef.current.contains(e.target as Node)) {
-        setFieldsOpen(false);
+  // Load meta (types, fields)
+  useEffect(() => {
+    const fetchMeta = async () => {
+      try {
+        const [fieldsRes, typesRes] = await Promise.all([
+          axios.get('/universities/academic-fields'),
+          axios.get('/universities/types'),
+        ]);
+        setAvailableFields(fieldsRes.data?.data || []);
+        setAvailableTypes(typesRes.data?.data || []);
+      } catch {
+        message.error('Failed to load metadata');
       }
     };
+    fetchMeta();
+  }, []);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [id]);
-
-  const validate = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.location.trim()) newErrors.location = 'Location is required';
-    if (!formData.type) newErrors.type = 'University type is required';
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email';
-    }
-    if (formData.website && !/^https?:\/\/.+\..+/.test(formData.website)) {
-      newErrors.website = 'Invalid URL';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  // Upload config
+  const uploadProps = {
+    name: 'logo',
+    multiple: false,
+    accept: 'image/*',
+    beforeUpload: (file: File) => {
+      const isImage = file.type.startsWith('image/');
+      const isLt5M = file.size / 1024 / 1024 < 5;
+      if (!isImage) {
+        message.error('Only image files allowed!');
+        return false;
+      }
+      if (!isLt5M) {
+        message.error('Image must be < 5MB!');
+        return false;
+      }
+      setLogoFile(file);
+      form.setFieldsValue({ logo: file.name });
+      return false;
+    },
+    onRemove: () => {
+      setLogoFile(null);
+      form.setFieldsValue({ logo: undefined });
+    },
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  // Submit form
+  const onFinish = async (values: UniversityData) => {
+    setLoading(true);
+    const dto = mapToUpdateDto(values);
+    const formData = new FormData();
 
-  const handleFieldToggle = (field: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      fields: prev.fields.includes(field)
-        ? prev.fields.filter((f) => f !== field)
-        : [...prev.fields, field],
-    }));
-  };
+    Object.entries(dto).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((v) => formData.append(`${key}[]`, v ?? ''));
+      } else if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+    if (logoFile) formData.append('logo', logoFile);
 
     try {
-      setIsSubmitting(true);
-      await axios.put(`/api/universities/${id}`, formData);
-      setSubmitMessage('University updated successfully!');
-      setTimeout(() => navigate('/admin/universities'), 1500);
-    } catch (error) {
-      console.error(error);
-      setSubmitMessage('Failed to update university.');
+      await axios.patch(`/universities/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      message.success('University updated successfully!');
+      navigate('/universities');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Update failed');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const [activeTab, setActiveTab] = useState<string>('universities');
+  // Reset form
+  const handleReset = async () => {
+    try {
+      const { data } = await axios.get(`/universities/${id}`);
+      form.setFieldsValue(mapApiToFormData(data));
+      setLogoFile(null);
+      message.info('Form reset');
+    } catch {
+      message.error('Reset failed');
+    }
+  };
+
+  // Loading state
+  if (pageLoading) {
+    return (
+      <div className='min-h-screen flex items-center justify-center bg-gray-100'>
+        <Spin size='large' />
+      </div>
+    );
+  }
 
   return (
-    <div className='flex h-screen overflow-hidden'>
-      <div className='flex flex-col flex-1 overflow-y-auto'>
-        <main className='flex-1 p-6 bg-gray-50'>
-          <div className='max-w-7xl mx-auto bg-white p-6 rounded-md shadow'>
-            <h1 className='text-2xl font-semibold mb-6'>Edit University</h1>
-            <form onSubmit={handleSubmit} className='space-y-6'>
-              {/* Text Inputs */}
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <div>
-                  <label htmlFor='name' className='block mb-1'>
-                    Name *
-                  </label>
-                  <input
-                    id='name'
-                    type='text'
-                    name='name'
-                    value={formData.name}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.name ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.name && <p className='text-red-500 text-sm mt-1'>{errors.name}</p>}
-                </div>
-                <div>
-                  <label htmlFor='location' className='block mb-1'>
-                    Location *
-                  </label>
-                  <input
-                    id='location'
-                    type='text'
-                    name='location'
-                    value={formData.location}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.location ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.location && (
-                    <p className='text-red-500 text-sm mt-1'>{errors.location}</p>
-                  )}
-                </div>
-                <div>
-                  <label htmlFor='coordinates' className='block mb-1'>
-                    Coordinates
-                  </label>
-                  <input
-                    id='coordinates'
-                    type='text'
-                    name='coordinates'
-                    value={formData.coordinates}
-                    onChange={handleChange}
-                    placeholder='e.g. 40.7128, -74.0060'
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
-                </div>
-              </div>
+    <div className='p-6 bg-gray-100 min-h-screen'>
+      <div className='max-w-7xl mx-auto'>
+        <div className='mb-6'>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/universities')}
+            className='mb-4'
+          >
+            Back to Universities
+          </Button>
+          <Title level={2}>Edit University</Title>
+        </div>
 
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <div>
-                  <label htmlFor='university-type' className='block mb-1'>
-                    University Type *
-                  </label>
-                  <select
-                    id='university-type'
-                    name='type'
-                    value={formData.type}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.type ? 'border-red-500' : 'border-gray-300'
-                    }`}
+        <div className='bg-white rounded-lg shadow p-6'>
+          <Form
+            form={form}
+            layout='vertical'
+            onFinish={onFinish}
+            initialValues={{ website: 'https://', fields: [] }}
+          >
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              {/* Form Fields */}
+              <div className='md:col-span-2'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <Form.Item
+                    label='University Name'
+                    name='universityName'
+                    rules={[{ required: true }]}
                   >
-                    <option value=''>Select type</option>
-                    <option value='Public'>Public</option>
-                    <option value='Private'>Private</option>
-                    <option value='Community'>Community</option>
-                    <option value='For-profit'>For-profit</option>
-                  </select>
-                  {errors.type && <p className='text-red-500 text-sm mt-1'>{errors.type}</p>}
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item label='Country' name='country' rules={[{ required: true }]}>
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
                 </div>
-                <div>
-                  <label htmlFor='numberOfStudents' className='block mb-1'>
-                    Number of Students
-                  </label>
-                  <input
-                    id='numberOfStudents'
-                    type='number'
+
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  <Form.Item label='Location' name='location' rules={[{ required: true }]}>
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item label='Latitude' name='latitude'>
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item label='Longitude' name='longitude'>
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                </div>
+
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  <Form.Item label='University Type' name='type' rules={[{ required: true }]}>
+                    <Select disabled={!isEditable}>
+                      {availableTypes.map((type) => (
+                        <Option key={type} value={type}>
+                          {type}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item
+                    label='Number of Students'
                     name='numberOfStudents'
-                    value={formData.numberOfStudents}
-                    onChange={handleChange}
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
+                    rules={[{ required: true }]}
+                  >
+                    <InputNumber className='w-full' disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item label='Ranking' name='rank'>
+                    <InputNumber className='w-full' disabled={!isEditable} />
+                  </Form.Item>
                 </div>
-                <div>
-                  <label htmlFor='ranking' className='block mb-1'>
-                    Ranking
-                  </label>
-                  <input
-                    id='ranking'
-                    type='number'
-                    name='ranking'
-                    value={formData.ranking}
-                    onChange={handleChange}
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
-                </div>
-              </div>
 
-              {/* Contact */}
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-                <div>
-                  <label htmlFor='phone' className='block mb-1'>
-                    Phone
-                  </label>
-                  <input
-                    id='phone'
-                    type='text'
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <Form.Item
+                    label='Phone'
                     name='phone'
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className='w-full border border-gray-300 rounded px-3 py-2'
-                  />
-                </div>
-                <div>
-                  <label htmlFor='email' className='block mb-1'>
-                    Email
-                  </label>
-                  <input
-                    id='email'
-                    type='email'
+                    rules={[
+                      { required: true },
+                      { pattern: /^\+?[1-9]\d{1,14}$/, message: 'Invalid phone number' },
+                    ]}
+                  >
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item
+                    label='Email'
                     name='email'
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.email ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.email && <p className='text-red-500 text-sm mt-1'>{errors.email}</p>}
+                    rules={[{ required: true }, { type: 'email' }]}
+                  >
+                    <Input disabled={!isEditable} />
+                  </Form.Item>
                 </div>
-                <div>
-                  <label htmlFor='website' className='block mb-1'>
-                    Website
-                  </label>
-                  <input
-                    id='website'
-                    type='text'
-                    name='website'
-                    value={formData.website}
-                    onChange={handleChange}
-                    className={`w-full border rounded px-3 py-2 ${
-                      errors.website ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.website && <p className='text-red-500 text-sm mt-1'>{errors.website}</p>}
-                </div>
-              </div>
 
-              {/* Description */}
-              <div>
-                <label htmlFor='description' className='block mb-1'>
-                  Description
-                </label>
-                <textarea
-                  id='description'
-                  name='description'
-                  value={formData.description}
-                  onChange={handleChange}
-                  className='w-full border border-gray-300 rounded px-3 py-2'
-                  rows={4}
-                />
-              </div>
+                <Form.Item label='Website' name='website' rules={[{ required: true }]}>
+                  <Input disabled={!isEditable} />
+                </Form.Item>
 
-              {/* Fields of Study */}
-              <div ref={fieldsRef} className='relative max-w-md'>
-                <label
-                  htmlFor='fields-dropdown'
-                  className='block text-sm font-medium text-gray-700 mb-2'
-                >
-                  Fields of Study
-                </label>
-                <button
-                  id='fields-dropdown'
-                  type='button'
-                  onClick={() => setFieldsOpen((open) => !open)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md text-left focus:outline-none'
-                >
-                  {formData.fields.length === 0 ? (
-                    <span className='text-gray-400'>Select fields of study...</span>
-                  ) : (
-                    formData.fields.join(', ')
-                  )}
-                </button>
-                {fieldsOpen && (
-                  <ul className='absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto'>
-                    {fieldsOptions.map((option) => (
-                      <button
-                        key={option}
-                        type='button'
-                        onClick={() => handleFieldToggle(option)}
-                        className={`w-full text-left px-3 py-2 cursor-pointer hover:bg-blue-100 ${
-                          formData.fields.includes(option) ? 'bg-blue-200 font-semibold' : ''
-                        }`}
-                        tabIndex={0}
-                      >
-                        {option}
-                      </button>
+                <Form.Item label='Description' name='description'>
+                  <TextArea rows={4} maxLength={1000} showCount disabled={!isEditable} />
+                </Form.Item>
+
+                <Form.Item label='Academic Fields' name='fields'>
+                  <Select mode='multiple' disabled={!isEditable} className='w-full'>
+                    {availableFields.map((field) => (
+                      <Option key={field} value={field}>
+                        {field}
+                      </Option>
                     ))}
-                  </ul>
-                )}
+                  </Select>
+                </Form.Item>
+
+                <Form.Item label='Other Information' name='other'>
+                  <TextArea rows={4} maxLength={500} showCount disabled={!isEditable} />
+                </Form.Item>
+
+                {/* Buttons */}
+                <div className='flex justify-end space-x-4 mt-6'>
+                  {!isEditable ? (
+                    <Button onClick={() => setIsEditable(true)} className='bg-[#ff7a00] text-white'>
+                      Edit
+                    </Button>
+                  ) : (
+                    <>
+                      <Button onClick={handleReset}>Reset</Button>
+                      <Button
+                        htmlType='submit'
+                        loading={loading}
+                        icon={<SaveOutlined />}
+                        className='bg-[#ff7a00] text-white'
+                      >
+                        {loading ? 'Updating...' : 'Update University'}
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Other */}
-              <div>
-                <label htmlFor='other' className='block mb-1'>
-                  Other
-                </label>
-                <textarea
-                  id='other'
-                  name='other'
-                  value={formData.other}
-                  onChange={handleChange}
-                  className='w-full border border-gray-300 rounded px-3 py-2'
-                  rows={3}
-                />
+              {/* Logo Upload */}
+              <div className='flex flex-col items-center '>
+                <Form.Item label='Logo' name='logo'>
+                  <Upload.Dragger
+                    {...uploadProps}
+                    showUploadList={false}
+                    disabled={!isEditable}
+                    className='!p-0 !border-none !bg-transparent !shadow-none !outline-none dragger-hidden'
+                  >
+                    <div className='relative w-32 h-32 group overflow-hidden border-none'>
+                      <img
+                        src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
+                        alt='Current logo'
+                        className='w-full h-full object-contain'
+                      />
+                      {isEditable && (
+                        <div className='absolute bottom-1 right-1 bg-[#ff7a00] rounded-full p-2 items-center justify-center flex'>
+                          <Pencil size={20} color='white' />
+                        </div>
+                      )}
+                    </div>
+                  </Upload.Dragger>
+                </Form.Item>
               </div>
-
-              <div className='flex justify-end'>
-                <button
-                  type='submit'
-                  disabled={isSubmitting}
-                  className='px-8 py-3 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50'
-                >
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-
-              {submitMessage && (
-                <p
-                  className={`text-sm mt-4 ${
-                    submitMessage.includes('successfully') ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {submitMessage}
-                </p>
-              )}
-            </form>
-          </div>
-        </main>
+            </div>
+          </Form>
+        </div>
       </div>
     </div>
   );
