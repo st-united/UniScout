@@ -56,6 +56,10 @@ const routes = [
         path: 'manage',
         element: <ManagePage />,
       },
+      {
+        path: 'admin/worldmap',
+        element: <WorldMap />,
+      },
     ],
   },
 ];
