@@ -14,6 +14,7 @@ import {
   BarChart,
   Bar,
   ResponsiveContainer,
+  LabelProps,
 } from 'recharts';
 
 import Sidebar from '../../components/Sidebar';
@@ -47,9 +48,9 @@ const dashboardData = {
   ],
 };
 
-const renderDot = (props, color) => {
+const renderDot = (props: LabelProps, color: string) => {
   const { x, y } = props;
-  return <circle cx={x + 6} cy={y + 3} r={6} fill={color} />;
+  return <circle cx={Number(x) + 6} cy={Number(y) + 3} r={6} fill={color} />;
 };
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
