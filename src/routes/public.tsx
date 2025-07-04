@@ -24,6 +24,10 @@ const routes = [
         path: 'worldmap',
         element: <WorldMap />,
       },
+      {
+        path: 'admin/worldmap',
+        element: <WorldMap />,
+      },
     ],
   },
 ];
