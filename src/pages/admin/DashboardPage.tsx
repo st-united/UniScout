@@ -14,9 +14,11 @@ import {
   BarChart,
   Bar,
   ResponsiveContainer,
+  LabelList,
   LabelProps,
 } from 'recharts';
 
+import AdminSearchFilter from '../../components/AdminSearchFilter';
 import Sidebar from '../../components/Sidebar';
 
 // Mock data - replace with your actual data source
@@ -50,7 +52,7 @@ const dashboardData = {
 
 const renderDot = (props: LabelProps, color: string) => {
   const { x, y } = props;
-  return <circle cx={Number(x) + 6} cy={Number(y) + 3} r={6} fill={color} />;
+  return <circle cx={Number(x) + 6} cy={Number(y) + 1} r={6} fill={color} />;
 };
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
@@ -127,7 +129,7 @@ const DashboardPage = () => {
   if (loading) {
     return (
       <div className='flex items-center justify-center h-full'>
-        <p className='text-gray-500'>Chargement des données...</p>
+        <p className='text-gray-500'>Loading data...</p>
       </div>
     );
   }
@@ -146,24 +148,25 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className='flex min-h-screen bg-gray-50'>
+    <div className='flex min-h-screen bg-gray-50 flex-col px-5 '>
       {/* Sidebar on the left */}
+      <AdminSearchFilter className='relative [&_.ant-input-affix-wrapper]:hidden p-absolute [&_.ant-dropdown-trigger]:absolute [&_.ant-dropdown-trigger]:top-4 [&_.ant-dropdown-trigger]:right-0 p-absolute' />
 
       {/* Main Content Area */}
-      <div className='flex-1 p-6 overflow-y-auto w-full'>
+      <div className='flex-1 py-3 px-auto overflow-y-auto w-full'>
         <div className='mb-6'>
           <h1 className='text-xl font-bold text-gray-800 mb-2'>Overview</h1>
         </div>
 
         {/* Top Stats */}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
-          <div className='bg-blue-50 p-8 rounded-2xl border border-blue-100 h-32'>
+          <div className='bg-blue-50 p-8 rounded-2xl border border-blue-100 h-18'>
             <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Universities</h3>
             <p className='text-4xl font-bold text-gray-900'>
               {summary.universityCount.toLocaleString()}
             </p>
           </div>
-          <div className='bg-orange-50 p-8 rounded-2xl border border-orange-100 h-32'>
+          <div className='bg-orange-50 p-8 rounded-2xl border border-orange-100 h-18'>
             <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Contact Request</h3>
             <p className='text-4xl font-bold text-gray-900'>{summary.contactCount}</p>
           </div>
@@ -232,33 +235,18 @@ const DashboardPage = () => {
                   <Bar
                     dataKey='pending'
                     stackId='a'
-                    fill='rgba(59, 130, 246, 0.5)'
+                    fill='rgba(59, 130, 246, 1)'
                     barSize={12}
-                    label={{ content: (props) => renderDot(props, 'rgba(59, 130, 246, 1)') }}
-                  />
-                  <Bar
-                    dataKey='inProgress'
-                    stackId='a'
-                    fill='rgba(16, 185, 129, 0.5)'
-                    barSize={12}
-                    label={{ content: (props) => renderDot(props, 'rgba(16, 185, 129, 1)') }}
-                  />
-                  <Bar
-                    dataKey='completed'
-                    stackId='a'
-                    fill='rgba(245, 158, 11, 0.5)'
-                    barSize={12}
-                    label={{ content: (props) => renderDot(props, 'rgba(245, 158, 11, 1)') }}
-                  />
+                  ></Bar>
+
+                  <Bar dataKey='inProgress' stackId='a' fill='rgba(245, 158, 11, 1)' barSize={12} />
+                  <Bar dataKey='completed' stackId='a' fill='rgba(16, 185, 129, 1)' barSize={12} />
                   <Bar
                     dataKey='rejected'
                     stackId='a'
-                    fill='rgba(239, 68, 68, 0.5)'
-                    radius={[10, 10, 0, 0]}
+                    fill='rgba(239, 68, 68, 1)'
+                    radius={[0, 0, 0, 0]}
                     barSize={12}
-                    label={{
-                      content: (props) => renderDot(props, 'rgba(239, 68, 68, 0.5)'),
-                    }}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -269,11 +257,11 @@ const DashboardPage = () => {
                   <span className='text-xs text-gray-600'>Pending</span>
                 </div>
                 <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-green-500'></div>
+                  <div className='w-3 h-3 rounded-full bg-yellow-500'></div>
                   <span className='text-xs text-gray-600'>In Progress</span>
                 </div>
                 <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-yellow-500'></div>
+                  <div className='w-3 h-3 rounded-full bg-green-500'></div>
                   <span className='text-xs text-gray-600'>Completed</span>
                 </div>
                 <div className='flex items-center space-x-2'>
@@ -290,7 +278,7 @@ const DashboardPage = () => {
                 <Filter className='w-4 h-4 text-gray-400' />
               </div>
               {trafficLoading ? (
-                <p className='text-gray-500'>Chargement...</p>
+                <p className='text-gray-500'>loading...</p>
               ) : (
                 <div className='flex items-center justify-between'>
                   <div className='w-48 h-48'>
@@ -332,7 +320,7 @@ const DashboardPage = () => {
           </div>
 
           {/* Top Search University - full width below, aligned left */}
-          <div className='col-span-1 xl:col-span-1 bg-white p-6 rounded-lg shadow-sm border'>
+          <div className='w-1/2 col-span-1 xl:col-span-1 bg-white p-6 rounded-lg shadow-sm border bg-gray-500'>
             <h3 className='text-lg font-semibold text-gray-800 mb-6'>Top Search University</h3>
             <div className='space-y-4'>
               {topSearch.map((item, index) => (
