@@ -159,7 +159,7 @@ const UniversityFilter = ({
     >
       <div className='lg:hidden flex justify-between items-center mb-4'>
         <button
-          className='flex items-center gap-2 text-orange-500 font-semibold'
+          className='flex items-center gap-2 text-orange-500 font-semibold bg-transparent border-none shadow-none p-0 hover:bg-transparent focus:bg-transparent'
           onClick={() => setIsMobileOpen((prev) => !prev)}
         >
           <Filter className='w-5 h-5' />
@@ -183,7 +183,7 @@ const UniversityFilter = ({
         </div>
 
         {/* Country Multi-select */}
-        <div className='rounded-lg p-4 shadow-sm' ref={countryDropdownRef}>
+        <div className='rounded-lg p-4 shadow-sm relative' ref={countryDropdownRef}>
           <h3 className='text-base font-semibold mb-3'>Country</h3>
           <button
             type='button'
@@ -208,7 +208,7 @@ const UniversityFilter = ({
           </button>
 
           {isCountryDropdownOpen && (
-            <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg left-0'>
+            <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg'>
               <label className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'>
                 <input
                   type='checkbox'
@@ -319,8 +319,8 @@ const UniversityFilter = ({
         </div>
 
         {/* Fields Multi-select */}
-        <div className='rounded-lg p-4 shadow-sm' ref={fieldDropdownRef}>
-          <h3 className='text-base font-semibold mb-3'>Field of Study</h3>
+        <div className='rounded-lg p-4 shadow-sm relative' ref={fieldDropdownRef}>
+          <h3 className='text-base font-semibold mb-3'>Broad Fields</h3>
           <button
             type='button'
             className='relative w-full rounded-lg bg-white text-sm focus:outline-none cursor-pointer p-2 flex items-center justify-between'
@@ -344,7 +344,7 @@ const UniversityFilter = ({
           </button>
 
           {isFieldDropdownOpen && (
-            <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg left-0'>
+            <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg'>
               <label className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'>
                 <input
                   type='checkbox'

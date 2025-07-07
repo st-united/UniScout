@@ -2049,6 +2049,11 @@ country-list@^2.3.0:
   resolved "https://registry.yarnpkg.com/country-list/-/country-list-2.3.0.tgz#1e7ceaf9834c1d1210054301eabf4dc445ab978c"
   integrity sha512-qZk66RlmQm7fQjMYWku1AyjlKPogjPEorAZJG88owPExoPV8EsyCcuFLvO2afTXHEhi9liVOoyd+5A6ZS5QwaA==
 
+countrylist@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/countrylist/-/countrylist-1.0.0.tgz#402897adfd04842aca8daf7ae106786562c5b9dd"
+  integrity sha512-85jOrpM56lIJa2mJeVn9g5IdNdLdQov9Cy8tsm8dg1DU0KK2vziGd8Pmm36qXUXj/VrwAB0RnNuNWJt0L4gY6A==
+
 create-require@^1.1.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/create-require/-/create-require-1.1.1.tgz#c1d7e8f1e5f6cfc9ff65f9cd352d37348756c333"
