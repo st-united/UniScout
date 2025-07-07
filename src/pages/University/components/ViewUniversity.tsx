@@ -74,6 +74,7 @@ const ViewUniversity = () => {
       students: rawUniversity.studentPopulation,
       location: { lat: rawUniversity.latitude, lng: rawUniversity.longitude },
       rating: 0,
+      abbreviation: rawUniversity.abbreviation,
     };
   }, []);
 

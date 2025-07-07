@@ -13,6 +13,11 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
       <div className='bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow h-35 flex flex-col justify-between'>
         <div className='flex items-start justify-between mb-4'>
           <div className='w-4/5'>
+            {university.abbreviation && (
+              <div className='text-blue-700 font-medium text-sm leading-tight'>
+                {university.abbreviation}
+              </div>
+            )}
             <h3 className='text-blue-700 font-medium text-sm leading-tight line-clamp-2'>
               {university.name}
             </h3>

@@ -78,4 +78,5 @@ export interface UniversityCustom {
   students: number;
   location: { lat: number; lng: number };
   rating: number;
+  abbreviation: string;
 }
