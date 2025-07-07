@@ -1,7 +1,9 @@
+import { lazy } from 'react';
+
 import PublicLayout from '@app/components/templates/PublicLayout';
 import ContactPage from '@app/pages/Contact/ContactPage';
+import SignIn from '@app/pages/SignIn/SignIn';
 import UniversityDetail from '@app/pages/University/components/UniversityDetail';
-import WorldMap from '@app/pages/University/components/Worldmap';
 import University from '@app/pages/University/University';
 
 const routes = [
@@ -9,7 +11,7 @@ const routes = [
     element: <PublicLayout />,
     children: [
       {
-        path: '/',
+        index: true,
         element: <University />,
       },
       {
@@ -21,8 +23,8 @@ const routes = [
         element: <UniversityDetail />,
       },
       {
-        path: 'worldmap',
-        element: <WorldMap />,
+        path: 'login',
+        element: <SignIn />,
       },
     ],
   },

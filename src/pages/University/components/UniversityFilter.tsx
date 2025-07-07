@@ -1,5 +1,5 @@
-import { Input } from 'antd';
-import { Search, RotateCcw, ArrowUp, ArrowDown, Filter, MapPin, ChevronDown } from 'lucide-react';
+import { Input, Tooltip } from 'antd';
+import { Filter, MapPin, ChevronDown, BookOpenText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
 export interface FilterOptions {
@@ -32,13 +32,13 @@ const FIELD_NAME_TO_API_KEY: Record<string, string> = {
 };
 
 const FIELD_DISPLAY_NAMES = [
-  'Agriculture & Food Science',
-  'Arts & Design',
-  'Economics, Business & Management',
-  'Law & Political Science',
-  'Medicine, Pharmacy & Health Sciences',
   'Science & Engineering',
+  'Economics, Business & Management',
   'Social Sciences & Humanities',
+  'Medicine, Pharmacy & Health Sciences',
+  'Arts & Design',
+  'Law & Political Science',
+  'Agriculture & Food Science',
   'Sports & Physical Education',
   'Emerging Technologies & Interdisciplinary Studies',
   'Other',
@@ -152,13 +152,6 @@ const UniversityFilter = ({
     setFilters(resetValues);
   };
 
-  const toggleSortOrder = () => {
-    setFilters((prev) => ({
-      ...prev,
-      sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc',
-    }));
-  };
-
   return (
     <div
       className='lg:w-80 w-full lg:sticky lg:top-6 self-start'
@@ -179,38 +172,14 @@ const UniversityFilter = ({
           isMobileOpen ? 'block' : 'hidden'
         } lg:block`}
       >
-        <Input
-          prefix={<Search className='w-4 h-4 text-gray-400' />}
-          allowClear
-          type='text'
-          placeholder='Search'
-          value={filters.search}
-          onChange={(e) => handleFilterChange('search', e.target.value)}
-          className='w-full pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 bg-transparent'
-        />
-
         <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-1'>
-            <span className='text-orange-500 font-semibold text-base'>Filter</span>
-            <RotateCcw
-              className='w-4 h-4 text-black cursor-pointer hover:text-orange-500'
-              onClick={handleReset}
-            />
-          </div>
-          <div className='flex items-center gap-1'>
-            <span className='text-orange-500 font-semibold text-base'>Sort</span>
-            {filters.sortOrder === 'asc' ? (
-              <ArrowUp
-                className='w-4 h-4 text-black cursor-pointer hover:text-orange-500'
-                onClick={toggleSortOrder}
-              />
-            ) : (
-              <ArrowDown
-                className='w-4 h-4 text-black cursor-pointer hover:text-orange-500'
-                onClick={toggleSortOrder}
-              />
-            )}
-          </div>
+          <span className='text-orange-500 font-semibold text-base'>Filter</span>
+          <button
+            onClick={handleReset}
+            className='bg-transparent border-0 text-orange-500 font-semibold text-base cursor-pointer hover:text-orange-700'
+          >
+            Reset Filter
+          </button>
         </div>
 
         {/* Country Multi-select */}
@@ -299,26 +268,53 @@ const UniversityFilter = ({
         </div>
 
         {/* Size */}
-        <div className='border border-gray-200 bg-white rounded-lg p-4 shadow-sm'>
+        <div className='border border-gray-200 bg-white rounded-lg p-4'>
           <h3 className='text-base font-semibold mb-3'>Size</h3>
           <div className='grid grid-cols-2 gap-3'>
-            {['Small', 'Medium', 'Large', 'Extra Large'].map((size) => (
-              <label key={size} className='flex items-center gap-2'>
-                <input
-                  type='checkbox'
-                  value={size.toLowerCase()}
-                  checked={filters.size.includes(size.toLowerCase())}
-                  onChange={(e) => {
-                    const newSizes = e.target.checked
-                      ? [...filters.size, size.toLowerCase()]
-                      : filters.size.filter((s) => s !== size.toLowerCase());
-                    handleFilterChange('size', newSizes);
-                  }}
-                  className='accent-orange-500'
-                />
-                <span className='text-sm'>{size}</span>
-              </label>
-            ))}
+            {['Small', 'Medium', 'Large', 'Extra Large'].map((size) => {
+              let tooltip = '';
+              switch (size) {
+                case 'Small':
+                  tooltip = '<20,000';
+                  break;
+                case 'Medium':
+                  tooltip = '<40,000';
+                  break;
+                case 'Large':
+                  tooltip = '<100,000';
+                  break;
+                case 'Extra Large':
+                  tooltip = '>=100,000';
+                  break;
+                default:
+                  tooltip = '';
+              }
+              return (
+                <Tooltip
+                  key={size}
+                  title={tooltip}
+                  placement='top'
+                  color='#F1F1F1'
+                  overlayInnerStyle={{ color: 'black' }}
+                >
+                  <label className='flex items-center gap-2'>
+                    <input
+                      type='checkbox'
+                      value={size.toLowerCase()}
+                      checked={filters.size.includes(size.toLowerCase())}
+                      onChange={(e) => {
+                        const newSizes = e.target.checked
+                          ? [...filters.size, size.toLowerCase()]
+                          : filters.size.filter((s) => s !== size.toLowerCase());
+                        handleFilterChange('size', newSizes);
+                      }}
+                      className='accent-orange-500'
+                    />
+                    <span className='text-sm'>{size}</span>
+                  </label>
+                </Tooltip>
+              );
+            })}
           </div>
         </div>
 
@@ -331,7 +327,7 @@ const UniversityFilter = ({
             onClick={() => setIsFieldDropdownOpen((prev) => !prev)}
           >
             <div className='flex items-center'>
-              <MapPin className='w-4 h-4 text-gray-500 mr-2' />
+              <BookOpenText className='w-4 h-4 text-gray-500 mr-2' />
               <span>
                 {filters.field.length === 0
                   ? 'All Fields'
