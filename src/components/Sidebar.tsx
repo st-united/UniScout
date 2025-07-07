@@ -1,6 +1,13 @@
+import { message } from 'antd';
+import axios from 'axios';
 import { LayoutDashboard, GraduationCap, FileText, User, LogOut, Menu, X } from 'lucide-react';
 import React, { useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+
+import { removeStorageData } from '@app/config/storage';
+import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
+import { logout } from '@app/redux/features/auth/authSlice';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,13 +17,14 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const menuItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      path: 'dashboard',
+      path: '/',
     },
     {
       id: 'manage-university',
@@ -52,16 +60,44 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     setIsOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('Logout clicked');
-    // navigate('/login');
+    try {
+      await axios.get('/api/auth/logout', {
+        headers: {
+          Authorization: '',
+        },
+      });
+      removeStorageData(ACCESS_TOKEN);
+      removeStorageData(REFRESH_TOKEN);
+
+      dispatch(logout());
+
+      message.success('Logged out successfully!');
+      console.log('Frontend logout complete. Redirecting to /login.');
+
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        message.error(error.response.data.message || 'Logout failed. Please try again.');
+      } else {
+        message.error('An unexpected error occurred during logout.');
+      }
+
+      removeStorageData(ACCESS_TOKEN);
+      removeStorageData(REFRESH_TOKEN);
+      dispatch(logout());
+      window.location.href = '/login';
+    } finally {
+      setIsOpen(false);
+    }
   };
 
-  // Check if any child is active for parent highlighting
-  const isParentActive = (item: any) => {
-    if (activeTab === item.id) return true;
+  const isParentActive = (item: (typeof menuItems)[number]): boolean => {
+    if (item.id === activeTab) return true;
     if (item.children) {
-      return item.children.some((child: any) => activeTab === child.id);
+      return item.children.some((child) => child.id === activeTab);
     }
     return false;
   };
@@ -169,7 +205,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </ul>
         </nav>
 
-        {/* Logo at Bottom */}
         <div className='p-6 border-t border-gray-200'>
           <div className='flex items-center space-x-2'>
             <div className='w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center'>

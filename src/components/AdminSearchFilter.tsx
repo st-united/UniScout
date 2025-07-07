@@ -1,8 +1,6 @@
 import { SearchOutlined, BellOutlined } from '@ant-design/icons';
-import { Input, Badge, Button, Dropdown, List, Typography, Space } from 'antd';
+import { Input, Badge, Button, Dropdown, List, Typography } from 'antd';
 import React, { useState } from 'react';
-
-import type { MenuProps } from 'antd';
 
 const { Text } = Typography;
 
@@ -167,7 +165,7 @@ const AdminSearchFilter: React.FC<SearchNotificationBarProps> = ({
   return (
     <div
       className={`px-6 py-4 border-b border-gray-200 ${className}`}
-      style={{ backgroundColor: '#FEF3E2' }}
+      style={{ backgroundColor: '#FFFFFF' }}
     >
       <div className='flex items-center justify-between max-w-7xl mx-auto'>
         {/* Search Section */}

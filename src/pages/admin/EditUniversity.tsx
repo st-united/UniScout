@@ -92,7 +92,7 @@ const EditUniversity = () => {
         if (formData.logoUrl) setExistingLogoUrl(formData.logoUrl);
       } catch (err) {
         message.error('Failed to load university data');
-        navigate('/admin/universities');
+        navigate('/universities');
       } finally {
         setPageLoading(false);
       }
@@ -161,7 +161,7 @@ const EditUniversity = () => {
     if (logoFile) formData.append('logo', logoFile);
 
     try {
-      await axios.patch(`/admin/universities/${id}`, formData, {
+      await axios.patch(`/universities/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       message.success('University updated successfully!');
@@ -201,7 +201,7 @@ const EditUniversity = () => {
         <div className='mb-6'>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/admin/universities')}
+            onClick={() => navigate('/universities')}
             className='mb-4'
           >
             Back to Universities

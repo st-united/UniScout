@@ -4,6 +4,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   CloseOutlined,
+  ExclamationCircleFilled,
 } from '@ant-design/icons';
 import {
   Table,
@@ -15,14 +16,13 @@ import {
   Row,
   Col,
   Typography,
-  Pagination,
   Modal,
   Drawer,
   Badge,
   Tag,
 } from 'antd';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import AdminSearchFilter from '../../components/AdminSearchFilter';
@@ -30,18 +30,36 @@ import type { ColumnsType } from 'antd/es/table';
 const { Option } = Select;
 const { Title } = Typography;
 
-// Mock data interface
+// Updated interface to match API response
 interface University {
-  id: number;
-  name: string;
+  id: string;
+  university: string;
+  abbreviation: string;
+  latitude: number;
+  longitude: number;
+  logo: string;
   rank: number;
-  location: string;
   type: string;
+  country: string;
+  location: string;
+  studentPopulation: number;
+  year: number;
+  contact: string;
+  email: string;
+  website: string;
+  strength: string;
+  description: string;
+  exchange: string | null;
+  fieldNames: string[];
+  subjectNames: string[];
   size: string;
-  department: string;
-  region: string;
-  status: string;
-  abbreviation?: string; // Added for search functionality
+}
+
+// API Response interface
+interface UniversityApiResponse {
+  message: string;
+  data: University[];
+  totalCount: number;
 }
 
 // Interface for notification items (imported from AdminSearchFilter)
@@ -65,21 +83,6 @@ export function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// Mock university data - replace with your actual universityData import
-const mockUniversityData: University[] = Array.from({ length: 100 }, (_, i) => ({
-  id: i + 1,
-  name: `Stanford University ${i + 1}`,
-  abbreviation: `SU${i + 1}`, // Added abbreviations for search
-  rank: i + 1,
-  location: i % 3 === 0 ? 'America' : i % 3 === 1 ? 'Canada' : 'UK',
-  type:
-    i % 4 === 0 ? 'Academy' : i % 4 === 1 ? 'Public' : i % 4 === 2 ? 'Private' : 'International',
-  size: i % 4 === 0 ? 'Small' : i % 4 === 1 ? 'Medium' : i % 4 === 2 ? 'Large' : 'XL',
-  department: i % 3 === 0 ? 'Science & Engineer' : i % 3 === 1 ? 'Business' : 'Arts & Humanities',
-  region: i % 3 === 0 ? 'North America' : i % 3 === 1 ? 'Europe' : 'Asia',
-  status: i % 2 === 0 ? 'Public' : 'Private',
-}));
-
 const sortOptions = [
   { label: 'High to Low Rank', value: 'rank-desc' },
   { label: 'Low to High Rank', value: 'rank-asc' },
@@ -89,7 +92,13 @@ const sortOptions = [
 type FilterKey = 'country' | 'region' | 'type' | 'size' | 'department' | 'search';
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // State for university data
+  const [universityData, setUniversityData] = useState<UniversityApiResponse>();
   const [currentUniversityData, setCurrentUniversityData] = useState<University[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [filters, setFilters] = useState<Record<FilterKey, string>>({
     country: '',
     region: '',
@@ -101,15 +110,16 @@ const UniversityListPage: React.FC = () => {
   const debouncedFilters = useDebounce(filters, 400);
 
   const [sortBy, setSortBy] = useState('name-asc');
-  const [loading] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
 
-  useEffect(() => {
-    const fetchUniversities = async () => {
-      try {
-        console.log('API params sent:', {
+  const fetchUniversities = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get<UniversityApiResponse>('/admin/universities', {
+        params: {
           search: filters.search || undefined,
           type: filters.type || undefined,
           country: filters.country || undefined,
@@ -118,39 +128,37 @@ const UniversityListPage: React.FC = () => {
             filters.department && filters.department !== 'all' ? [filters.department] : undefined,
 
           sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
-        });
+          page: currentPage,
+          limit: pageSize,
+        },
+      });
+      setCurrentUniversityData(response.data.data);
+      setUniversityData(response.data);
+    } catch (err) {
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message || 'Failed to fetch universities'
+        : 'An unexpected error occurred';
+      setError(errorMessage);
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, sortBy, currentPage, pageSize]);
 
-        const response = await axios.get('/universities', {
-          params: {
-            search: filters.search || undefined,
-            type: filters.type || undefined,
-            country: filters.country || undefined,
-            size: filters.size || undefined,
-            fieldNames:
-              filters.department && filters.department !== 'all' ? [filters.department] : undefined,
-
-            sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
-            page: currentPage,
-            limit: pageSize,
-          },
-        });
-        setCurrentUniversityData(response.data.data);
-        setTotalCount(response.data.totalCount);
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          console.error('Erreur API:', {
-            status: error.response?.status,
-            message: error.response?.data?.message,
-            data: error.response?.data,
-            config: error.config,
-          });
-        } else {
-          console.error('Unexpected Error:', error);
-        }
-      }
-    };
+  useEffect(() => {
     fetchUniversities();
-  }, [debouncedFilters, sortBy, currentPage, pageSize]);
+  }, [
+    debouncedFilters,
+    sortBy,
+    currentPage,
+    pageSize,
+    filters.search,
+    filters.type,
+    filters.country,
+    filters.size,
+    filters.department,
+    fetchUniversities,
+  ]);
 
   // Multi-select state
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -164,6 +172,8 @@ const UniversityListPage: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
 
+  // API function to fetch universities
+
   // Check screen size
   useEffect(() => {
     const checkIsMobile = () => {
@@ -174,6 +184,11 @@ const UniversityListPage: React.FC = () => {
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
+
+  // Fetch universities on component mount
+  useEffect(() => {
+    fetchUniversities();
+  }, [currentPage, pageSize, fetchUniversities]);
 
   useEffect(() => {
     setFilters((prevFilters) => {
@@ -188,7 +203,6 @@ const UniversityListPage: React.FC = () => {
     setSearchInput(searchValue);
   };
 
-  // Handle notification click from AdminSearchFilter component
   const handleNotificationClick = (notification: NotificationItem) => {
     // Navigate to join request management page or show details
     console.log('Notification clicked:', notification);
@@ -238,75 +252,135 @@ const UniversityListPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
-        // Mock check for existing references
-        const hasReferences = Math.random() < 0.1;
-        if (hasReferences) {
-          throw new Error('Cannot delete university due to existing references.');
-        }
+        console.log('Deleting university ID:', universityToDelete.id);
+
+        await axios.delete(`/universities/${universityToDelete.id}`, {
+          data: { confirm_deletion: true },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
         setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
         message.success('University deleted successfully');
         console.log(
-          `AUDIT: Deleted university ${universityToDelete.name} (ID: ${universityToDelete.id})`,
+          `AUDIT: Deleted university ${universityToDelete.university} (ID: ${universityToDelete.id})`,
         );
       } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
+        console.log('Deleting multiple universities:', selectedRowKeys);
+
+        await axios.delete('/universities/admin/bulk', {
+          data: {
+            ids: selectedRowKeys,
+            confirm_deletion: true,
+          },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
         const universitiesToDelete = currentUniversityData.filter((uni) =>
           selectedRowKeys.includes(uni.id),
         );
-
-        // Mock check for references
-        const hasReferences = Math.random() < 0.1;
-        if (hasReferences) {
-          throw new Error('Cannot delete universities due to existing references.');
-        }
 
         setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
         setSelectedRowKeys([]);
         message.success(`${selectedRowKeys.length} universities deleted successfully`);
         console.log(
           `AUDIT: Deleted ${universitiesToDelete.length} universities:`,
-          universitiesToDelete.map((u) => u.name),
+          universitiesToDelete.map((u) => u.university),
         );
       }
     } catch (error) {
-      message.error(error instanceof Error ? error.message : 'Delete failed');
+      const errorMessage = axios.isAxiosError(error)
+        ? error.response?.data?.message || 'Delete failed'
+        : 'Delete failed';
+      message.error(errorMessage);
+      console.error('Delete error:', error);
     } finally {
       setDeleteModalVisible(false);
       setUniversityToDelete(null);
     }
   };
 
-  const handleEdit = (universityId: number) => {
-    navigate(`/admin/edit-university/${universityId}`);
+  const handleEdit = (universityId: string) => {
+    navigate(`/edit-university/${universityId}`);
   };
 
-  const handleExport = () => {
-    message.info('Export functionality will be implemented');
+  const handleExport = async () => {
+    try {
+      const response = await axios.get('/admin/universities/export', {
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'universities.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      message.success('Universities exported successfully');
+    } catch (error) {
+      message.error('Export failed');
+      console.error('Export error:', error);
+    }
   };
 
-  // Filter universities based on search input
-  const filteredUniversities = currentUniversityData;
-  const [totalCount, setTotalCount] = useState(0);
+  // Enhanced filter function to include university name, location, and strength search
+  const filteredUniversities = currentUniversityData.filter((u) => {
+    const searchMatch =
+      !filters.search ||
+      u.university.toLowerCase().includes(filters.search.toLowerCase()) ||
+      u.location.toLowerCase().includes(filters.search.toLowerCase()) ||
+      u.country.toLowerCase().includes(filters.search.toLowerCase()) ||
+      u.strength.toLowerCase().includes(filters.search.toLowerCase());
 
-  /*const sortedUniversities = [...filteredUniversities].sort((a, b) => {
+    return (
+      searchMatch &&
+      (!filters.country || u.country === filters.country) &&
+      (!filters.type || u.type === filters.type) &&
+      (!filters.size || u.size === filters.size) &&
+      (!filters.department || u.strength.includes(filters.department))
+    );
+  });
+
+  const sortedUniversities = [...filteredUniversities].sort((a, b) => {
     switch (sortBy) {
       case 'rank-asc':
         return b.rank - a.rank;
       case 'rank-desc':
         return a.rank - b.rank;
       case 'name-asc':
-        return a.name.localeCompare(b.name);
+        return a.university.localeCompare(b.university);
       case 'name-desc':
-        return b.name.localeCompare(a.name);
+        return b.university.localeCompare(a.university);
       default:
         return 0;
     }
-  });*/
-  const sortedUniversities = filteredUniversities;
+  });
 
   // Get unique values for filter options
-  const getUniqueValues = (key: keyof University) => {
-    return [...new Set(currentUniversityData.map((u) => u[key]))].filter(Boolean);
+  const getUniqueCountries = () => {
+    return [...new Set(currentUniversityData.map((u) => u.country))].filter(Boolean).sort();
+  };
+
+  const getUniqueTypes = () => {
+    return [...new Set(currentUniversityData.map((u) => u.type))].filter(Boolean).sort();
+  };
+
+  const getUniqueSizes = () => {
+    return [...new Set(currentUniversityData.map((u) => u.size))].filter(Boolean).sort();
+  };
+
+  const getUniqueDepartments = () => {
+    const allDepartments = currentUniversityData.flatMap((u) =>
+      (u.strength || '').split(',').map((dept) => dept.trim()),
+    );
+    return [...new Set(allDepartments)].filter(Boolean).sort();
   };
 
   // Check if any filters are active
@@ -337,8 +411,10 @@ const UniversityListPage: React.FC = () => {
     {
       title: 'University Name',
       dataIndex: 'university',
-      key: 'name',
+      key: 'university',
+      width: 400,
       sorter: true,
+      render: (text: string) => <span>{text}</span>,
     },
     {
       title: 'Rank',
@@ -357,19 +433,51 @@ const UniversityListPage: React.FC = () => {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
-      width: 120,
+      width: 100,
+      render: (type: string) => (
+        <Tag color={type === 'public' ? 'blue' : 'green'}>
+          {type.charAt(0).toUpperCase() + type.slice(1)}
+        </Tag>
+      ),
     },
     {
       title: 'Size',
       dataIndex: 'size',
       key: 'size',
       width: 100,
+      render: (size: string) => (
+        <Tag
+          color={
+            size === 'small'
+              ? 'orange'
+              : size === 'medium'
+              ? 'yellow'
+              : size === 'large'
+              ? 'blue'
+              : 'purple'
+          }
+        >
+          {size.charAt(0).toUpperCase() + size.slice(1)}
+        </Tag>
+      ),
     },
     {
-      title: 'Broad Field',
-      dataIndex: 'strength',
-      key: 'strength',
-      width: 180,
+      title: 'Broad field',
+      dataIndex: 'academicFieldsCommaSeparated',
+      key: 'academicFieldsCommaSeparated',
+      width: 200,
+      render: (academicFieldsCommaSeparated: string) => (
+        <div
+          style={{
+            maxWidth: '180px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {academicFieldsCommaSeparated}
+        </div>
+      ),
     },
     {
       title: 'Action',
@@ -408,7 +516,7 @@ const UniversityListPage: React.FC = () => {
   // Get confirmation message
   const getConfirmationMessage = () => {
     if (deleteType === 'single' && universityToDelete) {
-      return `Are you sure delete ${universityToDelete.name}?`;
+      return `Are you sure delete ${universityToDelete.university}?`;
     } else if (deleteType === 'multiple') {
       return 'Are you sure delete all selected fields?';
     }
@@ -426,7 +534,7 @@ const UniversityListPage: React.FC = () => {
           style={{ width: '100%' }}
         >
           <Option value='all'>All Countries</Option>
-          {getUniqueValues('location').map((country) => (
+          {getUniqueCountries().map((country) => (
             <Option key={country} value={country}>
               {country}
             </Option>
@@ -441,10 +549,10 @@ const UniversityListPage: React.FC = () => {
           onChange={(value) => handleFilterChange('type', value === 'all' ? '' : value)}
           style={{ width: '100%' }}
         >
-          <Option value='all'>All Type</Option>
-          {['Public', 'Private', 'Academy', 'International'].map((type) => (
+          <Option value='all'>All Types</Option>
+          {getUniqueTypes().map((type) => (
             <Option key={type} value={type}>
-              {type}
+              {type.charAt(0).toUpperCase() + type.slice(1)}
             </Option>
           ))}
         </Select>
@@ -457,10 +565,10 @@ const UniversityListPage: React.FC = () => {
           onChange={(value) => handleFilterChange('size', value === 'all' ? '' : value)}
           style={{ width: '100%' }}
         >
-          <Option value='all'>All Size</Option>
-          {['Small', 'Medium', 'Large', 'XL'].map((size) => (
+          <Option value='all'>All Sizes</Option>
+          {getUniqueSizes().map((size) => (
             <Option key={size} value={size}>
-              {size}
+              {size.charAt(0).toUpperCase() + size.slice(1)}
             </Option>
           ))}
         </Select>
@@ -474,7 +582,7 @@ const UniversityListPage: React.FC = () => {
           style={{ width: '100%' }}
         >
           <Option value='all'>All Fields</Option>
-          {getUniqueValues('department').map((dept) => (
+          {getUniqueDepartments().map((dept) => (
             <Option key={dept} value={dept}>
               {dept}
             </Option>
@@ -519,30 +627,47 @@ const UniversityListPage: React.FC = () => {
       </Col>
     </Row>
   );
-  const itemRender = (_: any, type: string, originalElement: React.ReactNode) => {
-    const commonStyle = { color: '#ff7a00', background: 'none', border: 'none', cursor: 'pointer' };
 
-    if (type === 'prev') {
-      return <button style={commonStyle}>Previous</button>;
-    }
-    if (type === 'next') {
-      return <button style={commonStyle}>Next</button>;
-    }
+  // Error state
+  if (error && currentUniversityData.length === 0) {
     return (
-      <button style={commonStyle}>
-        {React.isValidElement(originalElement) ? originalElement.props.children : originalElement}
-      </button>
+      <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
+        <AdminSearchFilter
+          onSearch={handleGlobalSearch}
+          onNotificationClick={handleNotificationClick}
+          onMarkAllAsRead={handleMarkAllAsRead}
+          placeholder='Search by university name, location, or field...'
+        />
+        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+          <Card>
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <Title level={4} style={{ color: '#ff4d4f' }}>
+                Failed to load universities
+              </Title>
+              <p style={{ color: '#666', marginBottom: '20px' }}>{error}</p>
+              <Button
+                type='primary'
+                onClick={fetchUniversities}
+                loading={loading}
+                style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+              >
+                Retry
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
-    <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
       {/* Search and Notification Bar */}
       <AdminSearchFilter
         onSearch={handleGlobalSearch}
         onNotificationClick={handleNotificationClick}
         onMarkAllAsRead={handleMarkAllAsRead}
-        placeholder='Search by university name, abbreviation, or location...'
+        placeholder='Search by university name, location, or field...'
       />
 
       {/* Main Content */}
@@ -554,13 +679,9 @@ const UniversityListPage: React.FC = () => {
               <Col span={24}>
                 <Button
                   onClick={() => setFilterDrawerVisible(true)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '40px',
-                  }}
+                  type='default'
+                  className='w-full flex items-center justify-center h-10 border border-gray-300 rounded-md
+                   transition duration-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-500'
                 >
                   <Space>
                     Filters
@@ -625,7 +746,7 @@ const UniversityListPage: React.FC = () => {
                 level={4}
                 style={{ margin: 0, color: '#333', fontSize: isMobile ? '18px' : '20px' }}
               >
-                List of universities
+                List of universities ({universityData?.totalCount || 0})
               </Title>
             </Col>
             <Col
@@ -649,7 +770,7 @@ const UniversityListPage: React.FC = () => {
                 <Button
                   type='primary'
                   icon={<PlusOutlined />}
-                  onClick={() => navigate('/admin/create-university')}
+                  onClick={() => navigate('/create-university')}
                   style={{
                     backgroundColor: '#ff7a00',
                     borderColor: '#ff7a00',
@@ -692,25 +813,104 @@ const UniversityListPage: React.FC = () => {
             rowKey='id'
             rowSelection={rowSelection}
             loading={loading}
-            pagination={false}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: universityData?.totalCount || 0,
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size || 12);
+              },
+              showSizeChanger: false,
+              showQuickJumper: false,
+              className: 'custom-pagination',
+              itemRender: (page, type, originalElement) => {
+                const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
+
+                const baseStyle: React.CSSProperties = {
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'color 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                };
+
+                if (type === 'prev') {
+                  const isDisabled = currentPage === 1;
+                  return (
+                    <span
+                      style={{
+                        ...baseStyle,
+                        color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ffb366';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ff7a00';
+                      }}
+                    >
+                      &lt; Previous
+                    </span>
+                  );
+                }
+
+                if (type === 'next') {
+                  const isDisabled = currentPage >= totalPages;
+                  return (
+                    <span
+                      style={{
+                        ...baseStyle,
+                        color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ffb366';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isDisabled) e.currentTarget.style.color = '#ff7a00';
+                      }}
+                    >
+                      Next &gt;
+                    </span>
+                  );
+                }
+
+                if (type === 'page') {
+                  const isCurrent = page === currentPage;
+                  return (
+                    <span
+                      style={{
+                        ...baseStyle,
+                        color: '#ff7a00',
+                        fontWeight: isCurrent ? 'bold' : 500,
+                      }}
+                    >
+                      {page}
+                    </span>
+                  );
+                }
+
+                if (type === 'jump-prev' || type === 'jump-next') {
+                  return <span style={{ color: '#999' }}>•••</span>;
+                }
+
+                return originalElement;
+              },
+              style: {
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100%',
+                marginTop: '24px',
+                marginBottom: '16px',
+              },
+            }}
             scroll={{ x: 800 }}
             style={{ marginBottom: 16 }}
           />
-
-          {/* Custom Pagination */}
-          <Row justify='center'>
-            <Pagination
-              current={currentPage}
-              total={totalCount}
-              pageSize={pageSize}
-              onChange={(page, size) => {
-                setCurrentPage(page);
-                setPageSize(size || 12);
-              }}
-              showSizeChanger={false}
-              itemRender={itemRender}
-            />
-          </Row>
         </Card>
       </div>
 
@@ -735,7 +935,7 @@ const UniversityListPage: React.FC = () => {
               size='large'
             >
               <Option value='all'>All Countries</Option>
-              {getUniqueValues('location').map((country) => (
+              {getUniqueCountries().map((country) => (
                 <Option key={country} value={country}>
                   {country}
                 </Option>
@@ -753,10 +953,10 @@ const UniversityListPage: React.FC = () => {
               style={{ width: '100%' }}
               size='large'
             >
-              <Option value='all'>All Type</Option>
-              {['Public', 'Private', 'Academy', 'International'].map((type) => (
+              <Option value='all'>All Types</Option>
+              {getUniqueTypes().map((type) => (
                 <Option key={type} value={type}>
-                  {type}
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
                 </Option>
               ))}
             </Select>
@@ -772,10 +972,10 @@ const UniversityListPage: React.FC = () => {
               style={{ width: '100%' }}
               size='large'
             >
-              <Option value='all'>All Size</Option>
-              {['Small', 'Medium', 'Large', 'XL'].map((size) => (
+              <Option value='all'>All Sizes</Option>
+              {getUniqueSizes().map((size) => (
                 <Option key={size} value={size}>
-                  {size}
+                  {size.charAt(0).toUpperCase() + size.slice(1)}
                 </Option>
               ))}
             </Select>
@@ -792,7 +992,7 @@ const UniversityListPage: React.FC = () => {
               size='large'
             >
               <Option value='all'>All Fields</Option>
-              {getUniqueValues('department').map((dept) => (
+              {getUniqueDepartments().map((dept) => (
                 <Option key={dept} value={dept}>
                   {dept}
                 </Option>
@@ -812,114 +1012,39 @@ const UniversityListPage: React.FC = () => {
               ))}
             </Select>
           </div>
-
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <Button
               onClick={handleResetFilters}
-              style={{
-                flex: 1,
-                height: '44px',
-                fontSize: '16px',
-                color: '#ff7a00',
-                borderColor: '#ff7a00',
-              }}
+              style={{ color: '#ff7a00', borderColor: '#ff7a00' }}
             >
               Reset Filters
             </Button>
             <Button
               type='primary'
               onClick={() => setFilterDrawerVisible(false)}
-              style={{
-                flex: 1,
-                height: '44px',
-                fontSize: '16px',
-                backgroundColor: '#ff7a00',
-                borderColor: '#ff7a00',
-              }}
+              style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
             >
-              Apply Filters
+              Apply
             </Button>
           </div>
         </Space>
       </Drawer>
 
-      {/* Custom Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       <Modal
-        open={deleteModalVisible}
+        title='Confirm Action'
+        visible={deleteModalVisible}
+        onOk={handleDeleteConfirm}
         onCancel={() => setDeleteModalVisible(false)}
-        footer={null}
-        centered
-        width={isMobile ? '90%' : 400}
-        style={{
-          borderRadius: '12px',
-        }}
-        bodyStyle={{
-          padding: isMobile ? '24px' : '32px',
-          textAlign: 'center',
-        }}
-        maskStyle={{
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        okText='Yes'
+        cancelText='No'
+        okButtonProps={{
+          type: 'primary', // blue button
         }}
       >
-        <div style={{ marginBottom: '24px' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              backgroundColor: '#FFF3CD',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px',
-            }}
-          >
-            <span style={{ fontSize: '24px', color: '#F59E0B' }}>⚠</span>
-          </div>
-          <div
-            style={{
-              fontSize: isMobile ? '16px' : '18px',
-              fontWeight: 500,
-              color: '#333',
-              lineHeight: '24px',
-            }}
-          >
-            {getConfirmationMessage()}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-          <Button
-            onClick={() => setDeleteModalVisible(false)}
-            style={{
-              minWidth: '80px',
-              height: '40px',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 500,
-              borderColor: '#d9d9d9',
-              color: '#666',
-              flex: isMobile ? 1 : 'none',
-            }}
-          >
-            No
-          </Button>
-          <Button
-            type='primary'
-            onClick={handleDeleteConfirm}
-            style={{
-              minWidth: '80px',
-              height: '40px',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 500,
-              backgroundColor: '#1890ff',
-              borderColor: '#1890ff',
-              flex: isMobile ? 1 : 'none',
-            }}
-          >
-            Yes
-          </Button>
+        <div className='flex items-start gap-2'>
+          <ExclamationCircleFilled className='text-yellow-300 text-lg relative -top-0.5' />
+          <p className='text-sm text-gray-700 m-0'>{getConfirmationMessage()}</p>
         </div>
       </Modal>
     </div>
