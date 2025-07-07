@@ -1,4 +1,5 @@
-import { Input, Tooltip } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
+import { Input, Tooltip, TreeSelect } from 'antd';
 import { Filter, MapPin, ChevronDown, BookOpenText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
@@ -43,6 +44,8 @@ const FIELD_DISPLAY_NAMES = [
   'Emerging Technologies & Interdisciplinary Studies',
   'Other',
 ];
+
+const MAX_COUNT = 3;
 
 const UniversityFilter = ({
   onFiltersUpdate,
@@ -319,64 +322,24 @@ const UniversityFilter = ({
         </div>
 
         {/* Fields Multi-select */}
-        <div className='rounded-lg p-4 shadow-sm relative' ref={fieldDropdownRef}>
+        <div className='rounded-lg p-4 shadow-sm'>
           <h3 className='text-base font-semibold mb-3'>Broad Fields</h3>
-          <button
-            type='button'
-            className='relative w-full rounded-lg bg-white text-sm focus:outline-none cursor-pointer p-2 flex items-center justify-between'
-            onClick={() => setIsFieldDropdownOpen((prev) => !prev)}
-          >
-            <div className='flex items-center'>
-              <BookOpenText className='w-4 h-4 text-gray-500 mr-2' />
+          <TreeSelect
+            treeData={FIELD_DISPLAY_NAMES.map((field) => ({ title: field, value: field }))}
+            value={filters.field}
+            onChange={(val: string[]) => handleFilterChange('field', val)}
+            multiple
+            maxCount={MAX_COUNT}
+            style={{ width: '100%' }}
+            suffixIcon={
               <span>
-                {filters.field.length === 0
-                  ? 'All Fields'
-                  : filters.field.length === 1
-                  ? filters.field[0]
-                  : `${filters.field.length} selected`}
+                {filters.field.length} / {MAX_COUNT} <DownOutlined />
               </span>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-gray-500 transform transition-transform ${
-                isFieldDropdownOpen ? 'rotate-180' : 'rotate-0'
-              }`}
-            />
-          </button>
-
-          {isFieldDropdownOpen && (
-            <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg'>
-              <label className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  checked={filters.field.length === FIELD_DISPLAY_NAMES.length}
-                  onChange={() => {
-                    if (filters.field.length === FIELD_DISPLAY_NAMES.length) {
-                      handleFilterChange('field', []);
-                    } else {
-                      handleFilterChange('field', FIELD_DISPLAY_NAMES);
-                    }
-                  }}
-                  className='accent-orange-500'
-                />
-                <span className='text-sm font-semibold'>Select All</span>
-              </label>
-              {FIELD_DISPLAY_NAMES.map((fieldName) => (
-                <label
-                  key={fieldName}
-                  className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'
-                >
-                  <input
-                    type='checkbox'
-                    value={fieldName}
-                    checked={filters.field.includes(fieldName)}
-                    onChange={() => handleFieldChange(fieldName)}
-                    className='accent-orange-500'
-                  />
-                  <span className='text-sm'>{fieldName}</span>
-                </label>
-              ))}
-            </div>
-          )}
+            }
+            treeCheckable
+            placeholder='Please select'
+            showCheckedStrategy={TreeSelect.SHOW_CHILD}
+          />
         </div>
       </div>
     </div>

@@ -56,7 +56,7 @@ const fieldsOfStudy = [
   'Emerging Technologies & Interdisciplinary Studies',
   'Other',
 ];
-const Major = ['ST United', 'Reject'];
+const FieldofStudy = ['ST United', 'Reject'];
 
 const MAX_FRONTEND_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_FRONTEND_FILES = 5;
@@ -77,7 +77,7 @@ export default function ConnectWithUs() {
     country: '',
     email: '',
     phone: '',
-    Major: '',
+    FieldofStudy: '',
   });
   const [newUniErrors, setNewUniErrors] = useState<any>({});
 
@@ -136,7 +136,7 @@ export default function ConnectWithUs() {
       errors.email = 'Invalid email.';
     if (!newUniData.phone) errors.phone = 'Required.';
     else if (!/^\+?\d+$/.test(newUniData.phone)) errors.phone = 'Only numbers and +.';
-    if (!newUniData.Major) errors.Major = 'Required.';
+    if (!newUniData.FieldofStudy) errors.FieldofStudy = 'Required.';
     // description is now optional, so no validation here
     return errors;
   };
@@ -151,7 +151,7 @@ export default function ConnectWithUs() {
     setSubmissionStatus('submitting');
     try {
       // Replace with your backend endpoint
-      await axios.post('contact/new-university', newUniData);
+      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', newUniData);
       setSubmissionStatus('success');
       showNotification('University submitted successfully.', 'success');
       setNewUniData({
@@ -165,7 +165,7 @@ export default function ConnectWithUs() {
         country: '',
         email: '',
         phone: '',
-        Major: '',
+        FieldofStudy: '',
       });
     } catch (err: any) {
       setSubmissionStatus('error');
@@ -246,7 +246,7 @@ export default function ConnectWithUs() {
       dataToSend.append('phone', updateData.phone);
       dataToSend.append('message', updateData.message);
       updateData.attachment.forEach((file) => dataToSend.append('files', file));
-      await axios.post('contact/update-info', dataToSend, {
+      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', dataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
@@ -514,29 +514,32 @@ export default function ConnectWithUs() {
               )}
             </div>
             <div>
-              <label htmlFor='new-Major' className='block mb-2 text-sm font-medium text-orange-600'>
-                Major
+              <label
+                htmlFor='new-FieldofStudy'
+                className='block mb-2 text-sm font-medium text-orange-600'
+              >
+                Field of Study
               </label>
               <select
-                id='Major'
-                name='Major'
-                value={newUniData.Major}
+                id='FieldofStudy'
+                name='FieldofStudy'
+                value={newUniData.FieldofStudy}
                 onChange={handleNewUniChange}
                 className={`!text-[#6B7280] w-full border-0 border-b-2 ${
-                  newUniErrors.Major ? 'border-red-500' : 'border-[#E85A0C]'
+                  newUniErrors.FieldofStudy ? 'border-red-500' : 'border-[#E85A0C]'
                 } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors text-gray-700`}
               >
                 <option value='' disabled>
-                  Select your Major
+                  Select your Field of Study
                 </option>
-                {Major.map((field) => (
+                {FieldofStudy.map((field) => (
                   <option key={field} value={field}>
                     {field}
                   </option>
                 ))}
               </select>
-              {newUniErrors.Major && (
-                <p className='text-red-500 text-sm mt-1'>{newUniErrors.Major}</p>
+              {newUniErrors.FieldofStudy && (
+                <p className='text-red-500 text-sm mt-1'>{newUniErrors.FieldofStudy}</p>
               )}
             </div>
             <div>
@@ -745,7 +748,7 @@ export default function ConnectWithUs() {
               {updateErrors.attachment && (
                 <p className='mt-2 text-sm text-red-500'>{updateErrors.attachment}</p>
               )}
-              <div className='text-xs text-gray-500 mt-2'>
+              <div className='text-s text-gray-500 mt-2'>
                 You can upload up to 5 files in PNG, JPG, JPEG, DOCX, DOC, or PDF format. Each file
                 must be no larger than 5MB
               </div>
