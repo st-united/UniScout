@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 
+import devplusLogo from '../assets/images/devplus.png';
 import { removeStorageData } from '@app/config/storage';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
 import { logout } from '@app/redux/features/auth/authSlice';
@@ -182,10 +183,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
 
         <div className='p-6 border-t border-gray-200 justify-center flex items-center space-x-2'>
           <div className='flex items-center space-x-2'>
-            <div className='w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center'>
-              <span className='text-white font-bold text-sm'>D</span>
-            </div>
-            <span className='text-orange-500 font-bold text-lg'>DevPlus</span>
+            <img src={devplusLogo} alt='DevPlus Logo' className='w-18 h-12' />
           </div>
         </div>
       </div>

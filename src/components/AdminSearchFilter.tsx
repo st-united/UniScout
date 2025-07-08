@@ -164,26 +164,47 @@ const AdminSearchFilter: React.FC<SearchNotificationBarProps> = ({
 
   return (
     <div
-      className={`px-6 py-4 border-b border-gray-200 ${className}`}
+      className={`px-6 pt-4 pb-0 border-b border-gray-200 ${className}`}
       style={{ backgroundColor: '#FFFFFF' }}
     >
       <div className='flex items-center justify-between max-w-7xl mx-auto'>
         {/* Search Section */}
-        <div className='flex-1 max-w-2xl'>
-          <Input
-            size='large'
-            placeholder={placeholder}
-            prefix={<SearchOutlined className='text-orange-500' />}
-            value={searchValue}
-            onChange={handleSearchChange}
-            className='rounded-full border-gray-300 hover:border-orange-400 focus:border-orange-500'
-            style={{
-              fontSize: '16px',
-              padding: '8px 16px',
-              backgroundColor: '#FFFFFF',
-              borderWidth: '1px',
-            }}
-          />
+        <div className='w-[600px]'>
+          <div style={{ display: 'flex', height: 40 }}>
+            <Input
+              placeholder={placeholder}
+              value={searchValue}
+              onChange={handleSearchChange}
+              bordered={false}
+              style={{
+                flex: 1,
+                fontSize: '14px',
+                padding: '0 12px', // No vertical padding
+                border: '1px solid #d9d9d9',
+                borderRight: 'none', // To avoid double border with button
+                borderRadius: '8px 0 0 8px',
+                height: '100%',
+                lineHeight: 'normal',
+              }}
+              className='bg-white'
+            />
+            <Button
+              type='primary'
+              onClick={() => onSearch?.(searchValue)}
+              style={{
+                backgroundColor: '#ff7a00',
+                border: '1px solid #d9d9d9',
+                borderRadius: '0 8px 8px 0',
+                width: 32,
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: 0,
+              }}
+              icon={<SearchOutlined style={{ fontSize: '16px' }} />}
+            />
+          </div>
         </div>
 
         {/* Notification Section */}
