@@ -102,6 +102,7 @@ const CreateUniversity = () => {
     { value: 'ict', label: 'Information & Communication Technology (ICT)' },
     { value: 'natural_sciences', label: 'Natural Sciences' },
     { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
+    { value: 'services', label: 'Services' },
     {
       value: 'transport_safety_security_military',
       label: 'Transport, Safety, Security & Military',
