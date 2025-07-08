@@ -1,5 +1,16 @@
 import { InboxOutlined, ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
-import { Form, Input, Select, Button, Upload, message, Typography, InputNumber, Spin } from 'antd';
+import {
+  Form,
+  Input,
+  Switch,
+  Select,
+  Button,
+  Upload,
+  message,
+  Typography,
+  InputNumber,
+  Spin,
+} from 'antd';
 import axios from 'axios';
 import { Pencil } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
@@ -28,11 +39,16 @@ interface UniversityData {
   other?: string;
   logo?: File;
   logoUrl?: string;
+  abbreviation?: string;
+  year?: number;
+  exchange?: boolean;
+  subjects?: string[];
 }
 
 // Mapping helpers
 const mapApiToFormData = (data: any): UniversityData => ({
   universityName: data.name || data.university || '',
+  abbreviation: data.abbreviation || '',
   country: data.country || '',
   location: data.location || '',
   latitude: data.latitude?.toString() || '',
@@ -50,10 +66,15 @@ const mapApiToFormData = (data: any): UniversityData => ({
       : [],
   other: data.other || data.strength || '',
   logoUrl: data.logoUrl || data.logo || '',
+  year: data.year || undefined,
+  exchange: data.exchange?.toLowerCase() === 'yes',
+
+  subjects: data.subjectsList ? data.subjectsList.split(',').map((s: string) => s.trim()) : [],
 });
 
 const mapToUpdateDto = (values: UniversityData) => ({
   university: values.universityName,
+  abbreviation: values.abbreviation,
   country: values.country,
   location: values.location,
   latitude: values.latitude ? Number(values.latitude) : undefined,
@@ -67,6 +88,9 @@ const mapToUpdateDto = (values: UniversityData) => ({
   description: values.description,
   academicFields: values.fields || [],
   strength: values.other,
+  year: values.year,
+  exchange: values.exchange ? 'Yes' : '-',
+  subjects: values.subjects || [],
 });
 
 const EditUniversity = () => {
@@ -80,6 +104,7 @@ const EditUniversity = () => {
   const [isEditable, setIsEditable] = useState(false);
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   // Load initial university data
   useEffect(() => {
@@ -100,6 +125,19 @@ const EditUniversity = () => {
 
     if (id) fetchUniversity();
   }, [id, form, navigate]);
+  // Load subjects
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const res = await axios.get('/universities/subjects');
+        setAvailableSubjects(res.data?.data || []);
+      } catch {
+        message.error('Failed to load subjects');
+      }
+    };
+
+    fetchSubjects();
+  }, []);
 
   // Load meta (types, fields)
   useEffect(() => {
@@ -161,7 +199,7 @@ const EditUniversity = () => {
     if (logoFile) formData.append('logo', logoFile);
 
     try {
-      await axios.patch(`/universities/${id}`, formData, {
+      await axios.patch(`/admin/universities/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       message.success('University updated successfully!');
@@ -204,9 +242,9 @@ const EditUniversity = () => {
             onClick={() => navigate('/universities')}
             className='mb-4'
           >
-            Back to Universities
+            Back
           </Button>
-          <Title level={2}>Edit University</Title>
+          <Title level={3}>{isEditable ? 'Edit University' : 'University Information'}</Title>
         </div>
 
         <div className='bg-white rounded-lg shadow p-6'>
@@ -219,12 +257,15 @@ const EditUniversity = () => {
             <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
               {/* Form Fields */}
               <div className='md:col-span-2'>
+                <Form.Item
+                  label='University Name'
+                  name='universityName'
+                  rules={[{ required: true }]}
+                >
+                  <Input disabled={!isEditable} className='rounded-md' />
+                </Form.Item>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <Form.Item
-                    label='University Name'
-                    name='universityName'
-                    rules={[{ required: true }]}
-                  >
+                  <Form.Item label='Abbreviation' name='abbreviation' rules={[{ required: true }]}>
                     <Input disabled={!isEditable} className='rounded-md' />
                   </Form.Item>
                   <Form.Item label='Country' name='country' rules={[{ required: true }]}>
@@ -249,7 +290,10 @@ const EditUniversity = () => {
                     <Select disabled={!isEditable} className='rounded-md'>
                       {availableTypes.map((type) => (
                         <Option key={type} value={type}>
-                          {type}
+                          {type
+                            .split(' ')
+                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ')}
                         </Option>
                       ))}
                     </Select>
@@ -263,6 +307,18 @@ const EditUniversity = () => {
                   </Form.Item>
                   <Form.Item label='Ranking' name='rank'>
                     <InputNumber className='w-full rounded-md' disabled={!isEditable} />
+                  </Form.Item>
+                  <Form.Item label='Year Established' name='year'>
+                    <InputNumber
+                      className='w-full rounded-md'
+                      disabled={!isEditable}
+                      min={1000}
+                      max={new Date().getFullYear()}
+                    />
+                  </Form.Item>
+
+                  <Form.Item label='Exchange Program' name='exchange' valuePropName='checked'>
+                    <Switch disabled={!isEditable} />
                   </Form.Item>
                 </div>
 
@@ -319,6 +375,20 @@ const EditUniversity = () => {
                     className='rounded-md'
                   />
                 </Form.Item>
+                <Form.Item label='Subjects' name='subjects'>
+                  <Select
+                    mode='multiple'
+                    disabled={!isEditable}
+                    className='w-full rounded-md'
+                    placeholder='Select subjects'
+                  >
+                    {availableSubjects.map((subject) => (
+                      <Option key={subject} value={subject}>
+                        {subject}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
 
                 {/* Buttons */}
                 <div className='flex justify-end space-x-4 mt-6'>
@@ -328,14 +398,14 @@ const EditUniversity = () => {
                     </Button>
                   ) : (
                     <>
-                      <Button onClick={handleReset}>Reset</Button>
+                      <Button onClick={handleReset}>Cancel</Button>
                       <Button
                         htmlType='submit'
                         loading={loading}
                         icon={<SaveOutlined />}
                         className='bg-[#ff7a00] text-white'
                       >
-                        {loading ? 'Updating...' : 'Update University'}
+                        {loading ? 'Updating...' : 'Save Changes'}
                       </Button>
                     </>
                   )}
@@ -345,25 +415,29 @@ const EditUniversity = () => {
               {/* Logo Upload */}
               <div className='flex flex-col items-center '>
                 <Form.Item label='Logo' name='logo'>
-                  <Upload.Dragger
-                    {...uploadProps}
-                    showUploadList={false}
-                    disabled={!isEditable}
-                    className='!p-0 !border-none !bg-transparent !shadow-none !outline-none dragger-hidden'
-                  >
-                    <div className='relative w-32 h-32 group overflow-hidden border-none'>
+                  <div className='relative w-32 h-32'>
+                    <Upload.Dragger
+                      {...uploadProps}
+                      showUploadList={false}
+                      disabled={!isEditable}
+                      className='absolute inset-0 z-10 opacity-0'
+                    >
+                      <div />
+                    </Upload.Dragger>
+
+                    <div className='relative w-full h-full group border border-gray-300 rounded-md overflow-hidden'>
                       <img
                         src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
-                        alt='Current logo'
+                        alt='University Logo'
                         className='w-full h-full object-contain'
                       />
                       {isEditable && (
-                        <div className='absolute bottom-1 right-1 bg-[#ff7a00] rounded-full p-2 items-center justify-center flex'>
+                        <div className='absolute bottom-1 right-1 bg-[#ff7a00] rounded-full p-2 flex items-center justify-center'>
                           <Pencil size={20} color='white' />
                         </div>
                       )}
                     </div>
-                  </Upload.Dragger>
+                  </div>
                 </Form.Item>
               </div>
             </div>
