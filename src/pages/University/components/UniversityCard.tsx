@@ -19,7 +19,7 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
             <div className='text-orange-500 text-xs'>{university.country}</div>
           </div>
           <img
-            src={university.logo}
+            src={university.logo.replace('http://localhost:3000/static/', '')}
             alt={`${university.name} logo`}
             className='w-16 h-16 object-contain rounded-lg'
           />
