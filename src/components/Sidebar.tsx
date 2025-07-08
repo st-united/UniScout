@@ -10,22 +10,15 @@ import { removeStorageData } from '@app/config/storage';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
 import { logout } from '@app/redux/features/auth/authSlice';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  activeTab: string;
+  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const pathToTab: Record<string, string> = {
-    '/': 'dashboard',
-    '/universities': 'manage-university',
-    '/manage': 'manage-request',
-    '/account': 'manage-account',
-  };
-
-  const activeTab = pathToTab[location.pathname] || '';
-
   const dispatch = useDispatch();
-
   const menuItems = [
     {
       id: 'dashboard',
@@ -59,7 +52,8 @@ const Sidebar: React.FC = () => {
     },
   ];
 
-  const handleMenuClick = (path: string) => {
+  const handleMenuClick = (path: string, tabId: string) => {
+    setActiveTab(tabId);
     navigate(path);
     setIsOpen(false);
   };
@@ -144,7 +138,9 @@ const Sidebar: React.FC = () => {
                 <li key={item.id}>
                   <button
                     onClick={() =>
-                      item.action === 'logout' ? handleLogout() : handleMenuClick(item.path || '/')
+                      item.action === 'logout'
+                        ? handleLogout()
+                        : handleMenuClick(item.path || '/', item.id)
                     }
                     style={
                       isActive

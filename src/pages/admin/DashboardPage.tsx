@@ -150,7 +150,7 @@ const DashboardPage = () => {
   return (
     <div className='flex min-h-screen bg-gray-50 flex-col px-5 '>
       {/* Sidebar on the left */}
-      <AdminSearchFilter className='relative [&_.ant-input-affix-wrapper]:hidden p-absolute [&_.ant-dropdown-trigger]:absolute [&_.ant-dropdown-trigger]:top-4 [&_.ant-dropdown-trigger]:right-0 p-absolute' />
+      <AdminSearchFilter className='relative [&_.ant-input-affix-wrapper]:hidden' />
 
       {/* Main Content Area */}
       <div className='flex-1 py-3 px-auto overflow-y-auto w-full'>
