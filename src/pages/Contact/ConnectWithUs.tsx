@@ -150,8 +150,26 @@ export default function ConnectWithUs() {
     }
     setSubmissionStatus('submitting');
     try {
-      // Replace with your backend endpoint
-      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', newUniData);
+      // Map frontend fields to API fields
+      const payload = {
+        name: newUniData.universityName, // Use universityName as name
+        email: newUniData.email,
+        message: newUniData.description, // Use description as message
+        requestType: 'New University',
+        universityName: newUniData.universityName,
+        phoneNumber: newUniData.phone,
+        country: newUniData.country,
+        location: newUniData.location,
+        type: newUniData.type,
+        universityEmail: newUniData.email, // Use email as universityEmail
+        website: newUniData.website,
+        broadFieldOfStudy: newUniData.fieldsOfStudy,
+        specificFieldOfStudy: newUniData.FieldofStudy,
+        rank: '',
+        numberOfStudents: newUniData.numberOfStudents,
+        // No files for new university
+      };
+      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', payload);
       setSubmissionStatus('success');
       showNotification('University submitted successfully.', 'success');
       setNewUniData({
@@ -239,12 +257,23 @@ export default function ConnectWithUs() {
     }
     setSubmissionStatus('submitting');
     try {
+      // Map frontend fields to API fields
       const dataToSend = new FormData();
-      dataToSend.append('representativeName', updateData.representativeName);
-      dataToSend.append('universityName', updateData.universityName);
+      dataToSend.append('name', updateData.representativeName);
       dataToSend.append('email', updateData.email);
-      dataToSend.append('phone', updateData.phone);
       dataToSend.append('message', updateData.message);
+      dataToSend.append('requestType', 'Update Information');
+      dataToSend.append('universityName', updateData.universityName);
+      dataToSend.append('phoneNumber', updateData.phone);
+      dataToSend.append('country', '');
+      dataToSend.append('location', '');
+      dataToSend.append('type', '');
+      dataToSend.append('universityEmail', '');
+      dataToSend.append('website', '');
+      dataToSend.append('broadFieldOfStudy', '');
+      dataToSend.append('specificFieldOfStudy', '');
+      dataToSend.append('rank', '');
+      dataToSend.append('numberOfStudents', '');
       updateData.attachment.forEach((file) => dataToSend.append('files', file));
       await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', dataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' },
