@@ -56,6 +56,7 @@ export interface RawUniversity {
   latitude: number;
   longitude: number;
   type: string;
+  abbreviation?: string;
 }
 
 export interface UniversityCardProps {

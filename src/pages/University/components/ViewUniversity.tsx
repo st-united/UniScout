@@ -74,7 +74,7 @@ const ViewUniversity = () => {
       students: rawUniversity.studentPopulation,
       location: { lat: rawUniversity.latitude, lng: rawUniversity.longitude },
       rating: 0,
-      abbreviation: rawUniversity.abbreviation,
+      abbreviation: rawUniversity.abbreviation || '',
     };
   }, []);
 
@@ -265,8 +265,10 @@ const ViewUniversity = () => {
                   allowClear
                   placeholder='Search'
                   value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onSearch={(value) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSearchInput(e.target.value)
+                  }
+                  onSearch={(value: string) => {
                     handleFiltersUpdate({ ...activeFilters, search: value });
                     setCurrentPage(1);
                   }}
@@ -288,7 +290,7 @@ const ViewUniversity = () => {
                       ? 'Sort by: low to high'
                       : 'Sort by: high to low'
                   }
-                  onChange={(val) =>
+                  onChange={(val: string) =>
                     handleFiltersUpdate({
                       ...activeFilters,
                       sortOrder: val === 'Sort by: low to high' ? 'asc' : 'desc',
