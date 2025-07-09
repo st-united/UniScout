@@ -45,23 +45,34 @@ interface FormErrors {
 // Enums and constants for dropdowns
 const universityTypes = ['Public', 'Private', 'Academic', 'College', 'International'];
 const fieldsOfStudy = [
-  'Science & Engineering',
-  'Economics, Business & Management',
-  'Social Sciences & Humanities',
-  'Medicine, Pharmacy & Health Sciences ',
-  'Arts & Design',
-  'Law & Political Science',
-  'Agriculture & Food Science',
-  'Sports & Physical Education',
-  'Emerging Technologies & Interdisciplinary Studies',
-  'Other',
+  { label: 'Natural Sciences', value: 'natural_sciences', id: '9' },
+  { label: 'Engineering & Technology', value: 'engineering_technology', id: '5' },
+  { label: 'Information & Communication Technologies', value: 'ict', id: '8' },
+  { label: 'Business Managment & Law', value: 'business_management_law', id: '3' },
+  { label: 'Social & Behavioral Sciences', value: 'social_behavioral_sciences', id: '10' },
+  { label: 'Humanities & Languages', value: 'humanities_languages', id: '7' },
+  { label: 'Education & Training', value: 'education_training', id: '4' },
+  { label: 'Arts & Design', value: 'arts_design', id: '2' },
+  { label: 'Health & Medicine', value: 'health_medicine', id: '6' },
+  {
+    label: 'Agriculture & Veterinary Sciences',
+    value: 'agricultural_veterinary_sciences',
+    id: '1',
+  },
+  { label: 'Services', value: 'services', id: '11' },
+  {
+    label: 'Transport, Safety & Security, Military',
+    value: 'transport_safety_security_military',
+    id: '12',
+  },
 ];
-const FieldofStudy = ['ST United', 'Reject'];
-
-const MAX_FRONTEND_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_FRONTEND_FILES = 5;
 
 export default function ConnectWithUs() {
+  const [fieldOfStudyOptions, setFieldOfStudyOptions] = useState<string[]>([]);
+
+  const MAX_FRONTEND_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const MAX_FRONTEND_FILES = 5;
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'new' | 'update'>('new');
 
@@ -190,6 +201,24 @@ export default function ConnectWithUs() {
       showNotification('Submission failed.', 'error');
     }
   };
+
+  // Fetch subjects when broad field changes
+  useEffect(() => {
+    const selectedBroadField = fieldsOfStudy.find((f) => f.value === newUniData.fieldsOfStudy);
+    if (selectedBroadField) {
+      axios
+        .get(
+          `https://api.uniscout.dev.stunited.vn/api/universities/subjects?academicFieldId=${selectedBroadField.id}`,
+        )
+        .then((res) => {
+          setFieldOfStudyOptions(res.data.data.map((subject: any) => subject.name));
+        });
+      setNewUniData((prev) => ({ ...prev, FieldofStudy: '' })); // Clear specific field when broad changes
+    } else {
+      setFieldOfStudyOptions([]);
+      setNewUniData((prev) => ({ ...prev, FieldofStudy: '' }));
+    }
+  }, [newUniData.fieldsOfStudy]);
 
   // --- Handlers for Update Information ---
   const handleUpdateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -533,8 +562,8 @@ export default function ConnectWithUs() {
                   Select your fields
                 </option>
                 {fieldsOfStudy.map((field) => (
-                  <option key={field} value={field}>
-                    {field}
+                  <option key={field.value} value={field.value}>
+                    {field.label}
                   </option>
                 ))}
               </select>
@@ -544,7 +573,7 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label
-                htmlFor='new-FieldofStudy'
+                htmlFor='FieldofStudy'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
                 Field of Study
@@ -561,9 +590,9 @@ export default function ConnectWithUs() {
                 <option value='' disabled>
                   Select your Field of Study
                 </option>
-                {FieldofStudy.map((field) => (
-                  <option key={field} value={field}>
-                    {field}
+                {fieldOfStudyOptions.map((subject) => (
+                  <option key={subject} value={subject}>
+                    {subject}
                   </option>
                 ))}
               </select>
