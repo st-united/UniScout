@@ -1,4 +1,6 @@
-import { Input, Tooltip } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
+import { Input, Tooltip, TreeSelect } from 'antd';
+import axios from 'axios';
 import { Filter, MapPin, ChevronDown, BookOpenText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
@@ -19,30 +21,60 @@ interface UniversityFilterProps {
 }
 
 const FIELD_NAME_TO_API_KEY: Record<string, string> = {
-  'Agriculture & Food Science': 'agriculturalFoodScience',
-  'Arts & Design': 'artsDesign',
-  'Economics, Business & Management': 'economicsBusinessManagement',
-  'Law & Political Science': 'lawPoliticalScience',
-  'Medicine, Pharmacy & Health Sciences': 'medicinePharmacyHealthSciences',
-  'Science & Engineering': 'scienceEngineering',
-  'Social Sciences & Humanities': 'socialSciencesHumanities',
-  'Sports & Physical Education': 'sportsPhysicalEducation',
-  'Emerging Technologies & Interdisciplinary Studies': 'technology',
-  Other: 'others',
+  'Natural Sciences': 'natural_sciences',
+  'Engineering & Technology': 'engineering_technology',
+  'Information & Communication Technologies': 'ict',
+  'Business Managment & Law': 'business_management_law',
+  'Social & Behavioral Sciences': 'medicinePharmacyHealthSciences',
+  'Humanities & Languages': 'humanities_languages',
+  'Education & Training': 'education_training',
+  'Arts & Design': 'arts_design',
+  'Health & Medicine': 'health_medicine',
+  'Agriculture & Veterinary Sciences': 'agricultural_veterinary_sciences',
+  Services: 'services',
+  'Transport, Safety & Security, Military': 'transport_safety_security_military',
 };
 
 const FIELD_DISPLAY_NAMES = [
-  'Science & Engineering',
-  'Economics, Business & Management',
-  'Social Sciences & Humanities',
-  'Medicine, Pharmacy & Health Sciences',
-  'Arts & Design',
-  'Law & Political Science',
-  'Agriculture & Food Science',
-  'Sports & Physical Education',
-  'Emerging Technologies & Interdisciplinary Studies',
-  'Other',
+  { title: 'Natural Sciences', value: 'natural_sciences', id: '9' },
+  { title: 'Engineering & Technology', value: 'engineering_technology', id: '5' },
+  { title: 'Information & Communication Technologies', value: 'ict', id: '8' },
+  { title: 'Business Managment & Law', value: 'business_management_law', id: '3' },
+  { title: 'Social & Behavioral Sciences', value: 'social_behavioral_sciences', id: '10' },
+  { title: 'Humanities & Languages', value: 'humanities_languages', id: '7' },
+  { title: 'Education & Training', value: 'education_training', id: '4' },
+  { title: 'Arts & Design', value: 'arts_design', id: '2' },
+  { title: 'Health & Medicine', value: 'health_medicine', id: '6' },
+  {
+    title: 'Agriculture & Veterinary Sciences',
+    value: 'agricultural_veterinary_sciences',
+    id: '1',
+  },
+  { title: 'Services', value: 'services', id: '11' },
+  {
+    title: 'Transport, Safety & Security, Military',
+    value: 'transport_safety_security_military',
+    id: '12',
+  },
 ];
+
+// Extend the type for treeData items to include optional children
+interface TreeNode {
+  title: string;
+  value: string;
+  key: string;
+  isLeaf: boolean;
+  children?: TreeNode[];
+}
+
+const initialTreeData: TreeNode[] = FIELD_DISPLAY_NAMES.map((field) => ({
+  title: field.title,
+  value: field.value,
+  key: field.id,
+  isLeaf: false,
+}));
+
+const MAX_COUNT = 12;
 
 const UniversityFilter = ({
   onFiltersUpdate,
@@ -62,6 +94,7 @@ const UniversityFilter = ({
   const [isFieldDropdownOpen, setIsFieldDropdownOpen] = useState(false);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
   const fieldDropdownRef = useRef<HTMLDivElement>(null);
+  const [treeData, setTreeData] = useState<TreeNode[]>(initialTreeData);
 
   useEffect(() => {
     // Ensure filters.country and filters.field are always arrays
@@ -98,6 +131,42 @@ const UniversityFilter = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Fetch children (subjects) for a parent field when selected
+  const fetchSubjectsForField = async (fieldId: string) => {
+    // Only fetch if not already loaded
+    const parent = treeData.find((item) => item.key === fieldId);
+    if (!parent || parent.children) return;
+    try {
+      const res = await axios.get(
+        `https://api.uniscout.dev.stunited.vn/api/universities/subjects?page=1&academicFieldId=${fieldId}`,
+      );
+      const children = res.data.data.map((subject: any) => ({
+        title: subject.name,
+        value: subject.id,
+        key: `subject-${subject.id}`,
+        isLeaf: true,
+      }));
+      setTreeData((origin) =>
+        origin.map((item) => (item.key === fieldId ? { ...item, children } : item)),
+      );
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
+
+  // When a parent is selected, fetch its children if not already loaded
+  const handleFieldChangeWithSubjects = async (val: string[]) => {
+    // Check if a parent field was just selected
+    const newlySelected = val.filter((v) => !filters.field.includes(v));
+    for (const v of newlySelected) {
+      const parent = treeData.find((item) => item.value === v);
+      if (parent && !parent.children) {
+        await fetchSubjectsForField(parent.key);
+      }
+    }
+    handleFilterChange('field', val);
+  };
 
   const handleFilterChange = (key: keyof FilterOptions, value: string | string[]) => {
     setFilters((prev) => ({
@@ -319,64 +388,25 @@ const UniversityFilter = ({
         </div>
 
         {/* Fields Multi-select */}
-        <div className='rounded-lg p-4 shadow-sm relative' ref={fieldDropdownRef}>
+        <div className='rounded-lg p-4 shadow-sm'>
           <h3 className='text-base font-semibold mb-3'>Broad Fields</h3>
-          <button
-            type='button'
-            className='relative w-full rounded-lg bg-white text-sm focus:outline-none cursor-pointer p-2 flex items-center justify-between'
-            onClick={() => setIsFieldDropdownOpen((prev) => !prev)}
-          >
-            <div className='flex items-center'>
-              <BookOpenText className='w-4 h-4 text-gray-500 mr-2' />
+          <TreeSelect
+            treeData={treeData}
+            // No dropdown async loading
+            value={filters.field}
+            onChange={handleFieldChangeWithSubjects}
+            multiple
+            maxCount={MAX_COUNT}
+            style={{ width: '100%' }}
+            suffixIcon={
               <span>
-                {filters.field.length === 0
-                  ? 'All Fields'
-                  : filters.field.length === 1
-                  ? filters.field[0]
-                  : `${filters.field.length} selected`}
+                {filters.field.length} / {MAX_COUNT} <DownOutlined />
               </span>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-gray-500 transform transition-transform ${
-                isFieldDropdownOpen ? 'rotate-180' : 'rotate-0'
-              }`}
-            />
-          </button>
-
-          {isFieldDropdownOpen && (
-            <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg'>
-              <label className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  checked={filters.field.length === FIELD_DISPLAY_NAMES.length}
-                  onChange={() => {
-                    if (filters.field.length === FIELD_DISPLAY_NAMES.length) {
-                      handleFilterChange('field', []);
-                    } else {
-                      handleFilterChange('field', FIELD_DISPLAY_NAMES);
-                    }
-                  }}
-                  className='accent-orange-500'
-                />
-                <span className='text-sm font-semibold'>Select All</span>
-              </label>
-              {FIELD_DISPLAY_NAMES.map((fieldName) => (
-                <label
-                  key={fieldName}
-                  className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'
-                >
-                  <input
-                    type='checkbox'
-                    value={fieldName}
-                    checked={filters.field.includes(fieldName)}
-                    onChange={() => handleFieldChange(fieldName)}
-                    className='accent-orange-500'
-                  />
-                  <span className='text-sm'>{fieldName}</span>
-                </label>
-              ))}
-            </div>
-          )}
+            }
+            treeCheckable
+            placeholder='Please select'
+            showCheckedStrategy={TreeSelect.SHOW_CHILD}
+          />
         </div>
       </div>
     </div>

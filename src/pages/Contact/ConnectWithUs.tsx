@@ -45,23 +45,34 @@ interface FormErrors {
 // Enums and constants for dropdowns
 const universityTypes = ['Public', 'Private', 'Academic', 'College', 'International'];
 const fieldsOfStudy = [
-  'Science & Engineering',
-  'Economics, Business & Management',
-  'Social Sciences & Humanities',
-  'Medicine, Pharmacy & Health Sciences ',
-  'Arts & Design',
-  'Law & Political Science',
-  'Agriculture & Food Science',
-  'Sports & Physical Education',
-  'Emerging Technologies & Interdisciplinary Studies',
-  'Other',
+  { label: 'Natural Sciences', value: 'natural_sciences', id: '9' },
+  { label: 'Engineering & Technology', value: 'engineering_technology', id: '5' },
+  { label: 'Information & Communication Technologies', value: 'ict', id: '8' },
+  { label: 'Business Managment & Law', value: 'business_management_law', id: '3' },
+  { label: 'Social & Behavioral Sciences', value: 'social_behavioral_sciences', id: '10' },
+  { label: 'Humanities & Languages', value: 'humanities_languages', id: '7' },
+  { label: 'Education & Training', value: 'education_training', id: '4' },
+  { label: 'Arts & Design', value: 'arts_design', id: '2' },
+  { label: 'Health & Medicine', value: 'health_medicine', id: '6' },
+  {
+    label: 'Agriculture & Veterinary Sciences',
+    value: 'agricultural_veterinary_sciences',
+    id: '1',
+  },
+  { label: 'Services', value: 'services', id: '11' },
+  {
+    label: 'Transport, Safety & Security, Military',
+    value: 'transport_safety_security_military',
+    id: '12',
+  },
 ];
-const Major = ['ST United', 'Reject'];
-
-const MAX_FRONTEND_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_FRONTEND_FILES = 5;
 
 export default function ConnectWithUs() {
+  const [fieldOfStudyOptions, setFieldOfStudyOptions] = useState<string[]>([]);
+
+  const MAX_FRONTEND_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const MAX_FRONTEND_FILES = 5;
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'new' | 'update'>('new');
 
@@ -77,7 +88,7 @@ export default function ConnectWithUs() {
     country: '',
     email: '',
     phone: '',
-    Major: '',
+    FieldofStudy: '',
   });
   const [newUniErrors, setNewUniErrors] = useState<any>({});
 
@@ -136,7 +147,7 @@ export default function ConnectWithUs() {
       errors.email = 'Invalid email.';
     if (!newUniData.phone) errors.phone = 'Required.';
     else if (!/^\+?\d+$/.test(newUniData.phone)) errors.phone = 'Only numbers and +.';
-    if (!newUniData.Major) errors.Major = 'Required.';
+    if (!newUniData.FieldofStudy) errors.FieldofStudy = 'Required.';
     // description is now optional, so no validation here
     return errors;
   };
@@ -150,8 +161,26 @@ export default function ConnectWithUs() {
     }
     setSubmissionStatus('submitting');
     try {
-      // Replace with your backend endpoint
-      await axios.post('contact/new-university', newUniData);
+      // Map frontend fields to API fields
+      const payload = {
+        name: newUniData.universityName, // Use universityName as name
+        email: newUniData.email,
+        message: newUniData.description, // Use description as message
+        requestType: 'New University',
+        universityName: newUniData.universityName,
+        phoneNumber: newUniData.phone,
+        country: newUniData.country,
+        location: newUniData.location,
+        type: newUniData.type,
+        universityEmail: newUniData.email, // Use email as universityEmail
+        website: newUniData.website,
+        broadFieldOfStudy: newUniData.fieldsOfStudy,
+        specificFieldOfStudy: newUniData.FieldofStudy,
+        rank: '',
+        numberOfStudents: newUniData.numberOfStudents,
+        // No files for new university
+      };
+      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', payload);
       setSubmissionStatus('success');
       showNotification('University submitted successfully.', 'success');
       setNewUniData({
@@ -165,13 +194,31 @@ export default function ConnectWithUs() {
         country: '',
         email: '',
         phone: '',
-        Major: '',
+        FieldofStudy: '',
       });
     } catch (err: any) {
       setSubmissionStatus('error');
       showNotification('Submission failed.', 'error');
     }
   };
+
+  // Fetch subjects when broad field changes
+  useEffect(() => {
+    const selectedBroadField = fieldsOfStudy.find((f) => f.value === newUniData.fieldsOfStudy);
+    if (selectedBroadField) {
+      axios
+        .get(
+          `https://api.uniscout.dev.stunited.vn/api/universities/subjects?academicFieldId=${selectedBroadField.id}`,
+        )
+        .then((res) => {
+          setFieldOfStudyOptions(res.data.data.map((subject: any) => subject.name));
+        });
+      setNewUniData((prev) => ({ ...prev, FieldofStudy: '' })); // Clear specific field when broad changes
+    } else {
+      setFieldOfStudyOptions([]);
+      setNewUniData((prev) => ({ ...prev, FieldofStudy: '' }));
+    }
+  }, [newUniData.fieldsOfStudy]);
 
   // --- Handlers for Update Information ---
   const handleUpdateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -239,14 +286,25 @@ export default function ConnectWithUs() {
     }
     setSubmissionStatus('submitting');
     try {
+      // Map frontend fields to API fields
       const dataToSend = new FormData();
-      dataToSend.append('representativeName', updateData.representativeName);
-      dataToSend.append('universityName', updateData.universityName);
+      dataToSend.append('name', updateData.representativeName);
       dataToSend.append('email', updateData.email);
-      dataToSend.append('phone', updateData.phone);
       dataToSend.append('message', updateData.message);
+      dataToSend.append('requestType', 'Update Information');
+      dataToSend.append('universityName', updateData.universityName);
+      dataToSend.append('phoneNumber', updateData.phone);
+      dataToSend.append('country', '');
+      dataToSend.append('location', '');
+      dataToSend.append('type', '');
+      dataToSend.append('universityEmail', '');
+      dataToSend.append('website', '');
+      dataToSend.append('broadFieldOfStudy', '');
+      dataToSend.append('specificFieldOfStudy', '');
+      dataToSend.append('rank', '');
+      dataToSend.append('numberOfStudents', '');
       updateData.attachment.forEach((file) => dataToSend.append('files', file));
-      await axios.post('contact/update-info', dataToSend, {
+      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', dataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
@@ -504,8 +562,8 @@ export default function ConnectWithUs() {
                   Select your fields
                 </option>
                 {fieldsOfStudy.map((field) => (
-                  <option key={field} value={field}>
-                    {field}
+                  <option key={field.value} value={field.value}>
+                    {field.label}
                   </option>
                 ))}
               </select>
@@ -514,29 +572,32 @@ export default function ConnectWithUs() {
               )}
             </div>
             <div>
-              <label htmlFor='new-Major' className='block mb-2 text-sm font-medium text-orange-600'>
-                Major
+              <label
+                htmlFor='FieldofStudy'
+                className='block mb-2 text-sm font-medium text-orange-600'
+              >
+                Field of Study
               </label>
               <select
-                id='Major'
-                name='Major'
-                value={newUniData.Major}
+                id='FieldofStudy'
+                name='FieldofStudy'
+                value={newUniData.FieldofStudy}
                 onChange={handleNewUniChange}
                 className={`!text-[#6B7280] w-full border-0 border-b-2 ${
-                  newUniErrors.Major ? 'border-red-500' : 'border-[#E85A0C]'
+                  newUniErrors.FieldofStudy ? 'border-red-500' : 'border-[#E85A0C]'
                 } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors text-gray-700`}
               >
                 <option value='' disabled>
-                  Select your Major
+                  Select your Field of Study
                 </option>
-                {Major.map((field) => (
-                  <option key={field} value={field}>
-                    {field}
+                {fieldOfStudyOptions.map((subject) => (
+                  <option key={subject} value={subject}>
+                    {subject}
                   </option>
                 ))}
               </select>
-              {newUniErrors.Major && (
-                <p className='text-red-500 text-sm mt-1'>{newUniErrors.Major}</p>
+              {newUniErrors.FieldofStudy && (
+                <p className='text-red-500 text-sm mt-1'>{newUniErrors.FieldofStudy}</p>
               )}
             </div>
             <div>
@@ -745,7 +806,7 @@ export default function ConnectWithUs() {
               {updateErrors.attachment && (
                 <p className='mt-2 text-sm text-red-500'>{updateErrors.attachment}</p>
               )}
-              <div className='text-xs text-gray-500 mt-2'>
+              <div className='text-s text-gray-500 mt-2'>
                 You can upload up to 5 files in PNG, JPG, JPEG, DOCX, DOC, or PDF format. Each file
                 must be no larger than 5MB
               </div>

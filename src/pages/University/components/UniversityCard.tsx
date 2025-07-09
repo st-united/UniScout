@@ -1,3 +1,4 @@
+import { Button } from 'antd';
 import { Building2, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -10,10 +11,36 @@ interface UniversityCardProps {
 const UniversityCard = ({ university }: UniversityCardProps) => {
   return (
     <Link to={`/universities/${university.id}`} className='block'>
-      <div className='bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow h-35 flex flex-col justify-between'>
+      <div
+        className='bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow flex flex-col justify-between'
+        style={{ height: '12rem' }}
+      >
         <div className='flex items-start justify-between mb-4'>
           <div className='w-4/5'>
-            <h3 className='text-blue-700 font-medium text-sm leading-tight line-clamp-2'>
+            {university.abbreviation && (
+              <div style={{ marginBottom: 8 }}>
+                <Button
+                  type='default'
+                  ghost
+                  style={{
+                    borderColor: '#f2993f',
+                    color: '#f2993f',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    borderRadius: '4px',
+                    padding: '2px 12px',
+                    lineHeight: 1.2,
+                    background: 'transparent',
+                    height: 'auto',
+                    boxShadow: 'none',
+                    display: 'inline-block',
+                  }}
+                >
+                  {university.abbreviation}
+                </Button>
+              </div>
+            )}
+            <h3 className='text-blue-700 font-bold text-sm leading-tight line-clamp-2'>
               {university.name}
             </h3>
             <div className='text-orange-500 text-xs'>{university.country}</div>
