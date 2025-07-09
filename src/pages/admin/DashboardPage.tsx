@@ -1,3 +1,4 @@
+import { Dropdown, Menu } from 'antd';
 import axios from 'axios';
 import { Filter, ChevronRight } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -15,11 +16,13 @@ import {
   Bar,
   ResponsiveContainer,
   LabelList,
+  Area,
   LabelProps,
 } from 'recharts';
 
 import AdminSearchFilter from '../../components/AdminSearchFilter';
 import Sidebar from '../../components/Sidebar';
+import type { MenuProps } from 'antd';
 
 // Mock data - replace with your actual data source
 const dashboardData = {
@@ -58,6 +61,22 @@ const renderDot = (props: LabelProps, color: string) => {
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 const DashboardPage = () => {
+  const locationFilterItems: MenuProps['items'] = [{ key: 'all', label: 'All Regions' }];
+  const filterMenuItems: MenuProps['items'] = [
+    {
+      key: '1',
+      label: 'Last 7 days',
+    },
+    {
+      key: '2',
+      label: 'Last 30 days',
+    },
+    {
+      key: '3',
+      label: 'This Year',
+    },
+  ];
+
   const [summary, setSummary] = useState<{ universityCount: number; contactCount: number } | null>(
     null,
   );
@@ -101,6 +120,7 @@ const DashboardPage = () => {
     name: string;
     logo?: string | null;
     country?: string;
+    location?: string;
     count: number;
   };
   const [topSearch, setTopSearch] = useState<TopSearchItem[]>([]);
@@ -110,6 +130,7 @@ const DashboardPage = () => {
       try {
         const res = await axios.get('/dashboard/top-searched');
         setTopSearch(res.data);
+        console.log('Top Search Data:', res.data);
       } catch (error) {
         console.error('Erreur chargement top search :', error);
       }
@@ -148,9 +169,9 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className='flex min-h-screen bg-gray-50 flex-col px-5 '>
+    <div className='flex min-h-screen bg-gray-50 flex-col px-4 overflow-y-auto flex-1'>
       {/* Sidebar on the left */}
-      <AdminSearchFilter className='relative [&_.ant-input-affix-wrapper]:hidden' />
+      <AdminSearchFilter className='flex justify-end !p-0 ' />
 
       {/* Main Content Area */}
       <div className='flex-1 py-3 px-auto overflow-y-auto w-full'>
@@ -159,7 +180,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Top Stats */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 flex-1'>
           <div className='bg-blue-50 p-8 rounded-2xl border border-blue-100 h-18'>
             <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Universities</h3>
             <p className='text-4xl font-bold text-gray-900'>
@@ -172,64 +193,129 @@ const DashboardPage = () => {
           </div>
         </div>
         {/* Charts Section */}
-        <div className='grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6'>
+        <div className='grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6 flex-1'>
           {/* Website Traffic - full width */}
-          <div className='col-span-1 xl:col-span-3 bg-white p-6 rounded-lg shadow-sm border'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-lg font-semibold text-orange-600'>Website traffic tracking</h3>
-              <div className='flex items-center space-x-4'>
-                <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-blue-500'></div>
-                  <span className='text-sm text-gray-600'>This year</span>
+          <div className='col-span-1 xl:col-span-3 bg-white p-0 rounded-xl shadow-sm border overflow-hidden mb-8 flex-1'>
+            <div className=' relative py-10 bg-[#f9fafb] rounded-3xl'>
+              {/* Title + Legend inside the chart */}
+              <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-4'>
+                <div className='flex items-center space-x-4 text-sm font-medium text-gray-700 gap-8 px-4'>
+                  <span className='text-orange-600 text-base font-semibold'>
+                    Website traffic tracking
+                  </span>
+                  <span className='text-[#ccc] text-lg'>|</span>
+                  <div className='flex items-center space-x-4'>
+                    <div className='flex items-center space-x-1'>
+                      <span className='w-2 h-2 rounded-full bg-blue-500'></span>
+                      <span className='text-sm'>This year</span>
+                    </div>
+                    <div className='flex items-center space-x-1'>
+                      <span className='w-2 h-2 rounded-full bg-[#cbd5e1]'></span>
+                      <span className='text-sm'>Last year</span>
+                    </div>
+                  </div>
                 </div>
-                <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-gray-400'></div>
-                  <span className='text-sm text-gray-600'>Last year</span>
-                </div>
-                <Filter className='w-4 h-4 text-gray-400' />
+
+                <Dropdown menu={{ items: filterMenuItems }} trigger={['click']}>
+                  <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
+                    <Filter className='w-4 h-4' />
+                    <span>Filter</span>
+                  </div>
+                </Dropdown>
               </div>
+
+              <ResponsiveContainer width='100%' height={300}>
+                <LineChart
+                  data={dashboardData.trafficData}
+                  margin={{ top: 60, right: 30, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
+                      <stop offset='0%' stopColor='#ff7a00' stopOpacity={1} />
+                      <stop offset='100%' stopColor='#ff7a00' stopOpacity={0.2} />
+                    </linearGradient>
+                  </defs>
+
+                  <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
+                  <XAxis
+                    dataKey='month'
+                    tick={{ fill: '#F97316', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: '#F97316', fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `${v / 1000}K`}
+                  />
+
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || !payload.length) return null;
+                      return (
+                        <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
+                          <p className='font-semibold mb-1'>{label}</p>
+                          <p className='text-orange-500'>
+                            thisYear : {payload[0].value.toLocaleString()}
+                          </p>
+                          <p className='text-gray-400'>
+                            lastYear : {payload[1].value.toLocaleString()}
+                          </p>
+                        </div>
+                      );
+                    }}
+                  />
+
+                  <Area
+                    type='monotone'
+                    dataKey='thisYear'
+                    stroke='none'
+                    fill='url(#colorTraffic)'
+                  />
+
+                  <Line
+                    type='monotone'
+                    dataKey='thisYear'
+                    stroke='#3b82f6'
+                    strokeWidth={2}
+                    dot={false}
+                  />
+
+                  <Line
+                    type='monotone'
+                    dataKey='lastYear'
+                    stroke='#cbd5e1'
+                    strokeWidth={1.5}
+                    strokeDasharray='3 3'
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <ResponsiveContainer width='100%' height={300}>
-              <LineChart data={dashboardData.trafficData}>
-                <CartesianGrid strokeDasharray='3 3' stroke='#f0f0f0' />
-                <XAxis dataKey='month' axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip />
-                <Line
-                  type='monotone'
-                  dataKey='thisYear'
-                  stroke='#3B82F6'
-                  strokeWidth={3}
-                  dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                />
-                <Line
-                  type='monotone'
-                  dataKey='lastYear'
-                  stroke='#D1D5DB'
-                  strokeWidth={2}
-                  strokeDasharray='5 5'
-                  dot={{ fill: '#D1D5DB', strokeWidth: 2, r: 3 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
           </div>
 
           {/* Row for the two side-by-side charts */}
 
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
             {/* Track number of contact requests */}
-            <div className='bg-white p-6 rounded-lg shadow-sm border'>
+            <div className='bg-[#f9fafb] p-6 rounded-3xl shadow-sm border'>
               <div className='flex justify-between items-center mb-4'>
-                <h3 className='text-lg font-semibold text-gray-800'>
+                <h3 className='text-base font-semibold text-gray-800'>
                   Track number of contact requests
                 </h3>
-                <Filter className='w-4 h-4 text-gray-400' />
+                <Dropdown menu={{ items: filterMenuItems }} trigger={['click']}>
+                  <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
+                    <Filter className='w-4 h-4' />
+                    <span>Filter</span>
+                  </div>
+                </Dropdown>
               </div>
               <ResponsiveContainer width='100%' height={200}>
                 <BarChart data={dashboardData.requestData} barCategoryGap={10} barGap={4}>
                   <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-                  <XAxis dataKey='month' axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 200]} axisLine={false} tickLine={false} />
+                  <XAxis dataKey='month' axisLine={false} tickLine={false} fontSize={12} />
+                  <YAxis domain={[0, 200]} axisLine={false} tickLine={false} fontSize={12} />
                   <Tooltip />
 
                   <Bar
@@ -251,36 +337,43 @@ const DashboardPage = () => {
                 </BarChart>
               </ResponsiveContainer>
 
-              <div className='flex justify-center space-x-6 mt-4'>
-                <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-blue-500'></div>
-                  <span className='text-xs text-gray-600'>Pending</span>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-yellow-500'></div>
-                  <span className='text-xs text-gray-600'>In Progress</span>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-green-500'></div>
-                  <span className='text-xs text-gray-600'>Completed</span>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <div className='w-3 h-3 rounded-full bg-red-500'></div>
-                  <span className='text-xs text-gray-600'>Rejected</span>
+              <div className='w-full flex justify-center mt-4'>
+                <div className='flex flex-wrap justify-center items-center gap-x-6 gap-y-2'>
+                  <div className='flex items-center space-x-2'>
+                    <div className='w-3 h-3 rounded-full bg-blue-500'></div>
+                    <span className='text-xs text-gray-600'>Pending</span>
+                  </div>
+                  <div className='flex items-center space-x-2'>
+                    <div className='w-3 h-3 rounded-full bg-yellow-500'></div>
+                    <span className='text-xs text-gray-600'>In Progress</span>
+                  </div>
+                  <div className='flex items-center space-x-2'>
+                    <div className='w-3 h-3 rounded-full bg-green-500'></div>
+                    <span className='text-xs text-gray-600'>Completed</span>
+                  </div>
+                  <div className='flex items-center space-x-2'>
+                    <div className='w-3 h-3 rounded-full bg-red-500'></div>
+                    <span className='text-xs text-gray-600'>Rejected</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Traffic by Location */}
-            <div className='bg-white p-6 rounded-lg shadow-sm border'>
+            <div className='bg-[#f9fafb] p-6 rounded-3xl border'>
               <div className='flex justify-between items-center mb-4'>
-                <h3 className='text-lg font-semibold text-gray-800'>Traffic by Location</h3>
-                <Filter className='w-4 h-4 text-gray-400' />
+                <h3 className='text-base font-semibold text-gray-800'>Traffic by Location</h3>
+                <Dropdown menu={{ items: locationFilterItems }} trigger={['click']}>
+                  <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer'>
+                    <Filter className='w-4 h-4' />
+                    <span>Filter</span>
+                  </div>
+                </Dropdown>
               </div>
               {trafficLoading ? (
                 <p className='text-gray-500'>loading...</p>
               ) : (
-                <div className='flex items-center justify-between'>
+                <div className='flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6'>
                   <div className='w-48 h-48'>
                     <ResponsiveContainer width='100%' height='100%'>
                       <PieChart>
@@ -300,9 +393,9 @@ const DashboardPage = () => {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className='flex-1 ml-6 space-y-3'>
+                  <div className='w-full lg:w-auto flex flex-col space-y-3'>
                     {trafficByLocation.map((item, index) => (
-                      <div key={item.name} className='flex justify-between items-center'>
+                      <div key={item.name} className='flex justify-between items-center space-x-24'>
                         <div className='flex items-center space-x-3'>
                           <div
                             className='w-3 h-3 rounded-full'
@@ -319,18 +412,22 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Top Search University - full width below, aligned left */}
-          <div className='w-1/2 col-span-1 xl:col-span-1 bg-white p-6 rounded-lg shadow-sm border bg-gray-500'>
-            <h3 className='text-lg font-semibold text-gray-800 mb-6'>Top Search University</h3>
-            <div className='space-y-4'>
+          {/* Top Search University  */}
+          <div className='flex flex-col bg-[#f9fafb] rounded-3xl p-6 shadow-sm border flex-1 min-w-0 lg:w-1/3'>
+            <h3 className='text-base font-semibold text-gray-800 mb-6'>Top Search University</h3>
+
+            <div className='flex flex-col gap-3'>
               {topSearch.map((item, index) => (
                 <div
                   key={index}
-                  className='flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors'
+                  className='flex items-center justify-between bg-white p-4 rounded-xl border border-solid border-gray-300 hover:shadow-md transition-shadow cursor-pointer min-w-0'
                 >
-                  <div className='flex items-center space-x-4'>
-                    <div className='text-lg font-bold text-gray-400'>#{index + 1}</div>
-                    <div className='w-12 h-12 bg-red-600 rounded flex items-center justify-center flex-shrink-0'>
+                  <div className='flex items-center gap-8 flex-grow min-w-0'>
+                    {/* Rank */}
+                    <div className='text-lg font-bold text-gray-500 shrink-0'>#{index + 1}</div>
+
+                    {/* Logo */}
+                    <div className='w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center shrink-0'>
                       {item.logo ? (
                         <img
                           src={item.logo}
@@ -338,19 +435,25 @@ const DashboardPage = () => {
                           className='w-8 h-8 object-contain'
                         />
                       ) : (
-                        <span className='text-white font-bold text-xs'>
-                          {item.name.slice(0, 4).toUpperCase()}
+                        <span className='text-xs font-bold text-gray-500'>
+                          {item.name.slice(0, 2).toUpperCase()}
                         </span>
                       )}
                     </div>
-                    <div>
-                      <h4 className='font-medium text-gray-900 text-sm'>{item.name}</h4>
-                      <p className='text-yellow-500 text-xs'>{item.country || 'Unknown'}</p>
+
+                    {/* Name and location */}
+                    <div className='flex flex-col min-w-0 '>
+                      <h4 className='text-sm font-medium text-gray-900 underline text-ellipsis max-w-[160px] sm:max-w-full'>
+                        {item.name}
+                      </h4>
+                      <p className='text-xs text-orange-500'>
+                        {item.location || 'Unknown'}, {item.country || 'Unknown'}
+                      </p>
                     </div>
                   </div>
-                  <div className='text-sm text-gray-500 font-medium'>
-                    {item.count} search{item.count > 1 ? 'es' : ''}
-                  </div>
+
+                  {/* Arrow */}
+                  <ChevronRight className='w-4 h-4 text-gray-400 shrink-0' />
                 </div>
               ))}
             </div>
