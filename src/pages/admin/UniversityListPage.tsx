@@ -134,13 +134,12 @@ const UniversityListPage: React.FC = () => {
           type: debouncedFilters.type.length > 0 ? debouncedFilters.type : undefined,
           country: debouncedFilters.country.length > 0 ? debouncedFilters.country : undefined,
           size: debouncedFilters.size.length > 0 ? debouncedFilters.size : undefined,
-          academicFields:
+          fieldNames:
             debouncedFilters.academicFields.length > 0
               ? debouncedFilters.academicFields
               : undefined, // Updated to academicFields
           sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
           page: currentPage,
-          limit: pageSize,
         },
         paramsSerializer: (params) => {
           const searchParams = new URLSearchParams();
@@ -340,47 +339,8 @@ const UniversityListPage: React.FC = () => {
     }
   };
 
-  // Helper function to parse comma-separated academic fields
-  const parseAcademicFields = (academicFieldsCommaSeparated: string): string[] => {
-    if (!academicFieldsCommaSeparated) return [];
-    return academicFieldsCommaSeparated
-      .split(',')
-      .map((field) => field.trim())
-      .filter((field) => field);
-  };
-
-  // Helper function to get label for academic field value
-  const getAcademicFieldLabel = (value: string): string => {
-    const field = academicFieldsOptions.find((option) => option.value === value);
-    return field ? field.label : value;
-  };
-
-  // Enhanced filter function to include university name, location, and strength search
-  const filteredUniversities = currentUniversityData.filter((u) => {
-    const searchValue = filters.search[0] || '';
-    const universityFields = parseAcademicFields(u.academicFieldsCommaSeparated);
-
-    const searchMatch =
-      !searchValue ||
-      u.university.toLowerCase().includes(searchValue.toLowerCase()) ||
-      u.location.toLowerCase().includes(searchValue.toLowerCase()) ||
-      u.country.toLowerCase().includes(searchValue.toLowerCase()) ||
-      universityFields.some((field) =>
-        getAcademicFieldLabel(field).toLowerCase().includes(searchValue.toLowerCase()),
-      );
-
-    return (
-      searchMatch &&
-      (filters.country.length === 0 || filters.country.includes(u.country)) &&
-      (filters.type.length === 0 || filters.type.includes(u.type)) &&
-      (filters.size.length === 0 || filters.size.includes(u.size)) &&
-      (filters.academicFields.length === 0 ||
-        filters.academicFields.some((field) => universityFields.includes(field)))
-    );
-  });
-
   // Updated academic fields options
-  const academicFieldsOptions = [
+  const fieldNamesOptions = [
     { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
     { value: 'arts_design', label: 'Arts & Design' },
     { value: 'business_management_law', label: 'Business, Management & Law' },
@@ -399,6 +359,45 @@ const UniversityListPage: React.FC = () => {
     { value: 'other', label: 'Other' },
   ];
 
+  // Helper function to get label for academic field value
+  const getFieldNameLabel = (value: string): string => {
+    const field = fieldNamesOptions.find((option) => option.value === value);
+    return field ? field.label : value;
+  };
+
+  // Helper function to parse comma-separated academic fields
+  const parseAcademicFields = (academicFieldsCommaSeparated: string): string[] => {
+    if (!academicFieldsCommaSeparated) return [];
+    return academicFieldsCommaSeparated
+      .split(',')
+      .map((field) => field.trim())
+      .filter((field) => field);
+  };
+
+  // Enhanced filter function to include university name, location, and strength search
+  const filteredUniversities = currentUniversityData.filter((u) => {
+    const searchValue = filters.search[0] || '';
+    const universityFields = parseAcademicFields(u.academicFieldsCommaSeparated);
+
+    const searchMatch =
+      !searchValue ||
+      u.university.toLowerCase().includes(searchValue.toLowerCase()) ||
+      u.location.toLowerCase().includes(searchValue.toLowerCase()) ||
+      u.country.toLowerCase().includes(searchValue.toLowerCase()) ||
+      universityFields.some((field) =>
+        getFieldNameLabel(field).toLowerCase().includes(searchValue.toLowerCase()),
+      );
+
+    return (
+      searchMatch &&
+      (filters.country.length === 0 || filters.country.includes(u.country)) &&
+      (filters.type.length === 0 || filters.type.includes(u.type)) &&
+      (filters.size.length === 0 || filters.size.includes(u.size)) &&
+      (filters.academicFields.length === 0 ||
+        filters.academicFields.some((field) => universityFields.includes(field)))
+    );
+  });
+
   const sortedUniversities = [...filteredUniversities].sort((a, b) => {
     switch (sortBy) {
       case 'rank-asc':
@@ -412,15 +411,15 @@ const UniversityListPage: React.FC = () => {
 
   // Get unique values for filter options
   const getUniqueCountries = () => {
-    return [...new Set(currentUniversityData.map((u) => u.country))].filter(Boolean).sort();
+    return ['Australia', 'India', 'Japan', 'Korea', 'USA', 'Vietnam'];
   };
 
   const getUniqueTypes = () => {
-    return [...new Set(currentUniversityData.map((u) => u.type))].filter(Boolean).sort();
+    return ['Public', 'Private', 'International', 'Academic', 'College'];
   };
 
   const getUniqueSizes = () => {
-    return [...new Set(currentUniversityData.map((u) => u.size))].filter(Boolean).sort();
+    return ['Small', 'Medium', 'Large', 'Extra Large'];
   };
 
   // Updated to use academicFieldsCommaSeparated
@@ -430,8 +429,8 @@ const UniversityListPage: React.FC = () => {
     );
     const uniqueFields = [...new Set(allFields)];
 
-    // Sort fields based on the order in academicFieldsOptions
-    const customFieldOrder = academicFieldsOptions.map((field) => field.value);
+    // Sort fields based on the order in fieldNamesOptions
+    const customFieldOrder = fieldNamesOptions.map((field) => field.value);
     return customFieldOrder.filter((field) => uniqueFields.includes(field));
   };
 
@@ -454,7 +453,7 @@ const UniversityListPage: React.FC = () => {
       activeFilters.push({ key: 'size', label: 'Size', value: filters.size.join(', ') });
     }
     if (filters.academicFields && filters.academicFields.length > 0) {
-      const fieldLabels = filters.academicFields.map((field) => getAcademicFieldLabel(field));
+      const fieldLabels = filters.academicFields.map((field) => getFieldNameLabel(field));
       activeFilters.push({
         key: 'academicFields',
         label: 'Field',
@@ -528,10 +527,10 @@ const UniversityListPage: React.FC = () => {
         const fields = parseAcademicFields(academicFieldsCommaSeparated);
         const sortedFields = fields.sort(
           (a, b) =>
-            academicFieldsOptions.findIndex((opt) => opt.value === a) -
-            academicFieldsOptions.findIndex((opt) => opt.value === b),
+            fieldNamesOptions.findIndex((opt) => opt.value === a) -
+            fieldNamesOptions.findIndex((opt) => opt.value === b),
         );
-        const displayText = sortedFields.map((field) => getAcademicFieldLabel(field)).join(', ');
+        const displayText = sortedFields.map((field) => getFieldNameLabel(field)).join(', ');
 
         return (
           <div
@@ -626,6 +625,11 @@ const UniversityListPage: React.FC = () => {
           style={{ width: '100%' }}
           placeholder='Select countries'
           optionLabelProp='label'
+          popupRender={(menu) => (
+            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
+              {menu}
+            </span>
+          )}
         >
           {getUniqueCountries().map((country) => (
             <Option key={country} value={country} label={country}>
@@ -694,7 +698,7 @@ const UniversityListPage: React.FC = () => {
           {getUniqueFields().map((field) => (
             <Option key={field} value={field}>
               <Checkbox checked={filters.academicFields.includes(field)}>
-                {getAcademicFieldLabel(field)}
+                {getFieldNameLabel(field)}
               </Checkbox>
             </Option>
           ))}
