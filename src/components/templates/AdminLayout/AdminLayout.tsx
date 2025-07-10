@@ -3,19 +3,45 @@ import { Outlet, useLocation } from 'react-router-dom';
 
 import Sidebar from '@app/components/Sidebar';
 
-const pathToTab: Record<string, string> = {
+// Define a tab mapping for exact and prefix routes
+const pathToTabExact: Record<string, string> = {
   '/': 'dashboard',
   '/universities': 'manage-university',
   '/manage': 'manage-request',
   '/account': 'manage-account',
 };
 
+const pathToTabPrefix: Record<string, string> = {
+  '/edit-university': 'manage-university',
+  '/create-university': 'manage-university',
+  '/edit-request': 'manage-request',
+  '/add-request': 'manage-request',
+  '/edit-account': 'manage-account',
+};
+
 const AdminLayout = () => {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(pathToTab[location.pathname] || '');
+  const [activeTab, setActiveTab] = useState('');
 
   useEffect(() => {
-    setActiveTab(pathToTab[location.pathname] || '');
+    const { pathname } = location;
+
+    // 1. Check exact matches
+    if (pathToTabExact[pathname]) {
+      setActiveTab(pathToTabExact[pathname]);
+      return;
+    }
+
+    // 2. Check dynamic route prefix matches
+    const matchedPrefix = Object.keys(pathToTabPrefix).find((prefix) =>
+      pathname.startsWith(prefix),
+    );
+
+    if (matchedPrefix) {
+      setActiveTab(pathToTabPrefix[matchedPrefix]);
+    } else {
+      setActiveTab('');
+    }
   }, [location.pathname]);
 
   return (
