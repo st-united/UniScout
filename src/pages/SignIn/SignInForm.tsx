@@ -93,17 +93,19 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
       md={12}
       lg={12}
       xl={10}
-      className={`bg-[#e2e3e3] flex items-center justify-center min-h-screen px-8 ${className}`}
+      className={`bg-[#e2e3e3] flex items-center justify-center min-h-screen px-1 ${className}`}
     >
       <div className='w-full max-w-md'>
         <div className='flex justify-end mb-8 md:hidden'>
           <MenuOutlined className='text-2xl text-gray-600' />
         </div>
         <div className='text-center mb-8'>
-          <Title level={1} className='text-4xl font-bold text-gray-900 mb-2'>
+          <Title level={1} className='text-4xl font-bold text-gray-900'>
             Welcome Back !
           </Title>
-          <Paragraph className='text-lg text-orange-500 font-medium'>Login to continue</Paragraph>
+          <Paragraph className='text-lg text-orange-400 font-medium italic'>
+            Login to continue
+          </Paragraph>
         </div>
         <Form
           form={form}
@@ -137,20 +139,19 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
               onChange={(e) => onInputChange('password', e.target.value)}
             />
           </Form.Item>
-          <div className='text-right mb-6'>
-            <button
-              type='button'
-              className='underline text-orange-500 hover:text-orange-600 font-medium text-base bg-transparent border-none p-0 cursor-pointer'
-            >
-              Forgot Password?
-            </button>
-          </div>
+
           <Form.Item className='mb-0'>
             <Button
               type='primary'
               htmlType='submit'
               loading={loading}
-              className='text-[#D79275] w-full h-14 bg-blue-900 hover:bg-blue-700 border-none rounded-lg text-2xl font-bold'
+              className='w-full h-14 rounded-lg text-2xl font-bold text-white border-none'
+              style={{
+                backgroundColor: '#f97316', // orange-500
+                border: 'none',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fb923c')} // orange-300
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f97316')}
             >
               Login now
             </Button>
