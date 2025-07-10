@@ -259,7 +259,7 @@ const ViewUniversity = () => {
           <div className='flex-1 min-h-[700px] relative'>
             {/* Search, filter chips, and sort bar aligned with cards */}
             <div className='mb-6 flex flex-col gap-2'>
-              <div className='flex flex-row items-center gap-4 w-full'>
+              <div className='flex flex-row items-center gap-4 w-full sticky'>
                 {/* Search bar */}
                 <Input.Search
                   allowClear
@@ -296,7 +296,7 @@ const ViewUniversity = () => {
                       sortOrder: val === 'Sort by: low to high' ? 'asc' : 'desc',
                     })
                   }
-                  className='min-w-[120px]'
+                  className='min-w-[120px] min-h-[40px] '
                   options={[
                     { value: 'Sort by: high to low', label: 'Sort by: high to low' },
                     { value: 'Sort by: low to high', label: 'Sort by: low to high' },
@@ -310,7 +310,8 @@ const ViewUniversity = () => {
                     key={c}
                     closable
                     onClose={() => removeFilter('country', c)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(c)}
                   </Tag>
@@ -320,7 +321,8 @@ const ViewUniversity = () => {
                     key={t}
                     closable
                     onClose={() => removeFilter('type', t)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(t)}
                   </Tag>
@@ -330,7 +332,8 @@ const ViewUniversity = () => {
                     key={s}
                     closable
                     onClose={() => removeFilter('size', s)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(s)}
                   </Tag>
@@ -340,31 +343,16 @@ const ViewUniversity = () => {
                     key={f}
                     closable
                     onClose={() => removeFilter('field', f)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(f)}
                   </Tag>
                 ))}
               </div>
               {/* Results for ... */}
-              {activeFilters.search && (
-                <div className='mb-2'>
-                  <span className='italic text-lg'>
-                    Results for <b>&quot;{activeFilters.search}&quot;</b>:
-                  </span>
-                </div>
-              )}
             </div>
-            {loading && (
-              <div className='absolute inset-0 bg-white/80 z-20 flex items-center justify-center'>
-                <div className='text-center p-8 bg-white rounded-xl shadow-lg border border-gray-200'>
-                  <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4'></div>
-                  <h3 className='text-lg font-medium text-gray-700'>
-                    Finding Matching Universities
-                  </h3>
-                </div>
-              </div>
-            )}
+            {/* Removed loading overlay */}
             {universities?.length === 0 ? (
               <div className='flex items-center justify-center min-h-[600px]'>
                 <div className='text-center'>

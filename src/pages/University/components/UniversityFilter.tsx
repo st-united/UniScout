@@ -210,15 +210,14 @@ const UniversityFilter = ({
   };
 
   const handleReset = () => {
-    const resetValues: FilterOptions = {
-      search: '',
+    setFilters((prev) => ({
+      ...prev,
       country: [],
       type: [],
       size: [],
       field: [],
       sortOrder: 'asc',
-    };
-    setFilters(resetValues);
+    }));
   };
 
   return (
