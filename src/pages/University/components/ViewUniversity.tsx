@@ -1,7 +1,7 @@
 import { Pagination, Input, Select, Tag, Button } from 'antd';
 import axios from 'axios';
 import { Search } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 import UniversityCard from './UniversityCard';
@@ -43,6 +43,7 @@ const ViewUniversity = () => {
   const fetchControllerRef = React.useRef(new AbortController());
   const navigate = useNavigate();
   const location = useLocation();
+  const cardsRef = useRef<HTMLDivElement>(null);
 
   const mapRawToUniversity = useCallback((rawUniversity: RawUniversity): UniversityCustom => {
     return {
@@ -177,6 +178,10 @@ const ViewUniversity = () => {
   }, []);
 
   const handleMapCountryClick = (country: string) => {
+    // Do nothing or just select the country visually, but do not apply filter
+  };
+
+  const handleCountryCountClick = (country: string) => {
     setActiveFilters({
       search: '',
       country: [country],
@@ -186,7 +191,11 @@ const ViewUniversity = () => {
       sortOrder: 'asc',
     });
     setCurrentPage(1);
-    window.scrollTo({ top: 200, behavior: 'smooth' });
+    setTimeout(() => {
+      if (cardsRef.current) {
+        cardsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100); // wait for UI update
   };
 
   // Helper to remove a filter chip
@@ -244,7 +253,10 @@ const ViewUniversity = () => {
 
   return (
     <div className='min-h-screen w-full px-4 py-6'>
-      <WorldMap onCountryClick={handleMapCountryClick} />
+      <WorldMap
+        onCountryClick={handleMapCountryClick}
+        onCountryCountClick={handleCountryCountClick}
+      />
       <h2 className='text-center text-4xl font-bold mt-6 mb-6'>DISCOVER UNIVERSITIES</h2>
       <div className='flex justify-center mt-6'>
         <div className='w-full max-w-screen-xl flex flex-col lg:flex-row gap-6'>
@@ -256,7 +268,7 @@ const ViewUniversity = () => {
               availableFields={availableFields}
             />
           </div>
-          <div className='flex-1 min-h-[700px] relative'>
+          <div ref={cardsRef} className='flex-1 min-h-[700px] relative'>
             {/* Search, filter chips, and sort bar aligned with cards */}
             <div className='mb-6 flex flex-col gap-2'>
               <div className='flex flex-row items-center gap-4 w-full sticky'>

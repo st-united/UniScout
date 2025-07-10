@@ -114,7 +114,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) =
     USA: { left: 8, top: 30 },
     India: { left: 70, top: 50 },
     Korea: { left: 86, top: 37 },
-    Japan: { left: 90, top: 37 },
+    Japan: { left: 90, top: 35 },
     Vietnam: { left: 81, top: 53 },
     Australia: { left: 89, top: 80 },
   };
@@ -133,12 +133,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) =
     switch (country) {
       case 'USA':
       case 'United States':
-        return 'US';
+        return 'USA';
       case 'South Korea':
       case 'Korea':
         return 'Korea';
       case 'Australia':
-        return 'AU';
+        return 'Australia';
       default:
         return country;
     }
