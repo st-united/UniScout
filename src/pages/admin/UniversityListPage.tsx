@@ -131,7 +131,10 @@ const UniversityListPage: React.FC = () => {
       const response = await axios.get<UniversityApiResponse>('/admin/universities', {
         params: {
           search: debouncedFilters.search.length > 0 ? debouncedFilters.search[0] : undefined,
-          type: debouncedFilters.type.length > 0 ? debouncedFilters.type : undefined,
+          type:
+            debouncedFilters.type.length > 0
+              ? debouncedFilters.type.map((t) => t.toLowerCase())
+              : undefined,
           country: debouncedFilters.country.length > 0 ? debouncedFilters.country : undefined,
           size: debouncedFilters.size.length > 0 ? debouncedFilters.size : undefined,
           fieldNames:
@@ -415,11 +418,11 @@ const UniversityListPage: React.FC = () => {
   };
 
   const getUniqueTypes = () => {
-    return ['Public', 'Private', 'International', 'Academic', 'College'];
+    return ['public', 'private', 'college', 'academy', 'international'];
   };
 
   const getUniqueSizes = () => {
-    return ['Small', 'Medium', 'Large', 'Extra Large'];
+    return ['small', 'medium', 'large', 'extra large'];
   };
 
   // Updated to use academicFieldsCommaSeparated
@@ -683,7 +686,7 @@ const UniversityListPage: React.FC = () => {
         </Select>
       </Col>
 
-      <Col xs={24} sm={12} md={8} lg={6}>
+      <Col xs={24} sm={12} md={8} lg={8}>
         <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
           Broad Field
         </div>
@@ -705,7 +708,7 @@ const UniversityListPage: React.FC = () => {
         </Select>
       </Col>
 
-      <Col xs={24} sm={24} md={6} lg={6}>
+      <Col xs={24} sm={24} md={6} lg={4}>
         <div
           style={{
             fontSize: '12px',
@@ -1015,7 +1018,10 @@ const UniversityListPage: React.FC = () => {
         open={filterDrawerVisible}
         bodyStyle={{ padding: '16px' }}
       >
-        <Space direction='vertical' style={{ width: '100%' }} size='large'>
+        <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          <FilterSection />
+        </div>
+        <Space direction='vertical' style={{ width: '100%', marginTop: '16px' }} size='middle'>
           <Button onClick={handleResetFilters} style={{ color: '#ff7a00', borderColor: '#ff7a00' }}>
             Reset Filters
           </Button>

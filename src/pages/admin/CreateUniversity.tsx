@@ -14,42 +14,28 @@ import {
   Switch,
 } from 'antd';
 import axios from 'axios';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title } = Typography;
 const { Dragger } = Upload;
 
-interface UniversityData {
-  university: string;
-  abbreviation?: string;
-  latitude?: number;
-  longitude?: number;
-  rank?: number;
-  logo?: string;
-  type: 'public' | 'private';
-  country: string;
-  location: string;
-  studentPopulation?: number;
-  year?: number;
-  contact?: string;
-  email: string;
-  website: string;
-  strength?: string;
-  description?: string;
-  exchange?: boolean;
-  academicFields: string[];
-  subjects?: string[];
-}
-
 const CreateUniversity = () => {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [showOtherField, setShowOtherField] = useState(false);
-  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [showSubjectsField, setShowSubjectsField] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [availableCountries, setAvailableCountries] = useState<string[]>([]);
+  const [fieldSubjectsMap, setFieldSubjectsMap] = useState<Record<string, string[]>>({});
+  const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    fetchCountries();
+  }, []);
 
   // Button styles with hover effects
   const buttonStyles = {
@@ -90,199 +76,46 @@ const CreateUniversity = () => {
     },
   };
 
+  const fetchCountries = async (searchTerm = '') => {
+    try {
+      const response = await axios.get('/universities/countries', {
+        params: { search: searchTerm },
+      });
+
+      const countries = response.data?.data || response.data || [];
+      setAvailableCountries(countries);
+    } catch (error) {
+      console.error('Failed to fetch countries:', error);
+      setAvailableCountries([]);
+    }
+  };
+
   // Updated academic fields to match API enum
-  const academicFieldsOptions = [
-    { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
-    { value: 'arts_design', label: 'Arts & Design' },
-    { value: 'business_management_law', label: 'Business, Management & Law' },
-    { value: 'education_training', label: 'Education & Training' },
-    { value: 'engineering_technology', label: 'Engineering & Technology' },
-    { value: 'health_medicine', label: 'Health & Medicine' },
-    { value: 'humanities_languages', label: 'Humanities & Languages' },
-    { value: 'ict', label: 'Information & Communication Technology (ICT)' },
-    { value: 'natural_sciences', label: 'Natural Sciences' },
-    { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
+  const fieldNamesOptions = [
+    { value: 'agricultural', label: 'Agricultural & Veterinary Sciences' },
+    { value: 'art', label: 'Arts & Design' },
+    { value: 'business', label: 'Business, Management & Law' },
+    { value: 'education', label: 'Education & Training' },
+    { value: 'engineering', label: 'Engineering & Technology' },
+    { value: 'health', label: 'Health & Medicine' },
+    { value: 'humanities', label: 'Humanities & Languages' },
+    { value: 'information tech', label: 'Information & Communication Technology (ICT)' },
+    { value: 'natural', label: 'Natural Sciences' },
+    { value: 'social', label: 'Social & Behavioral Sciences' },
     { value: 'services', label: 'Services' },
     {
-      value: 'transport_safety_security_military',
+      value: 'transport',
       label: 'Transport, Safety, Security & Military',
     },
     { value: 'other', label: 'Other' },
   ];
 
-  // Valid subjects for each academic field
-  const academicFieldSubjects: { [key: string]: string[] } = {
-    agricultural_veterinary_sciences: [
-      'Agriculture',
-      'Agricultural Biotechnology',
-      'Animal Science',
-      'Plant Protection',
-      'Livestock Management',
-      'Horticultural Science',
-      'Veterinary Medicine',
-      'Agricultural Engineering',
-      'Forestry',
-      'Aquaculture',
-    ],
-    arts_design: [
-      'Fine Art',
-      'Performing Art',
-      'Visual Art',
-      'Industrial Design',
-      'Graphic Design',
-      'Photography',
-      'Music',
-      'Design',
-      'Film and Television',
-      'Theatre and Film',
-    ],
-    business_management_law: [
-      'Business Administration',
-      'Management',
-      'Marketing',
-      'Accounting',
-      'Finance',
-      'Economics',
-      'International Business',
-      'Commerce',
-      'Operations Management',
-      'Law',
-      'Tax Law',
-      'Corporate Law',
-      'Criminal Law',
-      'Civil Law',
-    ],
-    education_training: [
-      'Teacher Training',
-      'Primary Education',
-      'Early Childhood Education',
-      'Educational Psychology',
-      'Educational Science',
-      'Educational Leadership',
-      'Special Education',
-      'Adult Education',
-      'Curriculum Development',
-      'Elementary Education',
-      'Secondary Education',
-    ],
-    engineering_technology: [
-      'Mechanical Engineering',
-      'Civil Engineering',
-      'Electrical Engineering',
-      'Chemical Engineering',
-      'Computer Engineering',
-      'Environmental Engineering',
-      'Aerospace Engineering',
-      'Architectural Engineering',
-      'Industrial Engineering',
-      'Materials Science and Engineering',
-      'Mechatronics Engineering',
-      'Software Engineering',
-      'Telecommunications Engineering',
-      'Structural Engineering',
-      'Mining Engineering',
-      'Precision Engineering',
-      'Energy Systems Engineering',
-      'Energy Science and Engineering',
-      'Supercomputer Education and Research Centre',
-    ],
-    health_medicine: [
-      'Medicine',
-      'Dentistry',
-      'Pharmacy',
-      'Nursing',
-      'Public Health',
-      'Physiotherapy',
-      'Occupational Therapy',
-      'Speech Pathology',
-      'Medical Imaging',
-      'Radiology',
-      'Nutrition',
-      'Health Science',
-      'Biomedical Engineering',
-      'Paramedicine',
-      'Psychology',
-    ],
-    humanities_languages: [
-      'Liberal Art',
-      'History',
-      'Philosophy',
-      'Literature',
-      'Linguistics',
-      'Other Languages and Literatures',
-      'Urdu',
-      'Persian',
-      'Hindi',
-      'Sanskrit',
-      'Art and Archaeology',
-      'Religious Studies',
-    ],
-    ict: [
-      'Information Technology',
-      'Computer Science',
-      'Software Engineering',
-      'Cybersecurity',
-      'Information and Communication Engineering',
-      'Electrical and Computer Systems Engineering',
-      'Web Development',
-      'Data Science',
-      'Mobile App Development',
-      'Computer Systems Engineering',
-      'Computer Science and Automation',
-      'Information Engineering',
-      'Network Administration',
-      'Artificial Intelligence',
-      'Machine Learning',
-      'Business Information Systems',
-    ],
-    natural_sciences: [
-      'Physics',
-      'Chemistry',
-      'Biology',
-      'Mathematics',
-      'Statistics',
-      'Applied Physics',
-      'Applied Chemistry',
-      'Genetics',
-      'Botany',
-      'Zoology',
-      'Oceanography',
-      'Meteorology',
-      'Geology',
-      'Astronomy',
-      'Biochemistry',
-      'Environmental Chemistry',
-      'Health Science',
-      'Microbiology',
-    ],
-    social_behavioral_sciences: [
-      'Anthropology',
-      'Sociology',
-      'Political Science',
-      'International Relations',
-      'Criminology',
-      'Psychology',
-      'Geography',
-      'Educational Psychology',
-      'Social and Human Science',
-      'Urban Planning',
-      'Public Administration',
-      'Gender Studies',
-      'Management Studies',
-    ],
-    transport_safety_security_military: [
-      'Aeronautics and Astronautics',
-      'Nuclear and Quantum Engineering',
-      'Systems and Control Engineering',
-      'Robotics',
-    ],
-    other: [], // any custom subject user types manually
-  };
-  //
-
   const universityTypes = [
     { value: 'public', label: 'Public' },
     { value: 'private', label: 'Private' },
+    { value: 'college', label: 'College' },
+    { value: 'academy', label: 'Academy' },
+    { value: 'international', label: 'International' },
   ];
 
   const uploadProps = {
@@ -304,72 +137,93 @@ const CreateUniversity = () => {
 
       setLogoFile(file);
       form.setFieldsValue({ logo: file.name });
+      setLogoPreviewUrl(URL.createObjectURL(file));
       message.success(`${file.name} selected successfully`);
-      return false; // Prevent auto upload
+      return false;
     },
+
     onRemove: () => {
       setLogoFile(null);
+      setLogoPreviewUrl(null);
       form.setFieldsValue({ logo: undefined });
     },
   };
 
-  // Handle academic fields selection change
-  const handleAcademicFieldsChange = (selectedFields: string[]) => {
-    const hasOther = selectedFields.includes('other');
-    setShowOtherField(hasOther);
+  // Handle academic fields selection change - FIXED VERSION
+  const handleAcademicFieldsChange = async (selectedFields: string[]) => {
     setShowSubjectsField(selectedFields.length > 0);
 
-    // Clear the other field if "Other" is not selected
-    if (!hasOther) {
-      form.setFieldsValue({ otherField: undefined });
+    if (selectedFields.length === 0) {
+      setFieldSubjectsMap({});
+      setLoadingSubjects({});
+      return;
     }
 
-    // Clear subjects
-    form.setFieldsValue({ subjects: [] });
+    const updatedMap: Record<string, string[]> = { ...fieldSubjectsMap };
+    const updatedLoadingState: Record<string, boolean> = { ...loadingSubjects };
 
-    // Compute available subjects based on all selected academic fields
-    const allSubjects = selectedFields.flatMap((field) => academicFieldSubjects[field] || []);
-    const uniqueSubjects = Array.from(new Set(allSubjects));
-    setAvailableSubjects(uniqueSubjects);
-  };
+    // Set loading state for new fields
+    selectedFields.forEach((field) => {
+      if (!updatedMap[field]) {
+        updatedLoadingState[field] = true;
+      }
+    });
+    setLoadingSubjects(updatedLoadingState);
 
-  // Validate subjects belong to selected academic fields
-  const validateSubjects = (subjects: string[]) => {
-    const selectedFields = form.getFieldValue('academicFields') || [];
-
-    if (selectedFields.includes('other')) {
-      return true; // Any subject is valid when 'other' is selected
-    }
-
-    const invalidSubjects = subjects.filter((subject) => !availableSubjects.includes(subject));
-    return invalidSubjects.length === 0;
-  };
-
-  // Custom validation for unique values (this would typically be done on the server)
-  const validateUniqueness = (fieldName: string, value: string) => {
-    // This is a placeholder for uniqueness validation
-    // In a real application, you would make an API call to check uniqueness
-    return new Promise((resolve, reject) => {
-      // Simulate API call
-      setTimeout(() => {
-        // Mock validation - in real app, this would be an actual API call
-        const mockExistingValues = {
-          university: ['Harvard University', 'MIT', 'Stanford University'],
-          contact: ['+1-617-495-1000', '+1-650-723-2300'],
-          email: ['info@harvard.edu', 'info@mit.edu'],
-          website: ['https://harvard.edu', 'https://mit.edu'],
-        };
-
-        if (mockExistingValues[fieldName as keyof typeof mockExistingValues]?.includes(value)) {
-          reject(
-            new Error(
-              `This ${fieldName.replace(/([A-Z])/g, ' $1').toLowerCase()} is already taken`,
-            ),
-          );
-        } else {
-          resolve(true);
+    // Fetch subjects for each field
+    await Promise.all(
+      selectedFields.map(async (field) => {
+        // Skip if we already have subjects for this field
+        if (updatedMap[field] && updatedMap[field].length > 0) {
+          return;
         }
-      }, 500);
+
+        try {
+          console.log(`Fetching subjects for field: ${field}`);
+
+          const response = await axios.get('/universities/subjects', {
+            params: {
+              search: field, // ✅ correct
+            },
+          });
+
+          console.log(`Response for ${field}:`, response.data);
+
+          // Handle different response formats
+          let subjects: string[] = [];
+          if (response.data?.data) {
+            subjects = Array.isArray(response.data.data)
+              ? response.data.data.map((s: any) => s.name || s.title || s.subject || s)
+              : [];
+          } else if (Array.isArray(response.data)) {
+            subjects = response.data.map((s: any) => s.name || s.title || s.subject || s);
+          } else {
+            subjects = [];
+          }
+
+          updatedMap[field] = subjects;
+          console.log(`Subjects for ${field}:`, subjects);
+        } catch (err) {
+          console.error(`Failed to fetch subjects for ${field}:`, err);
+          updatedMap[field] = [];
+
+          // Show error message to user
+          message.error(`Failed to load subjects for ${field}`);
+        } finally {
+          updatedLoadingState[field] = false;
+        }
+      }),
+    );
+
+    setFieldSubjectsMap(updatedMap);
+    setLoadingSubjects(updatedLoadingState);
+
+    // Reset subject selections for fields that are no longer selected
+    const currentFields = form.getFieldValue('academicFields') || [];
+    Object.keys(fieldSubjectsMap).forEach((field) => {
+      if (!selectedFields.includes(field)) {
+        form.setFieldValue(`subjects_${field}`, []);
+      }
     });
   };
 
@@ -401,16 +255,18 @@ const CreateUniversity = () => {
         formData.append('logo', logoFile);
       }
 
-      // Append academic fields and subjects
-      values.academicFields.forEach((field: string) => {
-        formData.append('academicFields[]', field);
-      });
-
-      if (values.subjects && values.subjects.length > 0) {
-        values.subjects.forEach((subject: string) => {
-          formData.append('subjects[]', subject);
-        });
+      // Flatten subjects from each broad field
+      const subjects: string[] = [];
+      for (const field of values.academicFields) {
+        const fieldSubjects = values[`subjects_${field}`];
+        if (Array.isArray(fieldSubjects)) {
+          subjects.push(...fieldSubjects);
+        }
       }
+
+      subjects.forEach((subject) => {
+        formData.append('subjects[]', subject);
+      });
 
       // Submit with multipart/form-data
       const response = await axios.post('/admin/universities', formData, {
@@ -422,13 +278,15 @@ const CreateUniversity = () => {
       message.success('University created successfully!');
       form.resetFields();
       setLogoFile(null);
-      setShowOtherField(false);
+      setFieldSubjectsMap({});
+      setLoadingSubjects({});
       console.log('University created:', response.data);
     } catch (error: any) {
       console.error('Error creating university:', error);
 
       if (error.response) {
         const errorMessage = error.response.data?.message || 'Failed to create university';
+        console.error('Backend error details:', error.response.data);
         message.error(errorMessage);
 
         if (error.response.data?.errors) {
@@ -457,7 +315,8 @@ const CreateUniversity = () => {
   const handleReset = () => {
     form.resetFields();
     setLogoFile(null);
-    setShowOtherField(false);
+    setFieldSubjectsMap({});
+    setLoadingSubjects({});
   };
 
   return (
@@ -473,7 +332,7 @@ const CreateUniversity = () => {
         <div style={{ marginBottom: '16px' }}>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/universities')}
             style={buttonStyles.back}
             size='middle'
             onMouseEnter={(e) => {
@@ -524,24 +383,9 @@ const CreateUniversity = () => {
                 <Form.Item
                   label='University Name'
                   name='university'
-                  rules={[
-                    { required: true, message: 'Please enter university name' },
-                    { min: 2, message: 'University name must be at least 2 characters' },
-                    {
-                      validator: async (_, value) => {
-                        if (value && value.length >= 2) {
-                          try {
-                            await validateUniqueness('university', value);
-                          } catch (error: any) {
-                            throw new Error(error.message);
-                          }
-                        }
-                      },
-                    },
-                  ]}
-                  hasFeedback
+                  rules={[{ required: true, message: 'Please enter university name' }]}
                 >
-                  <Input placeholder='Enter university name' size='large' />
+                  <Input placeholder='Enter your university name' size='large' />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={24} md={8} lg={8}>
@@ -550,7 +394,7 @@ const CreateUniversity = () => {
                   name='abbreviation'
                   rules={[{ required: true, message: 'Please enter abbreviation' }]}
                 >
-                  <Input placeholder='Enter abbreviation (e.g., MIT)' size='large' />
+                  <Input placeholder='Enter your abbreviation' size='large' />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={24} md={8} lg={8}>
@@ -561,21 +405,46 @@ const CreateUniversity = () => {
                 >
                   <Dragger
                     {...uploadProps}
+                    fileList={logoFile ? [logoFile as any] : []}
                     style={{
-                      height: '100px',
+                      height: '150px',
                       borderColor: '#ff8c00',
                       backgroundColor: '#fff7e6',
+                      textAlign: 'center',
                     }}
+                    itemRender={() => null}
                   >
-                    <p className='ant-upload-drag-icon'>
-                      <InboxOutlined style={{ color: '#ff8c00', fontSize: '32px' }} />
-                    </p>
-                    <p className='ant-upload-text' style={{ fontSize: '14px', color: '#ff8c00' }}>
-                      Click or drag file to upload
-                    </p>
-                    <p className='ant-upload-hint' style={{ fontSize: '12px', color: '#ff8c00' }}>
-                      Support for single image upload. Max 5MB.
-                    </p>
+                    {logoPreviewUrl ? (
+                      <img
+                        src={logoPreviewUrl}
+                        alt='Logo Preview'
+                        style={{
+                          width: '120px',
+                          height: '120px',
+                          objectFit: 'contain',
+                          display: 'block',
+                          margin: '0 auto',
+                        }}
+                      />
+                    ) : (
+                      <>
+                        <p className='ant-upload-drag-icon'>
+                          <InboxOutlined style={{ color: '#ff8c00', fontSize: '32px' }} />
+                        </p>
+                        <p
+                          className='ant-upload-text'
+                          style={{ fontSize: '14px', color: '#ff8c00' }}
+                        >
+                          Click or drag file to upload
+                        </p>
+                        <p
+                          className='ant-upload-hint'
+                          style={{ fontSize: '12px', color: '#ff8c00' }}
+                        >
+                          Support for single image upload. Max 5MB.
+                        </p>
+                      </>
+                    )}
                   </Dragger>
                 </Form.Item>
               </Col>
@@ -589,7 +458,13 @@ const CreateUniversity = () => {
                   name='country'
                   rules={[{ required: true, message: 'Please enter country' }]}
                 >
-                  <Input placeholder='Enter country' size='large' />
+                  <Select placeholder='Select your country' size='large'>
+                    {availableCountries.map((country) => (
+                      <Option key={country} value={country}>
+                        {country}
+                      </Option>
+                    ))}
+                  </Select>
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={12}>
@@ -598,7 +473,7 @@ const CreateUniversity = () => {
                   name='location'
                   rules={[{ required: true, message: 'Please enter location' }]}
                 >
-                  <Input placeholder='Enter complete address/location' size='large' />
+                  <Input placeholder='Enter city or province' size='large' />
                 </Form.Item>
               </Col>
             </Row>
@@ -617,7 +492,7 @@ const CreateUniversity = () => {
                     },
                   ]}
                 >
-                  <Input placeholder='e.g. 40.7128' size='large' />
+                  <Input placeholder=' Enter your latitude e.g. 40.7128' size='large' />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={12}>
@@ -632,7 +507,7 @@ const CreateUniversity = () => {
                     },
                   ]}
                 >
-                  <Input placeholder='e.g. -74.0060' size='large' />
+                  <Input placeholder='Enter your longtitude e.g. -74.0060' size='large' />
                 </Form.Item>
               </Col>
             </Row>
@@ -645,7 +520,7 @@ const CreateUniversity = () => {
                   name='type'
                   rules={[{ required: true, message: 'Please select university type' }]}
                 >
-                  <Select placeholder='Select university type' size='large'>
+                  <Select placeholder='Select your university type' size='large'>
                     {universityTypes.map((type) => (
                       <Option key={type.value} value={type.value}>
                         {type.label}
@@ -656,7 +531,7 @@ const CreateUniversity = () => {
               </Col>
               <Col xs={24} sm={12} md={8} lg={8}>
                 <Form.Item
-                  label='Student Population'
+                  label='Number of Students'
                   name='studentPopulation'
                   rules={[
                     { required: true, message: 'Student population is required' },
@@ -671,7 +546,7 @@ const CreateUniversity = () => {
                     min={1}
                     precision={0}
                     style={{ width: '100%' }}
-                    placeholder='Enter student population'
+                    placeholder='Enter your number of students'
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     size='large'
                   />
@@ -679,7 +554,7 @@ const CreateUniversity = () => {
               </Col>
               <Col xs={24} sm={12} md={8} lg={8}>
                 <Form.Item
-                  label='Ranking'
+                  label='Rank'
                   name='rank'
                   rules={[
                     {
@@ -692,7 +567,7 @@ const CreateUniversity = () => {
                   <InputNumber
                     min={1}
                     style={{ width: '100%' }}
-                    placeholder='Enter ranking'
+                    placeholder='Enter your rank'
                     size='large'
                   />
                 </Form.Item>
@@ -727,34 +602,26 @@ const CreateUniversity = () => {
               </Col>
               <Col xs={24} sm={12} md={12}>
                 <Form.Item
-                  label='Contact Phone'
+                  label='Phone'
                   name='contact'
                   rules={[
                     { required: true, message: 'Contact is required' },
                     {
-                      pattern: /^[1-9]\d{0,2}\d{6,14}$/,
-                      message:
-                        'Invalid contact format. Must start with a country code (1-3 digits), followed by contact number (e.g., 84123456789)',
-                    },
-                    {
                       validator: async (_, value) => {
-                        if (value && /^[1-9]\d{0,2}\d{6,14}$/.test(value)) {
-                          // Ensure it's treated as string
-                          if (typeof value !== 'string') {
-                            throw new Error('Contact must be a string');
+                        if (value) {
+                          if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+                            throw new Error('Phone number must contain only digits');
                           }
-                          try {
-                            await validateUniqueness('contact', value);
-                          } catch (error: any) {
-                            throw new Error(error.message);
+
+                          if (value.length > 15) {
+                            throw new Error('Phone number must not exceed 15 digits');
                           }
                         }
                       },
                     },
                   ]}
-                  hasFeedback
                 >
-                  <Input placeholder='Enter phone number (e.g., 84123456789)' size='large' />
+                  <Input placeholder='Enter your phone (e.g., 84123456789)' size='large' />
                 </Form.Item>
               </Col>
             </Row>
@@ -770,19 +637,12 @@ const CreateUniversity = () => {
                     { type: 'email', message: 'Please enter valid email' },
                     {
                       validator: async (_, value) => {
-                        if (value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-                          try {
-                            await validateUniqueness('email', value);
-                          } catch (error: any) {
-                            throw new Error(error.message);
-                          }
-                        }
+                        value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
                       },
                     },
                   ]}
-                  hasFeedback
                 >
-                  <Input placeholder='Enter email address' size='large' />
+                  <Input placeholder='Enter your email' size='large' />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={12}>
@@ -796,20 +656,48 @@ const CreateUniversity = () => {
                       message: 'Website URL must start with http:// or https://',
                     },
                     {
-                      validator: async (_, value) => {
-                        if (value && /^https?:\/\/.+/.test(value)) {
-                          try {
-                            await validateUniqueness('website', value);
-                          } catch (error: any) {
-                            throw new Error(error.message);
+                      validator: async (_, value: string) => {
+                        if (!value) return Promise.resolve();
+
+                        try {
+                          const url = new URL(value);
+                          const domain = url.hostname;
+
+                          if (!domain.includes('.')) {
+                            return Promise.reject(
+                              'Website must contain at least one dot (e.g., example.com)',
+                            );
                           }
+
+                          if (/^[-.]/.test(domain) || /[-.]$/.test(domain)) {
+                            return Promise.reject(
+                              'Website must not start or end with a hyphen or dot',
+                            );
+                          }
+
+                          if (!/^[a-zA-Z0-9.-]+$/.test(domain)) {
+                            return Promise.reject(
+                              'Website contains invalid characters in domain (only letters, numbers, dots, and hyphens allowed)',
+                            );
+                          }
+
+                          if (/(\.\.|--)/.test(domain)) {
+                            return Promise.reject(
+                              'Website must not contain consecutive dots or hyphens',
+                            );
+                          }
+                          // If all checks pass, return resolved promise
+                          return Promise.resolve();
+                        } catch {
+                          return Promise.reject(
+                            'Invalid URL format. Must start with http:// or https://',
+                          );
                         }
                       },
                     },
                   ]}
-                  hasFeedback
                 >
-                  <Input placeholder='https://example.com' size='large' />
+                  <Input placeholder='Enter your website e.g. https://example.com' size='large' />
                 </Form.Item>
               </Col>
             </Row>
@@ -826,14 +714,11 @@ const CreateUniversity = () => {
                   label='Exchange Program'
                   name='exchange'
                   valuePropName='checked'
+                  style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
                   labelCol={{ span: 24 }}
-                  style={{ textAlign: 'center' }}
+                  colon={false}
                 >
-                  <Switch
-                    checkedChildren='Yes'
-                    unCheckedChildren='No'
-                    style={{ marginTop: 4, marginLeft: -20 }}
-                  />
+                  <Switch checkedChildren='Yes' unCheckedChildren='No' />
                 </Form.Item>
               </Col>
             </Row>
@@ -846,30 +731,30 @@ const CreateUniversity = () => {
                     rows={4}
                     placeholder='Enter description about the university'
                     showCount
-                    maxLength={1000}
+                    maxLength={250}
                     style={{ fontSize: '16px' }}
                   />
                 </Form.Item>
               </Col>
             </Row>
 
-            {/* Academic Fields */}
+            {/* Broad Fields */}
             <Row gutter={[12, 16]}>
               <Col xs={24}>
                 <Form.Item
-                  label='Academic Fields'
+                  label='Broad Fields'
                   name='academicFields'
                   rules={[{ required: true, message: 'Please select at least one academic field' }]}
                 >
                   <Select
                     mode='multiple'
-                    placeholder='Select academic fields'
+                    placeholder='Select broad fields of university'
                     style={{ width: '100%' }}
                     size='large'
                     maxTagCount='responsive'
                     onChange={handleAcademicFieldsChange}
                   >
-                    {academicFieldsOptions.map((field) => (
+                    {fieldNamesOptions.map((field) => (
                       <Option key={field.value} value={field.value}>
                         {field.label}
                       </Option>
@@ -879,81 +764,45 @@ const CreateUniversity = () => {
               </Col>
             </Row>
 
-            {/* Other - Conditional Field */}
-            {showOtherField && (
-              <Row gutter={[12, 16]}>
-                <Col xs={24}>
-                  <Form.Item
-                    label='Other Academic Field'
-                    name='otherField'
-                    rules={[
-                      {
-                        required: showOtherField,
-                        message: 'Please specify the other academic field',
-                      },
-                      { min: 2, message: 'Academic field must be at least 2 characters' },
-                    ]}
-                  >
-                    <Input
-                      placeholder='Enter specific academic field'
-                      size='large'
-                      style={{ fontSize: '16px' }}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            )}
-
-            {/* Subjects */}
+            {/* Subjects - IMPROVED VERSION */}
             <Row gutter={[12, 16]}>
               <Col xs={24}>
-                <Form.Item
-                  label='Subjects'
-                  name='subjects'
-                  rules={[
-                    {
-                      validator: (_, value) => {
-                        if (!value || value.length === 0) {
-                          return Promise.resolve();
-                        }
-
-                        const selectedFields = form.getFieldValue('academicFields') || [];
-                        if (selectedFields.length === 0) {
-                          return Promise.reject(new Error('Please select academic fields first'));
-                        }
-
-                        if (!validateSubjects(value)) {
-                          return Promise.reject(
-                            new Error(
-                              'One or more subjects are invalid or do not belong to the selected academic fields',
-                            ),
-                          );
-                        }
-
-                        return Promise.resolve();
+                {form.getFieldValue('academicFields')?.map((field: string) => (
+                  <Form.Item
+                    key={field}
+                    label={`Field of Study for ${
+                      fieldNamesOptions.find((f) => f.value === field)?.label || field
+                    }`}
+                    name={`subjects_${field}`}
+                    rules={[
+                      {
+                        required: true,
+                        message: `Please select at least one subject for ${field}`,
                       },
-                    },
-                  ]}
-                  dependencies={['academicFields']}
-                >
-                  <Select
-                    mode='multiple'
-                    placeholder='Select subjects based on your academic fields'
-                    style={{ width: '100%' }}
-                    size='large'
-                    maxTagCount='responsive'
-                    options={availableSubjects.map((subject) => ({
-                      label: subject,
-                      value: subject,
-                    }))}
-                    disabled={!form.getFieldValue('academicFields')?.length}
-                    notFoundContent={
-                      !form.getFieldValue('academicFields')?.length
-                        ? 'Please select academic fields first'
-                        : 'No subjects available'
-                    }
-                  />
-                </Form.Item>
+                    ]}
+                  >
+                    <Select
+                      mode='multiple'
+                      placeholder={
+                        loadingSubjects[field] ? 'Loading subjects...' : 'Select subjects'
+                      }
+                      options={fieldSubjectsMap[field]?.map((subject) => ({
+                        label: subject,
+                        value: subject,
+                      }))}
+                      disabled={loadingSubjects[field]}
+                      loading={loadingSubjects[field]}
+                      notFoundContent={
+                        loadingSubjects[field]
+                          ? 'Loading...'
+                          : !fieldSubjectsMap[field] || fieldSubjectsMap[field].length === 0
+                          ? 'No subjects available'
+                          : null
+                      }
+                      size='large'
+                    />
+                  </Form.Item>
+                ))}
               </Col>
             </Row>
 
@@ -974,7 +823,7 @@ const CreateUniversity = () => {
                     Object.assign(e.currentTarget.style, buttonStyles.reset);
                   }}
                 >
-                  Reset
+                  Cancel
                 </Button>
               </Col>
               <Col xs={24} sm={12} md={12} lg={12}>
