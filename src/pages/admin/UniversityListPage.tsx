@@ -266,7 +266,7 @@ const UniversityListPage: React.FC = () => {
       if (deleteType === 'single' && universityToDelete) {
         console.log('Deleting university ID:', universityToDelete.id);
 
-        await axios.delete(`/universities/${universityToDelete.id}`, {
+        await axios.delete(`/admin/universities/${universityToDelete.id}`, {
           data: { confirm_deletion: true },
           headers: {
             'Content-Type': 'application/json',
