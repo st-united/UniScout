@@ -92,13 +92,10 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
       sm={24}
       md={12}
       lg={12}
-      xl={10}
-      className={`bg-[#e2e3e3] flex items-center justify-center min-h-screen px-1 ${className}`}
+      xl={12}
+      className={`bg-[#e2e3e3] flex items-center justify-center min-h-screen p-0 order-1 md:order-2 ${className}`}
     >
-      <div className='w-full max-w-md'>
-        <div className='flex justify-end mb-8 md:hidden'>
-          <MenuOutlined className='text-2xl text-gray-600' />
-        </div>
+      <div className='w-full max-w-md px-4'>
         <div className='text-center mb-8'>
           <Title level={1} className='text-4xl font-bold text-gray-900'>
             Welcome Back !

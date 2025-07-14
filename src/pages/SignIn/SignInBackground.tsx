@@ -9,12 +9,15 @@ const SignInBackground: FC = () => (
     sm={24}
     md={12}
     lg={12}
-    xl={14}
-    className='bg-[#e2e3e3] items-center justify-center p-4 relative min-h-screen flex'
+    xl={12}
+    className='bg-[#e2e3e3] flex items-center justify-center min-h-screen p-0 order-2 md:order-1'
   >
-    {/* Rounded container with image */}
-    <div className='w-full max-w-xl rounded-2xl shadow-lg overflow-hidden flex items-center justify-center'>
-      <img src={loginImage} alt='Login Illustration' className='w-full h-auto object-contain' />
+    <div className='w-[90%] max-w-2xl rounded-2xl overflow-hidden shadow-lg'>
+      <img
+        src={loginImage}
+        alt='Login Illustration'
+        className='w-full h-auto object-contain rounded-2xl'
+      />
     </div>
   </Col>
 );

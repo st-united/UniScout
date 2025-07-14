@@ -32,7 +32,7 @@ const SignIn: FC = () => {
 
   return (
     <div className='min-h-screen bg-gray-100'>
-      <Row className='min-h-screen'>
+      <Row className='min-h-screen' gutter={0}>
         <SignInBackground />
         <SignInForm onInputChange={onInputChange} previousValue={previousValue} />
       </Row>
