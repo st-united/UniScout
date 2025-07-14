@@ -43,6 +43,7 @@ interface UniversityData {
   year?: number;
   exchange?: boolean;
   subjects?: string[];
+  strength?: string;
 }
 
 // Mapping helpers
@@ -68,7 +69,7 @@ const mapApiToFormData = (data: any): UniversityData => ({
   logoUrl: data.logoUrl || data.logo || '',
   year: data.year || undefined,
   exchange: data.exchange?.toLowerCase() === 'yes',
-
+  strength: data.strength || '',
   subjects: data.subjectsList ? data.subjectsList.split(',').map((s: string) => s.trim()) : [],
 });
 
@@ -254,9 +255,9 @@ const EditUniversity = () => {
             onFinish={onFinish}
             initialValues={{ website: 'https://', fields: [] }}
           >
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+            <div className='flex flex-col md:grid md:grid-cols-3 gap-6'>
               {/* Form Fields */}
-              <div className='md:col-span-2'>
+              <div className='md:col-span-2 order-2 md:order-1'>
                 <Form.Item
                   label='University Name'
                   name='universityName'
@@ -299,7 +300,7 @@ const EditUniversity = () => {
                     </Select>
                   </Form.Item>
                   <Form.Item
-                    label='Number of Students'
+                    label='Student Population'
                     name='numberOfStudents'
                     rules={[{ required: true }]}
                   >
@@ -315,10 +316,6 @@ const EditUniversity = () => {
                       min={1000}
                       max={new Date().getFullYear()}
                     />
-                  </Form.Item>
-
-                  <Form.Item label='Exchange Program' name='exchange' valuePropName='checked'>
-                    <Switch disabled={!isEditable} />
                   </Form.Item>
                 </div>
 
@@ -345,7 +342,14 @@ const EditUniversity = () => {
                 <Form.Item label='Website' name='website' rules={[{ required: true }]}>
                   <Input disabled={!isEditable} className='rounded-md' />
                 </Form.Item>
-
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <Form.Item label='University Strength' name='strength'>
+                    <Input disabled={!isEditable} className='rounded-md' />
+                  </Form.Item>
+                  <Form.Item label='Exchange Program' name='exchange' valuePropName='checked'>
+                    <Switch disabled={!isEditable} />
+                  </Form.Item>
+                </div>
                 <Form.Item label='Description' name='description'>
                   <TextArea
                     rows={4}
@@ -366,15 +370,18 @@ const EditUniversity = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item label='Other Information' name='other'>
-                  <TextArea
-                    rows={4}
-                    maxLength={500}
-                    showCount
-                    disabled={!isEditable}
-                    className='rounded-md'
-                  />
-                </Form.Item>
+                {form.getFieldValue('other') && form.getFieldValue('other') !== '-' && (
+                  <Form.Item label='Other Information' name='other'>
+                    <TextArea
+                      rows={4}
+                      maxLength={500}
+                      showCount
+                      disabled={!isEditable}
+                      className='rounded-md'
+                    />
+                  </Form.Item>
+                )}
+
                 <Form.Item label='Subjects' name='subjects'>
                   <Select
                     mode='multiple'
@@ -413,8 +420,8 @@ const EditUniversity = () => {
               </div>
 
               {/* Logo Upload */}
-              <div className='flex flex-col items-center '>
-                <Form.Item label='Logo' name='logo'>
+              <div className='flex flex-col items-center order-1 md:order-2'>
+                <Form.Item name='logo'>
                   <div className='relative w-32 h-32'>
                     <Upload.Dragger
                       {...uploadProps}
@@ -425,7 +432,7 @@ const EditUniversity = () => {
                       <div />
                     </Upload.Dragger>
 
-                    <div className='relative w-full h-full group border border-gray-300 rounded-md overflow-hidden'>
+                    <div className='relative w-full h-full group border border-gray-300 rounded-md overflow-hidden order-1 '>
                       <img
                         src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
                         alt='University Logo'

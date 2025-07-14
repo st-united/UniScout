@@ -443,7 +443,7 @@ const DashboardPage = () => {
 
                     {/* Name and location */}
                     <div className='flex flex-col min-w-0 '>
-                      <h4 className='text-sm font-medium text-gray-900 underline text-ellipsis max-w-[160px] sm:max-w-full'>
+                      <h4 className='text-sm font-medium text-gray-900 underline truncate max-w-[160px] sm:max-w-full'>
                         {item.name}
                       </h4>
                       <p className='text-xs text-orange-500'>
