@@ -8,6 +8,7 @@ import ProtectedRoute from '@app/components/templates/ProtectedRoute';
 import CreateUniversity from '@app/pages/admin/CreateUniversity';
 import DashboardPage from '@app/pages/admin/DashboardPage';
 import EditUniversity from '@app/pages/admin/EditUniversity';
+import ManageAccount from '@app/pages/admin/ManageAccount';
 import ManagePage from '@app/pages/admin/ManagePage';
 import UniversityListPage from '@app/pages/admin/UniversityListPage';
 import SignIn from '@app/pages/SignIn/SignIn';
@@ -61,6 +62,10 @@ const routes = [
       {
         path: 'manage',
         element: <ManagePage />,
+      },
+      {
+        path: 'account',
+        element: <ManageAccount />,
       },
     ],
   },
