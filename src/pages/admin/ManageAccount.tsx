@@ -23,41 +23,6 @@ interface Account {
   status: 'Active' | 'Deactivated' | 'Blocked' | 'Pending';
 }
 
-const initialData: Account[] = [
-  {
-    key: '1',
-    name: 'Christine Brooks',
-    role: 'Marketing',
-    email: 'example@gmail.com',
-    createdAt: '2024-07-02 11:34:21',
-    status: 'Active',
-  },
-  {
-    key: '2',
-    name: 'Christine Brooks',
-    role: 'Marketing',
-    email: 'example@gmail.com',
-    createdAt: '2024-07-02 11:34:21',
-    status: 'Deactivated',
-  },
-  {
-    key: '3',
-    name: 'Christine Brooks',
-    role: 'Marketing',
-    email: 'example@gmail.com',
-    createdAt: '2024-07-02 11:34:21',
-    status: 'Blocked',
-  },
-  {
-    key: '4',
-    name: 'Christine Brooks',
-    role: 'Marketing',
-    email: 'example@gmail.com',
-    createdAt: '2024-07-02 11:34:21',
-    status: 'Pending',
-  },
-];
-
 const ManageAccount: React.FC = () => {
   const [stats, setStats] = useState<{
     total: number;
@@ -67,14 +32,39 @@ const ManageAccount: React.FC = () => {
     Pending: number;
   } | null>(null);
 
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const colorMap: Record<Account['status'], { text: string; bg: string }> = {
+    Active: { text: '#00B69B', bg: 'rgba(0, 182, 155, 0.3)' },
+    Deactivated: { text: '#6226EF', bg: 'rgba(98, 38, 239, 0.2)' },
+    Blocked: { text: '#EF3826', bg: 'rgba(239, 56, 38, 0.2)' },
+    Pending: { text: '#FFA756', bg: 'rgba(255, 167, 86, 0.3)' },
+  };
+
+  const mapBackendStatus = (status: string): Account['status'] => {
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
+        return 'Active';
+      case 'INACTIVE':
+        return 'Deactivated';
+      case 'BLOCKED':
+        return 'Blocked';
+      case 'PENDING':
+        return 'Pending';
+      default:
+        return 'Pending';
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const res = await axios.get('/dashboard/users-overview');
         const data = res.data.data;
-
         setStats({
           total: data.totalUsers,
           Active: data.activeUsers,
@@ -84,22 +74,38 @@ const ManageAccount: React.FC = () => {
         });
       } catch (error) {
         console.error('Error fetching overview stats:', error);
+      }
+    };
+
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get('/users');
+        console.log('RESPONSE /users:', res.data);
+
+        const users = res.data.data;
+        const total = res.data.meta?.totalItems ?? users.length;
+
+        const formattedUsers = users.map((user: any) => ({
+          key: String(user.id),
+          name: user.name,
+          role: user.job ?? '-',
+          email: user.email,
+          createdAt: user.createdAt,
+          status: mapBackendStatus(user.status),
+        }));
+        setAccounts(formattedUsers);
+        setTotalCount(total);
+      } catch (error) {
+        console.error('Error fetching users:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStats();
-  }, []);
-
-  const [accounts, setAccounts] = useState<Account[]>(initialData);
-
-  const colorMap: Record<Account['status'], { text: string; bg: string }> = {
-    Active: { text: '#00B69B', bg: 'rgba(0, 182, 155, 0.3)' },
-    Deactivated: { text: '#6226EF', bg: 'rgba(98, 38, 239, 0.30)' },
-    Blocked: { text: '#EF3826', bg: 'rgba(239, 56, 38, 0.30)' },
-    Pending: { text: '#FFA756', bg: 'rgba(255, 167, 86, 0.5)' },
-  };
+    fetchUsers();
+  }, [currentPage, pageSize]);
 
   const columns: ColumnsType<Account> = [
     {
@@ -146,7 +152,10 @@ const ManageAccount: React.FC = () => {
         const { text, bg } = colorMap[status];
 
         return (
-          <div className='flex flex-1 items-center rounded-md ' style={{ backgroundColor: bg }}>
+          <div
+            className='flex items-center justify-center rounded-md'
+            style={{ backgroundColor: bg }}
+          >
             <Select
               value={status}
               onChange={handleChange}
@@ -154,20 +163,26 @@ const ManageAccount: React.FC = () => {
               dropdownStyle={{
                 backgroundColor: '#ffffff',
                 borderRadius: 8,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
               }}
-              className='!bg-transparent !border-none !outline-none !shadow-none !text-sm w-full text-center text-${text}'
+              className='!bg-transparent !border-none !outline-none !shadow-none !text-sm w-full text-center'
               style={{
                 backgroundColor: 'transparent',
                 color: text,
                 fontWeight: 600,
-                minWidth: 120,
               }}
               getPopupContainer={(trigger) => trigger.parentNode}
             >
-              {Object.entries(colorMap).map(([key]) => (
+              {Object.entries(colorMap).map(([key, value]) => (
                 <Option key={key} value={key}>
-                  <span className='text-black text-sm font-normal'>{key}</span>
+                  <span
+                    className='text-sm font-bold'
+                    style={{
+                      color: key === status ? value.text : '#000',
+                      fontWeight: key === status ? 600 : 400,
+                    }}
+                  >
+                    {key}
+                  </span>
                 </Option>
               ))}
             </Select>
@@ -201,7 +216,7 @@ const ManageAccount: React.FC = () => {
     },
     {
       label: 'Deactivated',
-      value: stats?.Deactivated,
+      value: stats?.Deactivated ?? 0,
       icon: <UserRoundMinus className='w-6 h-6 text-[#6226EF]' />,
       bg: 'bg-[#6226EF]/20',
       color: 'text-[#6226EF]',
@@ -214,16 +229,17 @@ const ManageAccount: React.FC = () => {
       color: 'text-[#FFA756]',
     },
   ];
+
   if (loading || !stats) {
     return (
-      <div className='relative flex justify-center items-center py-20'>
+      <div className='flex justify-center items-center py-10'>
         <p className='text-gray-500'>Loading stats...</p>
       </div>
     );
   }
 
   return (
-    <div className='flex flex-1 w-full flex-col px-4 py-6 overflow-x-hidden w-auto'>
+    <div className='flex flex-1 flex-col px-4 py-6 overflow-x-hidden w-auto'>
       <h3 className='my-5 text-lg font-semibold'>Overview</h3>
 
       <div className='flex flex-1 flex-wrap gap-2 mb-10 items-center justify-center'>
@@ -252,7 +268,14 @@ const ManageAccount: React.FC = () => {
       <Table
         columns={columns}
         dataSource={accounts}
-        pagination={false}
+        loading={loading}
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalCount,
+          onChange: (page) => setCurrentPage(page),
+          position: ['bottomCenter'],
+        }}
         scroll={{ x: '100%' }}
         bordered
         className='px-5'
