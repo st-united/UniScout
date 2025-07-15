@@ -7,8 +7,10 @@ import AdminLayout from '@app/components/templates/AdminLayout/AdminLayout';
 import ProtectedRoute from '@app/components/templates/ProtectedRoute';
 import CreateUniversity from '@app/pages/admin/CreateUniversity';
 import DashboardPage from '@app/pages/admin/DashboardPage';
+import EditRequest from '@app/pages/admin/EditRequest';
 import EditUniversity from '@app/pages/admin/EditUniversity';
-import ManagePage from '@app/pages/admin/ManagePage';
+import ManageRequest from '@app/pages/admin/ManageRequest';
+import RequestDetail from '@app/pages/admin/RequestDetail';
 import UniversityListPage from '@app/pages/admin/UniversityListPage';
 import SignIn from '@app/pages/SignIn/SignIn';
 
@@ -60,7 +62,15 @@ const routes = [
       },
       {
         path: 'manage',
-        element: <ManagePage />,
+        element: <ManageRequest />,
+      },
+      {
+        path: 'edit-request/:id',
+        element: <EditRequest />,
+      },
+      {
+        path: 'request-detail/:id',
+        element: <RequestDetail />,
       },
     ],
   },

@@ -1,12 +1,10 @@
-import { BellOutlined } from '@ant-design/icons';
-import { message, Badge, Button, Dropdown, List } from 'antd';
+import { message } from 'antd';
 import axios from 'axios';
 import { LayoutDashboard, GraduationCap, FileText, User, LogOut, Menu, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-import devplusLogo from '../assets/images/devplus.png';
 import { removeStorageData } from '@app/config/storage';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
 import { logout } from '@app/redux/features/auth/authSlice';
@@ -107,25 +105,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed lg:static z-50 w-64 bg-white h-screen flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
+        className={`fixed z-30 w-64 bg-white flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
+        style={{
+          top: '64px', // Position below header
+          bottom: '0', // Extend to bottom
+          height: 'calc(100vh - 64px)', // Subtract header height (64px = h-16)
+        }}
       >
         {/* Mobile close button */}
         <div className='lg:hidden flex justify-end p-4'>
           <button onClick={() => setIsOpen(false)} className='p-1 hover:bg-gray-100 rounded'>
             <X className='w-6 h-6 text-gray-700' />
           </button>
-        </div>
-
-        {/* User profile section */}
-        <div className='p-6 pt-8'>
-          <div className='flex items-center space-x-3'>
-            <div className='w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center'>
-              <User className='w-5 h-5 text-gray-600' />
-            </div>
-            <span className='text-gray-700 text-base font-medium'>Ngoc Nhi</span>
-          </div>
         </div>
 
         {/* Navigation */}
@@ -152,17 +145,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                         : {}
                     }
                     className={`
-  w-full flex items-center space-x-3 px-4 py-3 text-sm rounded-xl
-  transition-all duration-300 ease-in-out
-  appearance-none bg-transparent border-none
-  ${
-    item.action === 'logout'
-      ? 'text-gray-500 hover:text-red-600'
-      : isActive
-      ? 'text-[#E75200] bg-[#FF842B1C] shadow-xl font-semibold '
-      : 'text-gray-800 hover:text-orange-600'
-  }
-`}
+                    w-full flex items-center space-x-3 px-4 py-3 text-sm rounded-xl
+                    transition-all duration-300 ease-in-out
+                    appearance-none bg-transparent border-none
+                    ${
+                      item.action === 'logout'
+                        ? 'text-gray-500 hover:text-red-600'
+                        : isActive
+                        ? 'text-[#E75200] bg-[#FF842B1C] shadow-xl font-semibold '
+                        : 'text-gray-800 hover:text-orange-600'
+                    }
+                  `}
                   >
                     <Icon
                       className={`w-5 h-5 transition-colors duration-200 ${
@@ -181,9 +174,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </ul>
         </nav>
 
-        <div className='p-6 border-t border-gray-200 justify-center flex items-center space-x-2'>
-          <div className='flex items-center space-x-2'>
-            <img src={devplusLogo} alt='DevPlus Logo' className='w-18 h-12' />
+        <div className='p-6 border-t border-gray-200 justify-start flex items-center'>
+          <div className='w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center'>
+            <User className='w-5 h-5 text-gray-600' />
+          </div>
+          <div className='flex items-center'>
+            <span className='text-gray-700 text-base font-medium'>Ngoc Nhi</span>
           </div>
         </div>
       </div>

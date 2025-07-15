@@ -27,8 +27,11 @@ import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import AdminSearchFilter from '../../components/AdminSearchFilter';
+import AdminHeader from '../../components/AdminHeader';
+import AdminSearchbar from '../../components/AdminSearchbar';
+import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
+
 const { Option } = Select;
 const { Title } = Typography;
 
@@ -64,7 +67,7 @@ interface UniversityApiResponse {
   totalCount: number;
 }
 
-// Interface for notification items (imported from AdminSearchFilter)
+// Interface for notification items (imported from AdminNotification)
 interface NotificationItem {
   id: number;
   type: 'join_request';
@@ -215,7 +218,7 @@ const UniversityListPage: React.FC = () => {
     setCurrentPage(1);
   }, [searchInput]);
 
-  // Handle search from AdminSearchFilter component
+  // Handle search from AdminSearchbar component
   const handleGlobalSearch = (searchValue: string) => {
     setSearchInput(searchValue);
   };
@@ -750,15 +753,9 @@ const UniversityListPage: React.FC = () => {
   if (error && currentUniversityData.length === 0) {
     return (
       <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
-        <AdminSearchFilter
-          onSearch={handleGlobalSearch}
-          onNotificationClick={handleNotificationClick}
-          onMarkAllAsRead={handleMarkAllAsRead}
-          placeholder='Search'
-        />
         <div style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
-            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ textAlign: 'center', padding: '48px 20px' }}>
               <Title level={4} style={{ color: '#ff4d4f' }}>
                 Failed to load universities
               </Title>
@@ -780,278 +777,278 @@ const UniversityListPage: React.FC = () => {
 
   return (
     <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
-      {/* Search and Notification Bar */}
-      <AdminSearchFilter
-        onSearch={handleGlobalSearch}
-        onNotificationClick={handleNotificationClick}
-        onMarkAllAsRead={handleMarkAllAsRead}
-        placeholder='Search'
-      />
+      <AdminHeader />
 
       {/* Main Content */}
-      <div style={{ padding: isMobile ? '16px' : '24px' }}>
-        <Card>
-          {/* Mobile Filter Button */}
-          {isMobile && (
-            <Row style={{ marginBottom: 16 }}>
-              <Col span={24}>
-                <Button
-                  onClick={() => setFilterDrawerVisible(true)}
-                  type='default'
-                  className='w-full flex items-center justify-center h-10 border border-gray-300 rounded-md
-                   transition duration-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-500'
-                >
-                  <Space>
-                    Filters
-                    {hasActiveFilters && <Badge dot />}
-                  </Space>
-                </Button>
-              </Col>
-            </Row>
-          )}
-
-          {/* Desktop Filter Section */}
-          {!isMobile && <FilterSection />}
-
-          {/* Floating Active Filters */}
-          {hasActiveFilters && (
-            <Row style={{ marginBottom: 16 }}>
-              <Col span={24}>
-                <Space wrap>
-                  {getActiveFilters().map((filter) => (
-                    <Tag
-                      key={filter.key}
-                      closable
-                      onClose={() => removeFilter(filter.key)}
-                      closeIcon={<CloseOutlined />}
-                      style={{
-                        backgroundColor: '#fff7e6',
-                        borderColor: '#ff7a00',
-                        color: '#ff7a00',
-                        fontSize: '12px',
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      {filter.label}: {filter.value}
-                    </Tag>
-                  ))}
-                  {hasActiveFilters && (
-                    <Button
-                      type='text'
-                      size='small'
-                      onClick={handleResetFilters}
-                      style={{
-                        color: '#ff7a00',
-                        fontSize: '12px',
-                        padding: '0 4px',
-                        height: '24px',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      Clear all
-                    </Button>
-                  )}
-                </Space>
-              </Col>
-            </Row>
-          )}
-
-          {/* Header Section */}
-          <Row justify='space-between' align='middle' style={{ marginBottom: 16 }}>
-            <Col xs={24} sm={12}>
-              <Title
-                level={4}
-                style={{ margin: 0, color: '#333', fontSize: isMobile ? '18px' : '20px' }}
-              >
-                List of universities ({universityData?.totalCount || 0})
-              </Title>
-            </Col>
-            <Col
-              xs={24}
-              sm={12}
-              style={{ textAlign: isMobile ? 'left' : 'right', marginTop: isMobile ? 12 : 0 }}
-            >
-              <Space
-                direction={isMobile ? 'vertical' : 'horizontal'}
-                style={{ width: isMobile ? '100%' : 'auto' }}
-              >
-                {selectedRowKeys.length > 0 && (
-                  <Button
-                    danger
-                    onClick={() => showDeleteModal('multiple')}
+      <LayoutWrapper>
+        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+          <Card>
+            <div style={{ marginBottom: 16 }}>
+              <Row justify='space-between' align='middle' gutter={[16, 16]}>
+                <Col xs={24} sm={12}>
+                  <AdminSearchbar onSearch={handleGlobalSearch} placeholder='Search' />
+                </Col>
+                <Col xs={24} sm={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
+                  <Space
+                    direction={isMobile ? 'vertical' : 'horizontal'}
                     style={{ width: isMobile ? '100%' : 'auto' }}
                   >
-                    Delete Selected ({selectedRowKeys.length})
+                    {selectedRowKeys.length > 0 && (
+                      <Button
+                        danger
+                        onClick={() => showDeleteModal('multiple')}
+                        style={{ width: isMobile ? '100%' : 'auto' }}
+                      >
+                        Delete Selected ({selectedRowKeys.length})
+                      </Button>
+                    )}
+                    <Button
+                      type='primary'
+                      icon={<PlusOutlined />}
+                      onClick={() => navigate('/create-university')}
+                      style={{
+                        backgroundColor: '#ff7a00',
+                        borderColor: '#ff7a00',
+                        width: isMobile ? '100%' : 'auto',
+                      }}
+                    >
+                      Create
+                    </Button>
+                    <Button
+                      icon={<ExportOutlined />}
+                      onClick={handleExport}
+                      style={{
+                        backgroundColor: '#ff7a00',
+                        borderColor: '#ff7a00',
+                        color: 'white',
+                        width: isMobile ? '100%' : 'auto',
+                      }}
+                    >
+                      Export
+                    </Button>
+                  </Space>
+                </Col>
+              </Row>
+            </div>
+            {/* Mobile Filter Button */}
+            {isMobile && (
+              <Row style={{ marginBottom: 16 }}>
+                <Col span={24}>
+                  <Button
+                    onClick={() => setFilterDrawerVisible(true)}
+                    type='default'
+                    className='w-full flex items-center justify-center h-10 border border-gray-300 rounded-md
+                   transition duration-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-500'
+                  >
+                    <Space>
+                      Filters
+                      {hasActiveFilters && <Badge dot />}
+                    </Space>
                   </Button>
-                )}
-                <Button
-                  type='primary'
-                  icon={<PlusOutlined />}
-                  onClick={() => navigate('/create-university')}
-                  style={{
-                    backgroundColor: '#ff7a00',
-                    borderColor: '#ff7a00',
-                    width: isMobile ? '100%' : 'auto',
-                  }}
-                >
-                  Create
-                </Button>
-                <Button
-                  icon={<ExportOutlined />}
-                  onClick={handleExport}
-                  style={{
-                    backgroundColor: '#ff7a00',
-                    borderColor: '#ff7a00',
-                    color: 'white',
-                    width: isMobile ? '100%' : 'auto',
-                  }}
-                >
-                  Export
-                </Button>
-              </Space>
-            </Col>
-          </Row>
+                </Col>
+              </Row>
+            )}
 
-          {/* Table */}
-          <Table
-            columns={columns}
-            dataSource={sortedUniversities}
-            rowKey='id'
-            rowSelection={showBatchActions ? rowSelection : undefined}
-            loading={loading}
-            pagination={{
-              current: currentPage,
-              pageSize: pageSize,
-              total: universityData?.totalCount || 0,
-              onChange: (page, size) => {
-                setCurrentPage(page);
-                setPageSize(size || 12);
-              },
-              showSizeChanger: false,
-              showQuickJumper: false,
-              className: 'custom-pagination',
-              itemRender: (page, type, originalElement) => {
-                const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
-                const baseStyle: React.CSSProperties = {
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'color 0.2s ease',
-                  display: 'inline-flex',
+            {/* Desktop Filter Section */}
+            {!isMobile && <FilterSection />}
+
+            {/* Floating Active Filters */}
+            {hasActiveFilters && (
+              <Row style={{ marginBottom: 16 }}>
+                <Col span={24}>
+                  <Space wrap>
+                    {getActiveFilters().map((filter) => (
+                      <Tag
+                        key={filter.key}
+                        closable
+                        onClose={() => removeFilter(filter.key)}
+                        closeIcon={<CloseOutlined />}
+                        style={{
+                          backgroundColor: '#fff7e6',
+                          borderColor: '#ff7a00',
+                          color: '#ff7a00',
+                          fontSize: '12px',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        {filter.label}: {filter.value}
+                      </Tag>
+                    ))}
+                    {hasActiveFilters && (
+                      <Button
+                        type='text'
+                        size='small'
+                        onClick={handleResetFilters}
+                        style={{
+                          color: '#ff7a00',
+                          fontSize: '12px',
+                          padding: '0 4px',
+                          height: '24px',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        Clear all
+                      </Button>
+                    )}
+                  </Space>
+                </Col>
+              </Row>
+            )}
+
+            {/* Header Section */}
+            <Row justify='space-between' align='middle' style={{ marginBottom: 16 }}>
+              <Col xs={24} sm={12}>
+                <Title
+                  level={4}
+                  style={{ margin: 0, color: '#333', fontSize: isMobile ? '18px' : '20px' }}
+                >
+                  List of universities ({universityData?.totalCount || 0})
+                </Title>
+              </Col>
+            </Row>
+
+            {/* Table */}
+            <Table
+              columns={columns}
+              dataSource={sortedUniversities}
+              rowKey='id'
+              rowSelection={showBatchActions ? rowSelection : undefined}
+              loading={loading}
+              pagination={{
+                current: currentPage,
+                pageSize: pageSize,
+                total: universityData?.totalCount || 0,
+                onChange: (page, size) => {
+                  setCurrentPage(page);
+                  setPageSize(size || 12);
+                },
+                showSizeChanger: false,
+                showQuickJumper: false,
+                className: 'custom-pagination',
+                itemRender: (page, type, originalElement) => {
+                  const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
+                  const baseStyle: React.CSSProperties = {
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'color 0.2s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  };
+
+                  if (type === 'prev') {
+                    const isDisabled = currentPage === 1;
+                    return (
+                      <span
+                        style={{
+                          ...baseStyle,
+                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        &lt; Previous
+                      </span>
+                    );
+                  }
+
+                  if (type === 'next') {
+                    const isDisabled = currentPage >= totalPages;
+                    return (
+                      <span
+                        style={{
+                          ...baseStyle,
+                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        Next &gt;
+                      </span>
+                    );
+                  }
+
+                  if (type === 'page') {
+                    const isCurrent = page === currentPage;
+                    return (
+                      <span
+                        style={{
+                          ...baseStyle,
+                          color: '#ff7a00',
+                          fontWeight: isCurrent ? 'bold' : 500,
+                        }}
+                      >
+                        {page}
+                      </span>
+                    );
+                  }
+
+                  if (type === 'jump-prev' || type === 'jump-next') {
+                    return <span style={{ color: '#999' }}>•••</span>;
+                  }
+
+                  return originalElement;
+                },
+                style: {
+                  display: 'flex',
+                  justifyContent: 'center',
                   alignItems: 'center',
-                  gap: '4px',
-                };
-
-                if (type === 'prev') {
-                  const isDisabled = currentPage === 1;
-                  return (
-                    <span
-                      style={{
-                        ...baseStyle,
-                        color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                        cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      &lt; Previous
-                    </span>
-                  );
-                }
-
-                if (type === 'next') {
-                  const isDisabled = currentPage >= totalPages;
-                  return (
-                    <span
-                      style={{
-                        ...baseStyle,
-                        color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                        cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      Next &gt;
-                    </span>
-                  );
-                }
-
-                if (type === 'page') {
-                  const isCurrent = page === currentPage;
-                  return (
-                    <span
-                      style={{
-                        ...baseStyle,
-                        color: '#ff7a00',
-                        fontWeight: isCurrent ? 'bold' : 500,
-                      }}
-                    >
-                      {page}
-                    </span>
-                  );
-                }
-
-                if (type === 'jump-prev' || type === 'jump-next') {
-                  return <span style={{ color: '#999' }}>•••</span>;
-                }
-
-                return originalElement;
-              },
-              style: {
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                width: '100%',
-                marginTop: '24px',
-                marginBottom: '16px',
-              },
-            }}
-            scroll={{ x: 800 }}
-            style={{ marginBottom: 16 }}
-          />
-        </Card>
-      </div>
-
-      {/* Mobile Filter Drawer */}
-      <Drawer
-        title='Filters'
-        placement='bottom'
-        height='auto'
-        onClose={() => setFilterDrawerVisible(false)}
-        open={filterDrawerVisible}
-        bodyStyle={{ padding: '16px' }}
-      >
-        <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <FilterSection />
+                  width: '100%',
+                  marginTop: '24px',
+                  marginBottom: '16px',
+                },
+              }}
+              scroll={{ x: 800 }}
+              style={{ marginBottom: 16 }}
+            />
+          </Card>
         </div>
-        <Space direction='vertical' style={{ width: '100%', marginTop: '16px' }} size='middle'>
-          <Button onClick={handleResetFilters} style={{ color: '#ff7a00', borderColor: '#ff7a00' }}>
-            Reset Filters
-          </Button>
-          <Button
-            type='primary'
-            onClick={() => setFilterDrawerVisible(false)}
-            style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
-          >
-            Apply
-          </Button>
-        </Space>
-      </Drawer>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        title='Confirm Action'
-        open={deleteModalVisible}
-        onOk={handleDeleteConfirm}
-        onCancel={() => setDeleteModalVisible(false)}
-        okText='Yes'
-        cancelText='No'
-        okButtonProps={{
-          type: 'primary',
-        }}
-      >
-        <div className='flex items-start gap-2'>
-          <ExclamationCircleFilled className='text-yellow-300 text-lg relative -top-0.5' />
-          <p className='text-sm text-gray-700 m-0'>{getConfirmationMessage()}</p>
-        </div>
-      </Modal>
+        {/* Mobile Filter Drawer */}
+        <Drawer
+          title='Filters'
+          placement='bottom'
+          height='auto'
+          onClose={() => setFilterDrawerVisible(false)}
+          open={filterDrawerVisible}
+          bodyStyle={{ padding: '16px' }}
+        >
+          <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            <FilterSection />
+          </div>
+          <Space direction='vertical' style={{ width: '100%', marginTop: '16px' }} size='middle'>
+            <Button
+              onClick={handleResetFilters}
+              style={{ color: '#ff7a00', borderColor: '#ff7a00' }}
+            >
+              Reset Filters
+            </Button>
+            <Button
+              type='primary'
+              onClick={() => setFilterDrawerVisible(false)}
+              style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+            >
+              Apply
+            </Button>
+          </Space>
+        </Drawer>
+        {/* Delete Confirmation Modal */}
+        <Modal
+          title='Confirm Action'
+          open={deleteModalVisible}
+          onOk={handleDeleteConfirm}
+          onCancel={() => setDeleteModalVisible(false)}
+          okText='Yes'
+          cancelText='No'
+          okButtonProps={{
+            type: 'primary',
+          }}
+        >
+          <div className='flex items-start gap-2'>
+            <ExclamationCircleFilled className='text-yellow-300 text-lg relative -top-0.5' />
+            <p className='text-sm text-gray-700 m-0'>{getConfirmationMessage()}</p>
+          </div>
+        </Modal>
+      </LayoutWrapper>
     </div>
   );
 };
