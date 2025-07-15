@@ -67,14 +67,9 @@ interface TreeNode {
   children?: TreeNode[];
 }
 
-const initialTreeData: TreeNode[] = FIELD_DISPLAY_NAMES.map((field) => ({
-  title: field.title,
-  value: field.value,
-  key: field.id,
-  isLeaf: false,
-}));
+// Remove initialTreeData, will fetch subjects from API
 
-const MAX_COUNT = 12;
+const MAX_COUNT = 1000;
 
 const UniversityFilter = ({
   onFiltersUpdate,
@@ -94,7 +89,10 @@ const UniversityFilter = ({
   const [isFieldDropdownOpen, setIsFieldDropdownOpen] = useState(false);
   const countryDropdownRef = useRef<HTMLDivElement>(null);
   const fieldDropdownRef = useRef<HTMLDivElement>(null);
-  const [treeData, setTreeData] = useState<TreeNode[]>(initialTreeData);
+  // Remove initialTreeData, will fetch subjects from API
+  const [subjectOptions, setSubjectOptions] = useState<
+    { title: string; value: string; key: string }[]
+  >([]);
 
   useEffect(() => {
     // Ensure filters.country and filters.field are always arrays
@@ -132,39 +130,31 @@ const UniversityFilter = ({
     };
   }, []);
 
-  // Fetch children (subjects) for a parent field when selected
-  const fetchSubjectsForField = async (fieldId: string) => {
-    // Only fetch if not already loaded
-    const parent = treeData.find((item) => item.key === fieldId);
-    if (!parent || parent.children) return;
-    try {
-      const res = await axios.get(
-        `https://api.uniscout.dev.stunited.vn/api/universities/subjects?page=1&academicFieldId=${fieldId}`,
-      );
-      const children = res.data.data.map((subject: any) => ({
-        title: subject.name,
-        value: subject.id,
-        key: `subject-${subject.id}`,
-        isLeaf: true,
-      }));
-      setTreeData((origin) =>
-        origin.map((item) => (item.key === fieldId ? { ...item, children } : item)),
-      );
-    } catch (err) {
-      // Optionally handle error
-    }
-  };
-
-  // When a parent is selected, fetch its children if not already loaded
-  const handleFieldChangeWithSubjects = async (val: string[]) => {
-    // Check if a parent field was just selected
-    const newlySelected = val.filter((v) => !filters.field.includes(v));
-    for (const v of newlySelected) {
-      const parent = treeData.find((item) => item.value === v);
-      if (parent && !parent.children) {
-        await fetchSubjectsForField(parent.key);
+  // Fetch all subjects on mount
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const res = await axios.get(
+          'https://api.uniscout.dev.stunited.vn/api/universities/subjects',
+        );
+        if (Array.isArray(res.data.data)) {
+          setSubjectOptions(
+            res.data.data.map((subject: any) => ({
+              title: subject.name,
+              value: subject.name,
+              key: subject.id?.toString() || subject.name,
+            })),
+          );
+        }
+      } catch (err) {
+        setSubjectOptions([]);
       }
-    }
+    };
+    fetchSubjects();
+  }, []);
+
+  // Flat subject selection
+  const handleSubjectChange = (val: string[]) => {
     handleFilterChange('field', val);
   };
 
@@ -386,14 +376,13 @@ const UniversityFilter = ({
           </div>
         </div>
 
-        {/* Fields Multi-select */}
+        {/* Subjects Multi-select */}
         <div className='rounded-lg p-4 shadow-sm'>
-          <h3 className='text-base font-semibold mb-3'>Broad Fields</h3>
+          <h3 className='text-base font-semibold mb-3'>Subjects</h3>
           <TreeSelect
-            treeData={treeData}
-            // No dropdown async loading
+            treeData={subjectOptions}
             value={filters.field}
-            onChange={handleFieldChangeWithSubjects}
+            onChange={handleSubjectChange}
             multiple
             maxCount={MAX_COUNT}
             style={{ width: '100%' }}
@@ -402,9 +391,9 @@ const UniversityFilter = ({
                 {filters.field.length} / {MAX_COUNT} <DownOutlined />
               </span>
             }
-            treeCheckable
+            treeCheckable={false}
             placeholder='Please select'
-            showCheckedStrategy={TreeSelect.SHOW_CHILD}
+            showCheckedStrategy={TreeSelect.SHOW_ALL}
           />
         </div>
       </div>

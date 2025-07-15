@@ -260,7 +260,7 @@ const ViewUniversity = () => {
       <h2 className='text-center text-4xl font-bold mt-6 mb-6'>DISCOVER UNIVERSITIES</h2>
       <div className='flex justify-center mt-6'>
         <div className='w-full max-w-screen-xl flex flex-col lg:flex-row gap-6'>
-          <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0'>
+          <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0 pt-6'>
             <UniversityFilter
               onFiltersUpdate={handleFiltersUpdate}
               initialFilters={activeFilters}
@@ -270,8 +270,11 @@ const ViewUniversity = () => {
           </div>
           <div ref={cardsRef} className='flex-1 min-h-[700px] relative'>
             {/* Search, filter chips, and sort bar aligned with cards */}
-            <div className='mb-6 flex flex-col gap-2'>
-              <div className='flex flex-row items-center gap-4 w-full sticky'>
+            <div
+              className='flex flex-col bg-[#F5F5F5] pt-6 mb-4'
+              style={{ position: 'sticky', top: '63px', zIndex: 10 }}
+            >
+              <div className='flex flex-row items-center gap-4 w-full'>
                 {/* Search bar */}
                 <Input.Search
                   allowClear
@@ -316,7 +319,7 @@ const ViewUniversity = () => {
                 />
               </div>
               {/* Filter chips */}
-              <div className='flex flex-wrap gap-2 mb-2'>
+              <div className='flex flex-wrap gap-2'>
                 {activeFilters.country.map((c) => (
                   <Tag
                     key={c}
@@ -376,7 +379,7 @@ const ViewUniversity = () => {
               </div>
             ) : (
               <>
-                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-6 w-full'>
+                <div className='px-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-6 w-full'>
                   {universities.map((university) => (
                     <UniversityCard key={university.id} university={university} />
                   ))}
