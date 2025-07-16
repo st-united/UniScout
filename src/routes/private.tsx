@@ -6,6 +6,7 @@ import CreateUniversity from '@app/pages/admin/CreateUniversity';
 import DashboardPage from '@app/pages/admin/DashboardPage';
 import EditRequest from '@app/pages/admin/EditRequest';
 import EditUniversity from '@app/pages/admin/EditUniversity';
+import ManageAccount from '@app/pages/admin/ManageAccount';
 import ManageRequest from '@app/pages/admin/ManageRequest';
 import RequestDetail from '@app/pages/admin/RequestDetail';
 import UniversityListPage from '@app/pages/admin/UniversityListPage';
@@ -50,10 +51,6 @@ const routes = [
         element: <UniversityListPage />,
       },
       {
-        index: true,
-        element: <div>Home</div>,
-      },
-      {
         path: 'create-university',
         element: <CreateUniversity />,
       },
@@ -72,6 +69,10 @@ const routes = [
       {
         path: 'request-detail/:id',
         element: <RequestDetail />,
+      },
+      {
+        path: 'account',
+        element: <ManageAccount />,
       },
     ],
   },

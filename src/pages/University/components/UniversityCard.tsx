@@ -2,6 +2,7 @@ import { Button } from 'antd';
 import { Building2, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import noImage from '@app/assets/images/noimage.png';
 import { UniversityCustom } from '@app/interface/university.interface';
 
 interface UniversityCardProps {
@@ -49,6 +50,10 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
             src={university.logo.replace('http://localhost:3000/static/', '')}
             alt={`${university.name} logo`}
             className='w-16 h-16 object-contain rounded-lg'
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = noImage;
+            }}
           />
         </div>
         <div className='flex items-center gap-4 mt-auto'>
