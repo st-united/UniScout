@@ -10,7 +10,7 @@ const LayoutWrapper: React.FC<LayoutWrapperProps> = ({ children }) => {
       className='min-h-screen lg:ml-56 transition-all duration-300 ease-in-out'
       style={{
         marginTop: '14px',
-        paddingTop: '14px', // Add some padding from the header
+        paddingTop: '28px', // Add some padding from the header
       }}
     >
       <div>{children}</div>
