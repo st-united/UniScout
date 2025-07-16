@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import AdminHeader from '../../components/AdminHeader';
+import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
@@ -240,46 +242,49 @@ const ManageAccount: React.FC = () => {
 
   return (
     <div className='flex flex-1 flex-col px-4 py-6 overflow-x-hidden w-auto'>
-      <h3 className='my-5 text-lg font-semibold'>Overview</h3>
+      <AdminHeader />
+      <LayoutWrapper>
+        <h3 className='my-5 text-lg font-semibold'>Overview</h3>
 
-      <div className='flex flex-1 flex-wrap gap-2 mb-10 items-center justify-center'>
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className={`flex flex-wrap justify-between items-center rounded-xl px-0 sm:px-6 py-4 w-[150px] bg-white sm:scale-[1] scale-[0.8]`}
-            style={{
-              boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06)',
-            }}
-          >
-            <div className='flex flex-col items-start justify-center gap-1 w-1/2 h-[60px]'>
-              <p className={`text-sm ${item.color} font-semibold`}>{item.label}</p>
-              <p className='text-[28px] font-semibold text-gray-500'>{item.value}</p>
-            </div>
+        <div className='flex flex-1 flex-wrap gap-2 mb-10 items-center justify-center'>
+          {items.map((item) => (
             <div
-              className={`flex h-[60px] w-[60px] items-center justify-center rounded-[23px] ${item.bg}`}
+              key={item.label}
+              className={`flex flex-wrap justify-between items-center rounded-xl px-0 sm:px-6 py-4 w-[150px] bg-white sm:scale-[1] scale-[0.8]`}
+              style={{
+                boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06)',
+              }}
             >
-              {item.icon}
+              <div className='flex flex-col items-start justify-center gap-1 w-1/2 h-[60px]'>
+                <p className={`text-sm ${item.color} font-semibold`}>{item.label}</p>
+                <p className='text-[28px] font-semibold text-gray-500'>{item.value}</p>
+              </div>
+              <div
+                className={`flex h-[60px] w-[60px] items-center justify-center rounded-[23px] ${item.bg}`}
+              >
+                {item.icon}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
-      <Table
-        columns={columns}
-        dataSource={accounts}
-        loading={loading}
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: totalCount,
-          onChange: (page) => setCurrentPage(page),
-          position: ['bottomCenter'],
-        }}
-        scroll={{ x: '100%' }}
-        bordered
-        className='px-5'
-      />
+        <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
+        <Table
+          columns={columns}
+          dataSource={accounts}
+          loading={loading}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: totalCount,
+            onChange: (page) => setCurrentPage(page),
+            position: ['bottomCenter'],
+          }}
+          scroll={{ x: '100%' }}
+          bordered
+          className='px-5'
+        />
+      </LayoutWrapper>
     </div>
   );
 };
