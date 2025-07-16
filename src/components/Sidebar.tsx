@@ -111,7 +111,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         className={`w-64 bg-white flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg
         fixed top-0 left-0 h-full
         ${isOpen ? 'z-50 translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        lg:top-[48px] lg:h-[calc(100vh-48px)] lg:z-30
+        lg:top-[64px] lg:h-[calc(100vh-48px)] lg:z-30
       `}
       >
         {/* ✅ Mobile-only top bar: DevPlus logo + Close button in same row */}
