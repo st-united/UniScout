@@ -17,9 +17,14 @@ interface CountryData {
 interface WorldMapProps {
   className?: string;
   onCountryClick?: (country: string) => void;
+  onCountryCountClick?: (country: string) => void; // new prop
 }
 
-const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) => {
+const WorldMap: React.FC<WorldMapProps> = ({
+  className = '',
+  onCountryClick,
+  onCountryCountClick,
+}) => {
   const [countryData, setCountryData] = useState<CountryData[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,7 +119,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) =
     USA: { left: 8, top: 30 },
     India: { left: 70, top: 50 },
     Korea: { left: 86, top: 37 },
-    Japan: { left: 90, top: 37 },
+    Japan: { left: 90, top: 35 },
     Vietnam: { left: 81, top: 53 },
     Australia: { left: 89, top: 80 },
   };
@@ -133,12 +138,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) =
     switch (country) {
       case 'USA':
       case 'United States':
-        return 'US';
+        return 'USA';
       case 'South Korea':
       case 'Korea':
         return 'Korea';
       case 'Australia':
-        return 'AU';
+        return 'Australia';
       default:
         return country;
     }
@@ -232,7 +237,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) =
                   {/* Tooltip */}
                   {isSelected && (
                     <div
-                      className='absolute z-20 pointer-events-none'
+                      className='absolute z-20 pointer-events-auto' // changed from pointer-events-none
                       style={{
                         left: pos.left,
                         top: pos.top - 60,
@@ -244,7 +249,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ className = '', onCountryClick }) =
                           <div className='text-xs md:text-sm text-gray-700 font-semibold mb-1'>
                             {country}
                           </div>
-                          <div className='text-lg md:text-xl font-bold text-blue-900'>
+                          <div
+                            className='text-lg md:text-xl font-bold text-blue-900 cursor-pointer hover:underline'
+                            onClick={() => onCountryCountClick && onCountryCountClick(country)}
+                            role='button'
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onCountryCountClick && onCountryCountClick(country);
+                              }
+                            }}
+                          >
                             {loading ? '...' : getCountryCount(country)}
                           </div>
                           <div className='text-xs md:text-sm text-gray-600 font-medium'>

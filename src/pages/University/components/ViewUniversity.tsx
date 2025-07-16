@@ -1,9 +1,10 @@
 import { Pagination, Input, Select, Tag, Button } from 'antd';
 import axios from 'axios';
 import { Search } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
+import Chatbot from './Chatbot';
 import UniversityCard from './UniversityCard';
 import UniversityFilter, { FilterOptions } from './UniversityFilter';
 import WorldMap from './Worldmap';
@@ -43,6 +44,7 @@ const ViewUniversity = () => {
   const fetchControllerRef = React.useRef(new AbortController());
   const navigate = useNavigate();
   const location = useLocation();
+  const cardsRef = useRef<HTMLDivElement>(null);
 
   const mapRawToUniversity = useCallback((rawUniversity: RawUniversity): UniversityCustom => {
     return {
@@ -177,6 +179,10 @@ const ViewUniversity = () => {
   }, []);
 
   const handleMapCountryClick = (country: string) => {
+    // Do nothing or just select the country visually, but do not apply filter
+  };
+
+  const handleCountryCountClick = (country: string) => {
     setActiveFilters({
       search: '',
       country: [country],
@@ -186,7 +192,11 @@ const ViewUniversity = () => {
       sortOrder: 'asc',
     });
     setCurrentPage(1);
-    window.scrollTo({ top: 200, behavior: 'smooth' });
+    setTimeout(() => {
+      if (cardsRef.current) {
+        cardsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100); // wait for UI update
   };
 
   // Helper to remove a filter chip
@@ -244,11 +254,14 @@ const ViewUniversity = () => {
 
   return (
     <div className='min-h-screen w-full px-4 py-6'>
-      <WorldMap onCountryClick={handleMapCountryClick} />
+      <WorldMap
+        onCountryClick={handleMapCountryClick}
+        onCountryCountClick={handleCountryCountClick}
+      />
       <h2 className='text-center text-4xl font-bold mt-6 mb-6'>DISCOVER UNIVERSITIES</h2>
       <div className='flex justify-center mt-6'>
         <div className='w-full max-w-screen-xl flex flex-col lg:flex-row gap-6'>
-          <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0'>
+          <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0 pt-6'>
             <UniversityFilter
               onFiltersUpdate={handleFiltersUpdate}
               initialFilters={activeFilters}
@@ -256,9 +269,12 @@ const ViewUniversity = () => {
               availableFields={availableFields}
             />
           </div>
-          <div className='flex-1 min-h-[700px] relative'>
+          <div ref={cardsRef} className='flex-1 min-h-[700px] relative'>
             {/* Search, filter chips, and sort bar aligned with cards */}
-            <div className='mb-6 flex flex-col gap-2'>
+            <div
+              className='flex flex-col bg-[#F5F5F5] pt-6 mb-4'
+              style={{ position: 'sticky', top: '63px', zIndex: 10 }}
+            >
               <div className='flex flex-row items-center gap-4 w-full'>
                 {/* Search bar */}
                 <Input.Search
@@ -296,7 +312,7 @@ const ViewUniversity = () => {
                       sortOrder: val === 'Sort by: low to high' ? 'asc' : 'desc',
                     })
                   }
-                  className='min-w-[120px]'
+                  className='min-w-[120px] min-h-[40px] '
                   options={[
                     { value: 'Sort by: high to low', label: 'Sort by: high to low' },
                     { value: 'Sort by: low to high', label: 'Sort by: low to high' },
@@ -304,13 +320,14 @@ const ViewUniversity = () => {
                 />
               </div>
               {/* Filter chips */}
-              <div className='flex flex-wrap gap-2 mb-2'>
+              <div className='flex flex-wrap gap-2'>
                 {activeFilters.country.map((c) => (
                   <Tag
                     key={c}
                     closable
                     onClose={() => removeFilter('country', c)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(c)}
                   </Tag>
@@ -320,7 +337,8 @@ const ViewUniversity = () => {
                     key={t}
                     closable
                     onClose={() => removeFilter('type', t)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(t)}
                   </Tag>
@@ -330,7 +348,8 @@ const ViewUniversity = () => {
                     key={s}
                     closable
                     onClose={() => removeFilter('size', s)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(s)}
                   </Tag>
@@ -340,31 +359,16 @@ const ViewUniversity = () => {
                     key={f}
                     closable
                     onClose={() => removeFilter('field', f)}
-                    className='bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm'
+                    style={{ background: '#FEF7E6', color: '#FF923E', border: '1px solid #FF923E' }}
+                    className='px-3 py-1 rounded-full text-sm'
                   >
                     {capitalize(f)}
                   </Tag>
                 ))}
               </div>
               {/* Results for ... */}
-              {activeFilters.search && (
-                <div className='mb-2'>
-                  <span className='italic text-lg'>
-                    Results for <b>&quot;{activeFilters.search}&quot;</b>:
-                  </span>
-                </div>
-              )}
             </div>
-            {loading && (
-              <div className='absolute inset-0 bg-white/80 z-20 flex items-center justify-center'>
-                <div className='text-center p-8 bg-white rounded-xl shadow-lg border border-gray-200'>
-                  <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4'></div>
-                  <h3 className='text-lg font-medium text-gray-700'>
-                    Finding Matching Universities
-                  </h3>
-                </div>
-              </div>
-            )}
+            {/* Removed loading overlay */}
             {universities?.length === 0 ? (
               <div className='flex items-center justify-center min-h-[600px]'>
                 <div className='text-center'>
@@ -376,7 +380,7 @@ const ViewUniversity = () => {
               </div>
             ) : (
               <>
-                <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-6 w-full'>
+                <div className='px-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-6 w-full'>
                   {universities.map((university) => (
                     <UniversityCard key={university.id} university={university} />
                   ))}
@@ -395,6 +399,7 @@ const ViewUniversity = () => {
           </div>
         </div>
       </div>
+      <Chatbot />
     </div>
   );
 };
