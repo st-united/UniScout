@@ -187,36 +187,50 @@ const ManageRequest: React.FC = () => {
   };
 
   // Updated fetchRequests to use real API
+  // New code to copy and paste for the paramsSerializer part
   const fetchRequests = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Build query parameters
-      const params = new URLSearchParams({
+      const requestParams: Record<string, any> = {
         page: currentPage.toString(),
         pageSize: pageSize.toString(),
         sortBy: sortBy,
         sortOrder: sortOrder,
-      });
+      };
 
-      // Add filters if they exist
       if (debouncedFilters.requestType.length > 0) {
-        params.append('requestType', debouncedFilters.requestType[0]); // API seems to accept single value
+        requestParams.requestType = debouncedFilters.requestType;
       }
       if (debouncedFilters.country.length > 0) {
-        params.append('country', debouncedFilters.country[0]); // API seems to accept single value
+        requestParams.country = debouncedFilters.country;
       }
       if (debouncedFilters.status.length > 0) {
-        params.append('status', debouncedFilters.status[0]); // API seems to accept single value
+        requestParams.status = debouncedFilters.status;
       }
       if (debouncedFilters.search.length > 0 && debouncedFilters.search[0].trim()) {
-        params.append('search', debouncedFilters.search[0].trim());
+        requestParams.search = debouncedFilters.search[0].trim();
       }
 
-      const response = await axios.get(`${API_BASE_URL}/admin/contact?${params.toString()}`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/contact`, {
+        params: requestParams,
         headers: {
           accept: '*/*',
+        },
+        // Updated paramsSerializer to handle array values as comma-separated strings
+        paramsSerializer: (params) => {
+          const searchParams = new URLSearchParams();
+          Object.keys(params).forEach((key) => {
+            const value = params[key];
+            if (Array.isArray(value)) {
+              // Join array values with a comma for the API
+              searchParams.append(key, value.join(',')); // Now sends ?key=v1,v2
+            } else if (value !== undefined) {
+              searchParams.append(key, value);
+            }
+          });
+          return searchParams.toString();
         },
       });
 

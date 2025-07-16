@@ -26,7 +26,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   return (
-    <div className={`w-[600px] ${className}`}>
+    <div className={`w-full ${className}`}>
       <div style={{ display: 'flex', height: 40 }}>
         <Input
           placeholder={placeholder}

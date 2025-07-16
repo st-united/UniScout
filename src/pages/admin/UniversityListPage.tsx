@@ -784,13 +784,14 @@ const UniversityListPage: React.FC = () => {
         <div style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
             <div style={{ marginBottom: 16 }}>
-              <Row justify='space-between' align='middle' gutter={[16, 16]}>
-                <Col xs={24} sm={12}>
+              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                <Col xs={24} md={12}>
                   <AdminSearchbar onSearch={handleGlobalSearch} placeholder='Search' />
                 </Col>
                 <Col xs={24} sm={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
                   <Space
                     direction={isMobile ? 'vertical' : 'horizontal'}
+                    wrap={!isMobile} // Add this prop to allow buttons to wrap on larger screens
                     style={{ width: isMobile ? '100%' : 'auto' }}
                   >
                     {selectedRowKeys.length > 0 && (
