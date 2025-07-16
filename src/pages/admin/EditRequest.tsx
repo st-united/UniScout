@@ -1,8 +1,12 @@
 import {
   ArrowLeftOutlined,
   SaveOutlined,
-  HistoryOutlined,
   ExclamationCircleOutlined,
+  EditOutlined,
+  UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import {
   Form,
@@ -13,12 +17,15 @@ import {
   Typography,
   Spin,
   Modal,
-  Timeline,
   Space,
   Divider,
-  Layout,
+  Card,
+  Row,
+  Col,
+  Tag,
 } from 'antd';
 import axios from 'axios';
+import { GraduationCap } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -36,20 +43,11 @@ interface RequestData {
   representativeName: string;
   requestType: string;
   status: string;
-  phone: string;
-  email: string;
+  representativeNumber: string;
+  representativeEmail: string;
   message: string;
   createdAt: string;
   updatedAt: string;
-}
-
-interface StatusHistory {
-  id: string;
-  status: string;
-  updatedBy: string;
-  updatedAt: string;
-  reason?: string;
-  comment?: string;
 }
 
 interface RejectModalProps {
@@ -151,8 +149,6 @@ const EditRequest: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [requestData, setRequestData] = useState<RequestData | null>(null);
-  const [statusHistory, setStatusHistory] = useState<StatusHistory[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string>('');
   const [isEditable, setIsEditable] = useState(false);
@@ -162,8 +158,7 @@ const EditRequest: React.FC = () => {
     const fetchRequest = async () => {
       try {
         setPageLoading(true);
-        // Placeholder API call - replace with actual endpoint
-        const response = await axios.get(`/admin/requests/${id}`);
+        const response = await axios.get(`/api/admin/contact/${id}`);
         const data = response.data;
 
         setRequestData(data);
@@ -176,56 +171,10 @@ const EditRequest: React.FC = () => {
       }
     };
 
-    // Mock data for development
-    const mockData: RequestData = {
-      id: id || '1',
-      universityName: 'Harvard University',
-      representativeName: 'Nguyen Van A',
-      requestType: 'Update Information',
-      status: 'Pending',
-      phone: '21151515151',
-      email: 'example@gmail.com',
-      message:
-        'Request to update university information including contact details and academic programs.',
-      createdAt: '2024-01-15T10:30:00Z',
-      updatedAt: '2024-01-15T10:30:00Z',
-    };
-
-    setRequestData(mockData);
-    form.setFieldsValue(mockData);
-    setPageLoading(false);
-
-    // Uncomment for actual API call
-    // if (id) fetchRequest();
+    if (id) {
+      fetchRequest();
+    }
   }, [id, form, navigate]);
-
-  // Load status history
-  useEffect(() => {
-    const fetchStatusHistory = async () => {
-      try {
-        // Placeholder API call - replace with actual endpoint
-        const response = await axios.get(`/admin/requests/${id}/history`);
-        setStatusHistory(response.data);
-      } catch (err) {
-        console.error('Failed to load status history');
-      }
-    };
-
-    // Mock history data
-    const mockHistory: StatusHistory[] = [
-      {
-        id: '1',
-        status: 'Pending',
-        updatedBy: 'System',
-        updatedAt: '2024-01-15T10:30:00Z',
-        comment: 'Request submitted',
-      },
-    ];
-    setStatusHistory(mockHistory);
-
-    // Uncomment for actual API call
-    // if (id) fetchStatusHistory();
-  }, [id]);
 
   // Handle status change
   const handleStatusChange = (newStatus: string) => {
@@ -233,7 +182,6 @@ const EditRequest: React.FC = () => {
       setPendingStatus(newStatus);
       setRejectModalVisible(true);
     } else {
-      // Just update the form value, actual save happens on form submit
       form.setFieldsValue({ status: newStatus });
     }
   };
@@ -242,30 +190,21 @@ const EditRequest: React.FC = () => {
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const payload = {
+      const payload: any = {
         status: values.status,
-        ...(values.status === 'Rejected' &&
-          pendingStatus === 'Rejected' && { reason: values.rejectionReason }),
       };
 
-      // Placeholder API call - replace with actual endpoint
-      await axios.patch(`/admin/requests/${id}`, payload);
+      if (values.status === 'Rejected' && values.rejectionReason) {
+        payload.rejectionReason = values.rejectionReason;
+      }
+
+      await axios.patch(`/api/admin/contact/${id}/status`, payload);
 
       message.success('Request updated successfully!');
       setIsEditable(false);
 
       // Update local state
       setRequestData((prev) => (prev ? { ...prev, status: values.status } : null));
-
-      // Add to history
-      const newHistoryItem: StatusHistory = {
-        id: Date.now().toString(),
-        status: values.status,
-        updatedBy: 'Current Admin', // Replace with actual admin name
-        updatedAt: new Date().toISOString(),
-        ...(values.rejectionReason && { reason: values.rejectionReason }),
-      };
-      setStatusHistory((prev) => [...prev, newHistoryItem]);
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Update failed');
@@ -288,25 +227,14 @@ const EditRequest: React.FC = () => {
   const handleRejectCancel = () => {
     setRejectModalVisible(false);
     setPendingStatus('');
-    // Reset status to original value
     form.setFieldsValue({ status: requestData?.status });
   };
 
   // Reset form
-  const handleReset = async () => {
-    try {
-      // Reload original data
-      form.setFieldsValue(requestData);
-      setIsEditable(false);
-      message.info('Changes cancelled');
-    } catch {
-      message.error('Reset failed');
-    }
-  };
-
-  // Show history modal
-  const showHistoryModal = () => {
-    setShowHistory(true);
+  const handleReset = () => {
+    form.setFieldsValue(requestData);
+    setIsEditable(false);
+    message.info('Changes cancelled');
   };
 
   // Format date for display
@@ -322,7 +250,17 @@ const EditRequest: React.FC = () => {
     );
   }
 
-  const availableStatuses = requestData ? getAvailableStatusTransitions(requestData.status) : [];
+  if (!requestData) {
+    return (
+      <div className='min-h-screen flex items-center justify-center bg-gray-100'>
+        <div className='text-center'>
+          <Text type='secondary'>Request not found</Text>
+        </div>
+      </div>
+    );
+  }
+
+  const availableStatuses = getAvailableStatusTransitions(requestData.status);
   const isStatusChangeable = availableStatuses.length > 0;
 
   return (
@@ -330,152 +268,250 @@ const EditRequest: React.FC = () => {
       <AdminHeader />
       <LayoutWrapper>
         <div className='max-w-4xl mx-auto'>
+          {/* Header */}
           <div className='mb-6'>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/manage')}
-              className='mb-4'
-            >
-              Back
-            </Button>
-            <div className='flex justify-between items-center'>
-              <Title level={3}>{isEditable ? 'Edit Request' : 'Request Information'}</Title>
-              <Button icon={<HistoryOutlined />} onClick={showHistoryModal} type='default'>
-                View History
-              </Button>
+            <div className='flex justify-between items-center mb-4'>
+              <Title level={3} style={{ color: '#ff7a00', margin: 0 }}>
+                Detail of requests
+              </Title>
+              <Button
+                icon={<CloseOutlined />}
+                onClick={() => navigate('/manage')}
+                type='text'
+                size='large'
+                style={{ color: '#666' }}
+              />
             </div>
           </div>
 
-          <div className='bg-white rounded-lg shadow p-6'>
+          {/* Main Content */}
+          <div className='bg-white rounded-lg shadow-sm p-8'>
             <Form form={form} layout='vertical' onFinish={onFinish}>
-              <Form.Item label='University Name' name='universityName'>
-                <Input disabled className='rounded-md' />
-              </Form.Item>
+              {/* General Information */}
+              <div className='mb-8'>
+                <Title level={4} style={{ color: '#ff7a00', marginBottom: 24 }}>
+                  General Information
+                </Title>
 
-              <Form.Item label='Representative Name' name='representativeName'>
-                <Input disabled className='rounded-md' />
-              </Form.Item>
+                <Row gutter={[32, 24]}>
+                  <Col xs={24} md={12}>
+                    <div className='flex items-center space-x-3 mb-2'>
+                      <GraduationCap style={{ color: '#ff7a00', fontSize: 18 }} />
+                      <Text strong style={{ fontSize: 16 }}>
+                        University name
+                      </Text>
+                    </div>
+                    <Form.Item name='universityName' style={{ marginBottom: 0 }}>
+                      <Input
+                        disabled
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          fontSize: 14,
+                          color: '#666',
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
 
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <Form.Item label='Request Type' name='requestType'>
-                  <Input disabled className='rounded-md' />
-                </Form.Item>
+                  <Col xs={24} md={12}>
+                    <div className='flex items-center space-x-3 mb-2'>
+                      <UserOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
+                      <Text strong style={{ fontSize: 16 }}>
+                        Representative
+                      </Text>
+                    </div>
+                    <Form.Item name='representativeName' style={{ marginBottom: 0 }}>
+                      <Input
+                        disabled
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          fontSize: 14,
+                          color: '#666',
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
 
-                <Form.Item label='Status' name='status'>
-                  <Select
-                    disabled={!isEditable || !isStatusChangeable}
-                    className='rounded-md'
-                    onChange={handleStatusChange}
-                  >
-                    <Option value={requestData?.status}>{requestData?.status}</Option>
-                    {isEditable &&
-                      availableStatuses.map((status) => (
-                        <Option key={status} value={status}>
-                          {status}
-                        </Option>
-                      ))}
-                  </Select>
+                  <Col xs={24} md={12}>
+                    <div className='flex items-center space-x-3 mb-2'>
+                      <MailOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
+                      <Text strong style={{ fontSize: 16 }}>
+                        Email
+                      </Text>
+                    </div>
+                    <Form.Item name='representativeEmail' style={{ marginBottom: 0 }}>
+                      <Input
+                        disabled
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          fontSize: 14,
+                          color: '#666',
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <div className='flex items-center space-x-3 mb-2'>
+                      <PhoneOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
+                      <Text strong style={{ fontSize: 16 }}>
+                        Phone
+                      </Text>
+                    </div>
+                    <Form.Item name='representativeNumber' style={{ marginBottom: 0 }}>
+                      <Input
+                        disabled
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          fontSize: 14,
+                          color: '#666',
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+
+              {/* Message */}
+              <div className='mb-8'>
+                <Title level={4} style={{ color: '#ff7a00', marginBottom: 16 }}>
+                  Message
+                </Title>
+                <Form.Item name='message' style={{ marginBottom: 0 }}>
+                  <TextArea
+                    rows={4}
+                    disabled
+                    style={{
+                      backgroundColor: '#f5f5f5',
+                      border: '1px solid #e8e8e8',
+                      borderRadius: 8,
+                      padding: 12,
+                      fontSize: 14,
+                      color: '#333',
+                    }}
+                  />
                 </Form.Item>
               </div>
 
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <Form.Item label='Phone' name='phone'>
-                  <Input disabled className='rounded-md' />
-                </Form.Item>
+              {/* Request Information */}
+              <div className='mb-8'>
+                <Title level={4} style={{ color: '#ff7a00', marginBottom: 24 }}>
+                  Request Information
+                </Title>
 
-                <Form.Item label='Email' name='email'>
-                  <Input disabled className='rounded-md' />
-                </Form.Item>
+                <Row gutter={[32, 24]}>
+                  <Col xs={24} md={12}>
+                    <div className='mb-2'>
+                      <Text strong style={{ fontSize: 16 }}>
+                        Request Type
+                      </Text>
+                    </div>
+                    <Form.Item name='requestType' style={{ marginBottom: 0 }}>
+                      <Tag
+                        style={{
+                          backgroundColor: '#f0f0f0',
+                          border: '1px solid #d9d9d9',
+                          borderRadius: 16,
+                          padding: '4px 12px',
+                          fontSize: 14,
+                          color: '#333',
+                        }}
+                      >
+                        <Input
+                          disabled
+                          style={{
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            fontSize: 14,
+                            color: '#333',
+                          }}
+                        />
+                      </Tag>
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <div className='mb-2'>
+                      <Text strong style={{ fontSize: 16 }}>
+                        Status
+                      </Text>
+                    </div>
+                    <Form.Item name='status' style={{ marginBottom: 0 }}>
+                      <Select
+                        disabled={!isEditable || !isStatusChangeable}
+                        style={{
+                          minWidth: 150,
+                          borderRadius: 16,
+                        }}
+                        onChange={handleStatusChange}
+                        suffixIcon={isEditable && isStatusChangeable ? undefined : null}
+                      >
+                        <Option value={requestData.status}>{requestData.status}</Option>
+                        {isEditable &&
+                          availableStatuses.map((status) => (
+                            <Option key={status} value={status}>
+                              {status}
+                            </Option>
+                          ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
               </div>
-
-              <Form.Item label='Message' name='message'>
-                <TextArea rows={4} disabled className='rounded-md' />
-              </Form.Item>
 
               {/* Hidden field for rejection reason */}
               <Form.Item name='rejectionReason' style={{ display: 'none' }}>
                 <Input />
               </Form.Item>
 
-              {requestData && (
-                <div className='mt-6 p-4 bg-gray-50 rounded-md'>
-                  <Text strong>Request Information:</Text>
-                  <div className='mt-2 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
-                    <div>
-                      <Text type='secondary'>Created:</Text> {formatDate(requestData.createdAt)}
-                    </div>
-                    <div>
-                      <Text type='secondary'>Last Updated:</Text>{' '}
-                      {formatDate(requestData.updatedAt)}
-                    </div>
-                    <div>
-                      <Text type='secondary'>Current Status:</Text>{' '}
-                      <span style={{ color: getStatusColor(requestData.status) }}>
-                        {requestData.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Buttons */}
-              <div className='flex justify-end space-x-4 mt-6'>
+              {/* Action Buttons */}
+              <div className='flex justify-end space-x-3 mt-8'>
                 {!isEditable ? (
                   <Button
+                    icon={<EditOutlined />}
                     onClick={() => setIsEditable(true)}
-                    className='bg-[#ff7a00] text-white'
+                    style={{
+                      backgroundColor: '#ff7a00',
+                      borderColor: '#ff7a00',
+                      color: 'white',
+                      borderRadius: 6,
+                    }}
                     disabled={!isStatusChangeable}
                   >
                     Edit
                   </Button>
                 ) : (
                   <>
-                    <Button onClick={handleReset}>Cancel</Button>
+                    <Button onClick={handleReset} style={{ borderRadius: 6 }}>
+                      Cancel
+                    </Button>
                     <Button
                       htmlType='submit'
                       loading={loading}
                       icon={<SaveOutlined />}
-                      className='bg-[#ff7a00] text-white'
+                      style={{
+                        backgroundColor: '#ff7a00',
+                        borderColor: '#ff7a00',
+                        color: 'white',
+                        borderRadius: 6,
+                      }}
                     >
-                      {loading ? 'Saving...' : 'Save'}
+                      Save
                     </Button>
                   </>
                 )}
               </div>
             </Form>
           </div>
-
-          {/* Status History Modal */}
-          <Modal
-            title='Status History'
-            open={showHistory}
-            onCancel={() => setShowHistory(false)}
-            footer={[
-              <Button key='close' onClick={() => setShowHistory(false)}>
-                Close
-              </Button>,
-            ]}
-            width={600}
-          >
-            <Timeline>
-              {statusHistory.map((item) => (
-                <Timeline.Item key={item.id} color={getStatusColor(item.status)}>
-                  <div>
-                    <div className='font-semibold'>{item.status}</div>
-                    <div className='text-sm text-gray-600'>
-                      By {item.updatedBy} • {formatDate(item.updatedAt)}
-                    </div>
-                    {item.comment && <div className='text-sm mt-1'>{item.comment}</div>}
-                    {item.reason && (
-                      <div className='text-sm mt-1 text-red-600'>
-                        <strong>Reason:</strong> {item.reason}
-                      </div>
-                    )}
-                  </div>
-                </Timeline.Item>
-              ))}
-            </Timeline>
-          </Modal>
 
           {/* Reject Modal */}
           <RejectModal
