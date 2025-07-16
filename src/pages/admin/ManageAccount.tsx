@@ -8,9 +8,12 @@ import {
   UserRoundMinus,
   UserSearch,
   ChevronDown,
+  Plus,
+  ClipboardPaste,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import CreateAccount from './modals/CreateAccount';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
@@ -27,6 +30,9 @@ interface Account {
 }
 
 const ManageAccount: React.FC = () => {
+  const [createAccountModal, setCreateAccountModal] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
   const [stats, setStats] = useState<{
     total: number;
     Active: number;
@@ -119,7 +125,7 @@ const ManageAccount: React.FC = () => {
 
   const columns: ColumnsType<Account> = [
     {
-      title: 'Name',
+      title: 'NAME',
       dataIndex: 'name',
       key: 'name',
       render: (text) => text,
@@ -127,7 +133,7 @@ const ManageAccount: React.FC = () => {
     {
       title: (
         <div className='flex items-center gap-1'>
-          <span>Role</span>
+          <span>ROLE</span>
           <ChevronDown className='w-4 h-4 text-gray-400' />
         </div>
       ),
@@ -135,19 +141,19 @@ const ManageAccount: React.FC = () => {
       key: 'role',
     },
     {
-      title: 'Email',
+      title: 'EMAIL',
       dataIndex: 'email',
       key: 'email',
     },
     {
-      title: 'Create Date',
+      title: 'CREATE TIME',
       dataIndex: 'createdAt',
       key: 'createdAt',
     },
     {
       title: (
         <div className='flex items-center gap-1'>
-          <span>Status</span>
+          <span>STATUS</span>
           <ChevronDown className='w-4 h-4 text-gray-400' />
         </div>
       ),
@@ -271,235 +277,287 @@ const ManageAccount: React.FC = () => {
   }
 
   return (
-    <div className='flex flex-1 flex-col px-4 py-6 overflow-x-hidden w-auto'>
+    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
       <AdminHeader />
       <LayoutWrapper>
-        <h3 className='my-5 text-lg font-semibold'>Overview</h3>
-
-        <div className='flex flex-1 flex-wrap gap-2 mb-10 items-center justify-center'>
-          {items.map((item) => (
-            <div
-              key={item.label}
-              className={`flex flex-wrap justify-between items-center rounded-xl px-0 sm:px-6 py-4 w-[150px] bg-white sm:scale-[1] scale-[0.8]`}
-              style={{
-                boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06)',
-              }}
+        <div className='flex flex-1 flex-col px-4 py-6 overflow-x-hidden w-auto'>
+          <div className='flex justify-end mb-4 flex-row gap-2'>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
             >
-              <div className='flex flex-col items-start justify-center gap-1 w-1/2 h-[60px]'>
-                <p className={`text-sm ${item.color} font-semibold`}>{item.label}</p>
-                <p className='text-[28px] font-semibold text-gray-500'>{item.value}</p>
-              </div>
+              <Plus width={'15px'} height={'15px'} /> Create Account
+            </button>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+            >
+              <ClipboardPaste width={'15px'} height={'15px'} /> Export
+            </button>
+          </div>
+
+          <h3 className='my-5 text-lg font-semibold'>Overview</h3>
+
+          <div className='flex flex-1 flex-wrap gap-2 mb-10 items-center justify-center'>
+            {items.map((item) => (
               <div
-                className={`flex h-[60px] w-[60px] items-center justify-center rounded-[23px] ${item.bg}`}
+                key={item.label}
+                className={`flex flex-wrap justify-between items-center rounded-xl px-0 sm:px-6 py-4 w-[150px] bg-white sm:scale-[1] scale-[0.8]`}
+                style={{
+                  boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06)',
+                }}
               >
-                {item.icon}
+                <div className='flex flex-col items-start justify-center gap-1 w-1/2 h-[60px]'>
+                  <p className={`text-sm ${item.color} font-semibold`}>{item.label}</p>
+                  <p className='text-[28px] font-semibold text-gray-500'>{item.value}</p>
+                </div>
+                <div
+                  className={`flex h-[60px] w-[60px] items-center justify-center rounded-[23px] ${item.bg}`}
+                >
+                  {item.icon}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
-        <Table
-          columns={columns}
-          dataSource={accounts}
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize: pageSize,
-            total: totalCount,
-            onChange: (page: number) => setCurrentPage(page),
-            position: ['bottomCenter'],
-          }}
-          scroll={{ x: '100%' }}
-          bordered
-          className='px-5'
-          onRow={(record: Account) => ({
-            onClick: () => {
-              setSelectedUser(record);
-              setIsModalOpen(true);
-              setIsEditMode(false);
-            },
-            style: { cursor: 'pointer' },
-          })}
-        />
-        <Modal
-          open={isModalOpen}
-          onCancel={() => setIsModalOpen(false)}
-          footer={null}
-          centered
-          width={650}
-          bodyStyle={{ borderRadius: 20, padding: 8 }}
-        >
-          <h2
-            style={{
-              fontWeight: 600,
-              fontSize: 24,
-              marginBottom: 16,
-              borderBottom: '2px solid #e67c3f',
-              paddingBottom: 8,
+          <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
+          <Table
+            columns={columns}
+            dataSource={accounts}
+            loading={loading}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: totalCount,
+              onChange: (page: number) => setCurrentPage(page),
+              position: ['bottomCenter'],
             }}
+            scroll={{ x: '100%' }}
+            bordered
+            className='px-5'
+            onRow={(record: Account) => ({
+              onClick: () => {
+                setSelectedUser(record);
+                setIsModalOpen(true);
+                setIsEditMode(false);
+              },
+              style: { cursor: 'pointer' },
+            })}
+          />
+          <Modal
+            open={isModalOpen}
+            onCancel={() => setIsModalOpen(false)}
+            footer={null}
+            centered
+            width={650}
+            bodyStyle={{ borderRadius: 20, padding: 8 }}
           >
-            Edit Account
-          </h2>
-          <div style={{ marginBottom: 10 }}>
-            <label htmlFor='edit-account-name'>Name</label>
-            <Input
-              id='edit-account-name'
-              value={selectedUser?.name}
-              disabled={!isEditMode}
+            <h2
               style={{
-                marginTop: 4,
-                marginBottom: 10,
-                background: !isEditMode ? '#eee' : undefined,
-                height: 44,
-                fontSize: 15,
-              }}
-              placeholder='Example'
-            />
-            <label htmlFor='edit-account-email'>Email</label>
-            <Input
-              id='edit-account-email'
-              value={selectedUser?.email}
-              disabled={!isEditMode}
-              style={{
-                marginTop: 4,
-                marginBottom: 10,
-                background: !isEditMode ? '#eee' : undefined,
-                height: 44,
-                fontSize: 15,
-              }}
-              placeholder='example@gmail.com'
-            />
-            <div style={{ display: 'flex', gap: 16 }}>
-              <div style={{ flex: 1 }}>
-                <label htmlFor='edit-account-role'>Role</label>
-                <Select
-                  id='edit-account-role'
-                  value={selectedUser?.role}
-                  disabled={!isEditMode}
-                  style={{
-                    width: '100%',
-                    marginTop: 4,
-                    background: !isEditMode ? '#eee' : undefined,
-                    height: 44,
-                    fontSize: 14,
-                    borderRadius: !isEditMode ? 8 : undefined,
-                  }}
-                >
-                  <Select.Option value='Marketing'>Marketing</Select.Option>
-                  <Select.Option value='Admin'>Admin</Select.Option>
-                </Select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label htmlFor='edit-account-status'>Status</label>
-                <Select
-                  id='edit-account-status'
-                  value={selectedUser?.status}
-                  disabled={!isEditMode}
-                  open={statusDropdownOpen}
-                  onDropdownVisibleChange={(open: boolean) => {
-                    if (isEditMode && open) {
-                      setShowStatusWarning(true);
-                    } else {
-                      setStatusDropdownOpen(open);
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    marginTop: 4,
-                    background: !isEditMode ? '#eee' : undefined,
-                    height: 44,
-                    fontSize: 14,
-                    borderRadius: !isEditMode ? 8 : undefined,
-                  }}
-                >
-                  <Select.Option value='Active'>Active</Select.Option>
-                  <Select.Option value='Blocked'>Blocked</Select.Option>
-                  <Select.Option value='Deactivated'>Deactivated</Select.Option>
-                  <Select.Option value='Pending'>Pending</Select.Option>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
-            {!isEditMode ? (
-              <Button
-                type='primary'
-                style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
-                onClick={() => setIsEditMode(true)}
-              >
-                Edit
-              </Button>
-            ) : (
-              <Button
-                type='primary'
-                style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
-                onClick={() => setIsEditMode(false)}
-              >
-                Save
-              </Button>
-            )}
-          </div>
-        </Modal>
-        <Modal
-          open={showStatusWarning}
-          onCancel={() => setShowStatusWarning(false)}
-          footer={null}
-          centered
-          width={450}
-          bodyStyle={{ borderRadius: 24, padding: 32, textAlign: 'center' }}
-          maskClosable={false}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div
-              style={{
-                background: '#FFF2F0',
-                borderRadius: '50%',
-                width: 100,
-                height: 100,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 24px auto',
+                fontWeight: 600,
+                fontSize: 24,
+                marginBottom: 16,
+                borderBottom: '2px solid #e67c3f',
+                paddingBottom: 8,
               }}
             >
-              <ExclamationCircleOutlined style={{ color: '#EF3826', fontSize: 48 }} />
-            </div>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Warning</div>
-            <div style={{ fontSize: 16, marginBottom: 32 }}>
-              This action will disable the admin&apos;s access. Do you want to continue?
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
-              <Button
-                onClick={() => setShowStatusWarning(false)}
+              Edit Account
+            </h2>
+            <div style={{ marginBottom: 10 }}>
+              <label htmlFor='edit-account-name'>Name</label>
+              <Input
+                id='edit-account-name'
+                value={selectedUser?.name}
+                disabled={!isEditMode}
                 style={{
-                  minWidth: 120,
-                  background: '#fff',
-                  border: '1px solid #ddd',
-                  color: '#444',
-                  borderRadius: 8,
+                  marginTop: 4,
+                  marginBottom: 10,
+                  background: !isEditMode ? '#eee' : undefined,
+                  height: 44,
+                  fontSize: 15,
+                }}
+                placeholder='Example'
+              />
+              <label htmlFor='edit-account-email'>Email</label>
+              <Input
+                id='edit-account-email'
+                value={selectedUser?.email}
+                disabled={!isEditMode}
+                style={{
+                  marginTop: 4,
+                  marginBottom: 10,
+                  background: !isEditMode ? '#eee' : undefined,
+                  height: 44,
+                  fontSize: 15,
+                }}
+                placeholder='example@gmail.com'
+              />
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor='edit-account-role'>Role</label>
+                  <Select
+                    id='edit-account-role'
+                    value={selectedUser?.role}
+                    disabled={!isEditMode}
+                    style={{
+                      width: '100%',
+                      marginTop: 4,
+                      background: !isEditMode ? '#eee' : undefined,
+                      height: 44,
+                      fontSize: 14,
+                      borderRadius: !isEditMode ? 8 : undefined,
+                    }}
+                  >
+                    <Select.Option value='Marketing'>Marketing</Select.Option>
+                    <Select.Option value='Admin'>Admin</Select.Option>
+                  </Select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor='edit-account-status'>Status</label>
+                  <Select
+                    id='edit-account-status'
+                    value={selectedUser?.status}
+                    disabled={!isEditMode}
+                    open={statusDropdownOpen}
+                    onDropdownVisibleChange={(open: boolean) => {
+                      if (isEditMode && open) {
+                        setShowStatusWarning(true);
+                      } else {
+                        setStatusDropdownOpen(open);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      marginTop: 4,
+                      background: !isEditMode ? '#eee' : undefined,
+                      height: 44,
+                      fontSize: 14,
+                      borderRadius: !isEditMode ? 8 : undefined,
+                    }}
+                  >
+                    <Select.Option value='Active'>Active</Select.Option>
+                    <Select.Option value='Blocked'>Blocked</Select.Option>
+                    <Select.Option value='Deactivated'>Deactivated</Select.Option>
+                    <Select.Option value='Pending'>Pending</Select.Option>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+              {!isEditMode ? (
+                <Button
+                  type='primary'
+                  style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
+                  onClick={() => setIsEditMode(true)}
+                >
+                  Edit
+                </Button>
+              ) : (
+                <Button
+                  type='primary'
+                  style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
+                  onClick={() => setIsEditMode(false)}
+                >
+                  Save
+                </Button>
+              )}
+            </div>
+          </Modal>
+          <Modal
+            open={showStatusWarning}
+            onCancel={() => setShowStatusWarning(false)}
+            footer={null}
+            centered
+            width={450}
+            bodyStyle={{ borderRadius: 24, padding: 32, textAlign: 'center' }}
+            maskClosable={false}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div
+                style={{
+                  background: '#FFF2F0',
+                  borderRadius: '50%',
+                  width: 100,
+                  height: 100,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 24px auto',
                 }}
               >
-                Cancel
-              </Button>
-              <Button
-                type='primary'
-                style={{
-                  minWidth: 120,
-                  background: '#e67c3f',
-                  borderColor: '#e67c3f',
-                  borderRadius: 8,
-                }}
-                onClick={() => {
-                  setShowStatusWarning(false);
-                  setStatusDropdownOpen(true);
-                }}
-              >
-                OK
-              </Button>
+                <ExclamationCircleOutlined style={{ color: '#EF3826', fontSize: 48 }} />
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Warning</div>
+              <div style={{ fontSize: 16, marginBottom: 32 }}>
+                This action will disable the admin&apos;s access. Do you want to continue?
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+                <Button
+                  onClick={() => setShowStatusWarning(false)}
+                  style={{
+                    minWidth: 120,
+                    background: '#fff',
+                    border: '1px solid #ddd',
+                    color: '#444',
+                    borderRadius: 8,
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type='primary'
+                  style={{
+                    minWidth: 120,
+                    background: '#e67c3f',
+                    borderColor: '#e67c3f',
+                    borderRadius: 8,
+                  }}
+                  onClick={() => {
+                    setShowStatusWarning(false);
+                    setStatusDropdownOpen(true);
+                  }}
+                >
+                  OK
+                </Button>
+              </div>
             </div>
-          </div>
-        </Modal>
+          </Modal>
+          <CreateAccount
+            open={isCreateOpen}
+            onCancel={() => setIsCreateOpen(false)}
+            onSubmit={async (values) => {
+              try {
+                const payload = {
+                  name: values.name,
+                  email: values.email,
+                  job: values.role,
+                };
+
+                await axios.post('/users', payload);
+
+                const res = await axios.get('/users');
+                const users = res.data.data;
+                const total = res.data.meta?.totalItems ?? users.length;
+
+                const formattedUsers = users.map((user: any) => ({
+                  key: String(user.id),
+                  name: user.name,
+                  role: user.job ?? '-',
+                  email: user.email,
+                  createdAt: user.createdAt,
+                  status: mapBackendStatus(user.status),
+                }));
+
+                setAccounts(formattedUsers);
+                setTotalCount(total);
+                setIsCreateOpen(false);
+              } catch (error: any) {
+                console.error('Error creating account:', error);
+                alert(error.response?.data?.message || 'Failed to create account.');
+              }
+            }}
+          />
+        </div>
       </LayoutWrapper>
     </div>
   );
