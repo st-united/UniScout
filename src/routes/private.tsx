@@ -1,8 +1,5 @@
 import { lazy } from 'react';
 
-const PrivateLayout = lazy(() => import('@app/components/templates/PrivateLayout'));
-const NotFound = lazy(() => import('@app/pages/NotFound/NotFound'));
-const Forbidden = lazy(() => import('@app/pages/Forbidden/Forbidden'));
 import AdminLayout from '@app/components/templates/AdminLayout/AdminLayout';
 import ProtectedRoute from '@app/components/templates/ProtectedRoute';
 import CreateUniversity from '@app/pages/admin/CreateUniversity';
@@ -13,6 +10,10 @@ import ManageRequest from '@app/pages/admin/ManageRequest';
 import RequestDetail from '@app/pages/admin/RequestDetail';
 import UniversityListPage from '@app/pages/admin/UniversityListPage';
 import SignIn from '@app/pages/SignIn/SignIn';
+
+const PrivateLayout = lazy(() => import('@app/components/templates/PrivateLayout'));
+const NotFound = lazy(() => import('@app/pages/NotFound/NotFound'));
+const Forbidden = lazy(() => import('@app/pages/Forbidden/Forbidden'));
 
 const routes = [
   {
