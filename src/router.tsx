@@ -7,7 +7,7 @@ import publicRoutes from '@app/routes/public';
 const hostname = window.location.hostname;
 const isAdmin = hostname.includes('admin.uniscout.minthome.site');
 
-const routes = isAdmin ? [...privateRoutes] : [...privateRoutes];
+const routes = isAdmin ? [...privateRoutes] : [...publicRoutes];
 
 const router = createBrowserRouter([
   {
