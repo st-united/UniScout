@@ -1,4 +1,5 @@
-import { Table, Select } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { Table, Select, Modal, Input, Button } from 'antd';
 import axios from 'axios';
 import {
   Users,
@@ -13,6 +14,8 @@ import {
 import React, { useEffect, useState } from 'react';
 
 import CreateAccount from './modals/CreateAccount';
+import AdminHeader from '../../components/AdminHeader';
+import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
@@ -43,6 +46,13 @@ const ManageAccount: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Account | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const [showStatusWarning, setShowStatusWarning] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   const colorMap: Record<Account['status'], { text: string; bg: string }> = {
     Active: { text: '#00B69B', bg: 'rgba(0, 182, 155, 0.3)' },
@@ -118,6 +128,7 @@ const ManageAccount: React.FC = () => {
       title: 'NAME',
       dataIndex: 'name',
       key: 'name',
+      render: (text) => text,
     },
     {
       title: (
@@ -176,7 +187,28 @@ const ManageAccount: React.FC = () => {
                 color: text,
                 fontWeight: 600,
               }}
-              getPopupContainer={(trigger) => trigger.parentNode}
+              getPopupContainer={(trigger: HTMLElement) => trigger.parentNode as HTMLElement}
+              onDropdownVisibleChange={(open: boolean) => {
+                if (open) {
+                  Modal.confirm({
+                    title: 'Warning',
+                    icon: <ExclamationCircleOutlined />,
+                    content: (
+                      <div style={{ fontSize: 16, marginBottom: 32 }}>
+                        This action will disable the admin&apos;s access. Do you want to continue?
+                      </div>
+                    ),
+                    okText: 'Yes',
+                    cancelText: 'No',
+                    onOk() {
+                      console.log('OK');
+                    },
+                    onCancel() {
+                      console.log('Cancel');
+                    },
+                  });
+                }
+              }}
             >
               {Object.entries(colorMap).map(([key, value]) => (
                 <Option key={key} value={key}>

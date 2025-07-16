@@ -1,5 +1,5 @@
-import { SearchOutlined, BellOutlined } from '@ant-design/icons';
-import { Input, Badge, Button, Dropdown, List, Typography } from 'antd';
+import { BellOutlined } from '@ant-design/icons';
+import { Badge, Button, Dropdown, List, Typography } from 'antd';
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -16,15 +16,13 @@ interface NotificationItem {
 }
 
 // Interface for component props
-interface SearchNotificationBarProps {
-  onSearch?: (searchValue: string) => void;
+interface AdminNotificationProps {
   onNotificationClick?: (notification: NotificationItem) => void;
   onMarkAllAsRead?: () => void;
-  placeholder?: string;
   className?: string;
 }
 
-// Mock notification data - replace with your actual data
+// Mock notification data - replace with real data source
 const mockNotifications: NotificationItem[] = [
   {
     id: 1,
@@ -52,52 +50,31 @@ const mockNotifications: NotificationItem[] = [
   },
 ];
 
-const AdminSearchFilter: React.FC<SearchNotificationBarProps> = ({
-  onSearch,
+const AdminNotification: React.FC<AdminNotificationProps> = ({
   onNotificationClick,
   onMarkAllAsRead,
-  placeholder = 'Search',
   className = '',
 }) => {
-  const [searchValue, setSearchValue] = useState('');
   const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
   const location = useLocation();
-  const isDashboard = location.pathname === '/';
+  const isDashboard =
+    location.pathname.startsWith('/manage') || location.pathname.startsWith('/dashboard');
 
-  // Count unread notifications
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  // Handle search input change
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchValue(value);
-    if (onSearch) {
-      onSearch(value);
-    }
-  };
-
-  // Handle notification item click
   const handleNotificationItemClick = (notification: NotificationItem) => {
-    // Mark as read when clicked
     setNotifications((prev) =>
       prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
     );
 
-    if (onNotificationClick) {
-      onNotificationClick(notification);
-    }
+    onNotificationClick?.(notification);
   };
 
-  // Handle mark all as read
   const handleMarkAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-
-    if (onMarkAllAsRead) {
-      onMarkAllAsRead();
-    }
+    onMarkAllAsRead?.();
   };
 
-  // Notification dropdown menu
   const notificationDropdown = (
     <div
       className='w-80 max-w-sm bg-white rounded-lg shadow-lg border border-gray-200'
@@ -170,83 +147,27 @@ const AdminSearchFilter: React.FC<SearchNotificationBarProps> = ({
       className={`px-6 pt-4 pb-0 border-b border-gray-200 ${className}`}
       style={{ backgroundColor: '#FFFFFF' }}
     >
-      <div
-        className={`flex items-center justify-between ${!isDashboard ? 'max-w-7xl mx-auto' : ''}`}
-      >
-        {/* Search Section */}
-
-        {!isDashboard && (
-          <div className='w-[600px]'>
-            <div style={{ display: 'flex', height: 40 }}>
-              <Input
-                placeholder={placeholder}
-                value={searchValue}
-                onChange={handleSearchChange}
-                bordered={false}
-                style={{
-                  flex: 1,
-                  fontSize: '14px',
-                  padding: '0 12px', // No vertical padding
-                  border: '1px solid #d9d9d9',
-                  borderRight: 'none', // To avoid double border with button
-                  borderRadius: '8px 0 0 8px',
-                  height: '100%',
-                  lineHeight: 'normal',
-                }}
-                className='bg-white'
-              />
-              <Button
-                type='primary'
-                onClick={() => onSearch?.(searchValue)}
-                style={{
-                  backgroundColor: '#ff7a00',
-                  border: '1px solid #d9d9d9',
-                  borderRadius: '0 8px 8px 0',
-                  width: 32,
-                  height: '100%',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  padding: 0,
-                }}
-                icon={<SearchOutlined style={{ fontSize: '16px' }} />}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Notification Section */}
-        <div className='ml-6'>
-          <Dropdown
-            overlay={notificationDropdown}
-            trigger={['click']}
-            placement='bottomRight'
-            overlayStyle={{ zIndex: 9999 }}
-            getPopupContainer={(trigger) => trigger.parentElement || document.body}
+      <div className={`flex items-center justify-end ${!isDashboard ? 'max-w-7xl mx-auto' : ''}`}>
+        <Dropdown
+          overlay={notificationDropdown}
+          trigger={['click']}
+          placement='bottomRight'
+          overlayStyle={{ zIndex: 9999 }}
+          getPopupContainer={(trigger) => trigger.parentElement || document.body}
+        >
+          <Button
+            type='text'
+            size='large'
+            className='flex items-center justify-center w-12 h-12 rounded-full hover:bg-orange-100 transition-colors'
           >
-            <Button
-              type='text'
-              size='large'
-              className='flex items-center justify-center w-12 h-12 rounded-full hover:bg-orange-100 transition-colors'
-            >
-              <Badge count={unreadCount} size='small' offset={[2, -2]}>
-                <BellOutlined className='text-xl text-gray-600 hover:text-orange-500 transition-colors' />
-              </Badge>
-            </Button>
-          </Dropdown>
-        </div>
+            <Badge count={unreadCount} size='small' offset={[2, -2]}>
+              <BellOutlined className='text-xl text-gray-600 hover:text-orange-500 transition-colors' />
+            </Badge>
+          </Button>
+        </Dropdown>
       </div>
-
-      {/* Search Results Info */}
-      {/*searchValue && (
-        <div className='max-w-7xl mx-auto mt-3'>
-          <Text className='text-sm text-orange-700'>
-            Searching for: &quot;<span className='font-medium'>{searchValue}</span>&quot;
-          </Text>
-        </div>
-      )*/}
     </div>
   );
 };
 
-export default AdminSearchFilter;
+export default AdminNotification;
