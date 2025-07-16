@@ -15,6 +15,7 @@ import {
   Checkbox,
   Input,
 } from 'antd';
+import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -25,7 +26,23 @@ import type { ColumnsType } from 'antd/es/table';
 const { Option } = Select;
 const { Title } = Typography;
 
-// Interface for user request
+// API Base URL
+const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
+
+// Interface for API responses
+interface ContactRequestType {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface ContactSubmissionStatus {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+// Interface for user request (updated to match API response)
 interface UserRequest {
   id: string;
   number: number;
@@ -35,7 +52,16 @@ interface UserRequest {
   status: 'Pending' | 'In Progress' | 'Rejected' | 'Completed';
   submittedBy: string;
   submittedDate: string;
+  submittedAt: string; // API timestamp field
   description?: string;
+}
+
+// API Response interface
+interface ApiResponse {
+  data: UserRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 // Custom hook for debouncing input values
@@ -51,8 +77,8 @@ export function useDebounce<T>(value: T, delay: number): T {
 }
 
 const sortOptions = [
-  { label: 'Sort by: newest first', value: 'new-to-old' },
-  { label: 'Sort by: oldest first', value: 'old-to-new' },
+  { label: 'Sort by: newest first', value: 'DESC' },
+  { label: 'Sort by: oldest first', value: 'ASC' },
 ];
 
 type FilterKey = 'country' | 'requestType' | 'status' | 'search';
@@ -62,7 +88,14 @@ const ManageRequest: React.FC = () => {
   const [requestData, setRequestData] = useState<UserRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
   const navigate = useNavigate();
+
+  // State for API data
+  const [contactRequestTypes, setContactRequestTypes] = useState<string[]>([]);
+  const [contactSubmissionStatuses, setContactSubmissionStatuses] = useState<string[]>([]);
+  const [loadingRequestTypes, setLoadingRequestTypes] = useState(false);
+  const [loadingSubmissionStatuses, setLoadingSubmissionStatuses] = useState(false);
 
   const [filters, setFilters] = useState<Record<FilterKey, string[]>>({
     country: [],
@@ -73,7 +106,8 @@ const ManageRequest: React.FC = () => {
 
   const debouncedFilters = useDebounce(filters, 400);
 
-  const [sortBy, setSortBy] = useState('Sort by: newest first');
+  const [sortOrder, setSortOrder] = useState('DESC'); // Changed from sortBy to sortOrder
+  const [sortBy] = useState('submittedAt'); // Fixed sort field
   const [searchInput, setSearchInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -82,109 +116,53 @@ const ManageRequest: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
 
-  // Mock data for demonstration
-  const mockRequests: UserRequest[] = [
-    {
-      id: '1',
-      number: 1,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Pending',
-      submittedBy: 'john.doe@email.com',
-      submittedDate: '2024-01-15',
-    },
-    {
-      id: '2',
-      number: 2,
-      requestType: 'Update Information',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Rejected',
-      submittedBy: 'jane.smith@email.com',
-      submittedDate: '2024-01-14',
-    },
-    {
-      id: '3',
-      number: 3,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'In Progress',
-      submittedBy: 'bob.wilson@email.com',
-      submittedDate: '2024-01-13',
-    },
-    {
-      id: '4',
-      number: 4,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Completed',
-      submittedBy: 'alice.johnson@email.com',
-      submittedDate: '2024-01-12',
-    },
-    {
-      id: '5',
-      number: 5,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Completed',
-      submittedBy: 'charlie.brown@email.com',
-      submittedDate: '2024-01-11',
-    },
-    {
-      id: '6',
-      number: 6,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Completed',
-      submittedBy: 'diana.prince@email.com',
-      submittedDate: '2024-01-10',
-    },
-    {
-      id: '7',
-      number: 7,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Completed',
-      submittedBy: 'edward.stark@email.com',
-      submittedDate: '2024-01-09',
-    },
-    {
-      id: '8',
-      number: 8,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Completed',
-      submittedBy: 'frank.castle@email.com',
-      submittedDate: '2024-01-08',
-    },
-    {
-      id: '9',
-      number: 9,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Completed',
-      submittedBy: 'grace.hopper@email.com',
-      submittedDate: '2024-01-07',
-    },
-    {
-      id: '10',
-      number: 10,
-      requestType: 'New University',
-      country: 'America',
-      universityName: 'Harvard University (HU)',
-      status: 'Completed',
-      submittedBy: 'henry.ford@email.com',
-      submittedDate: '2024-01-06',
-    },
-  ];
+  // API Functions
+  const fetchContactRequestTypes = async () => {
+    setLoadingRequestTypes(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/admin/contact/request-types`, {
+        headers: {
+          accept: '*/*',
+        },
+      });
+
+      if (Array.isArray(response.data.data)) {
+        setContactRequestTypes(response.data.data);
+      } else {
+        throw new Error('Invalid request types format');
+      }
+    } catch (error) {
+      console.error('Error fetching contact request types:', error);
+      message.error('Failed to fetch request types');
+      // fallback
+      setContactRequestTypes(['New University', 'Update Information', 'Remove University']);
+    } finally {
+      setLoadingRequestTypes(false);
+    }
+  };
+
+  const fetchContactSubmissionStatuses = async () => {
+    setLoadingSubmissionStatuses(true);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/admin/contact/submission-statuses`, {
+        headers: {
+          accept: '*/*',
+        },
+      });
+
+      if (Array.isArray(response.data.data)) {
+        setContactSubmissionStatuses(response.data.data);
+      } else {
+        throw new Error('Invalid response format for submission statuses');
+      }
+    } catch (error) {
+      console.error('Error fetching contact submission statuses:', error);
+      message.error('Failed to fetch submission statuses');
+      setContactSubmissionStatuses(['Pending', 'In Progress', 'Rejected', 'Completed']);
+    } finally {
+      setLoadingSubmissionStatuses(false);
+    }
+  };
 
   // Check screen size
   useEffect(() => {
@@ -197,32 +175,75 @@ const ManageRequest: React.FC = () => {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
+  // Load API data on component mount
+  useEffect(() => {
+    fetchContactRequestTypes();
+    fetchContactSubmissionStatuses();
+  }, []);
+
   const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
     setFilters({ ...filters, [field]: values });
     setCurrentPage(1);
   };
 
+  // Updated fetchRequests to use real API
   const fetchRequests = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Simulate API call with mock data
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setRequestData(mockRequests);
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        pageSize: pageSize.toString(),
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+      });
+
+      // Add filters if they exist
+      if (debouncedFilters.requestType.length > 0) {
+        params.append('requestType', debouncedFilters.requestType[0]); // API seems to accept single value
+      }
+      if (debouncedFilters.country.length > 0) {
+        params.append('country', debouncedFilters.country[0]); // API seems to accept single value
+      }
+      if (debouncedFilters.status.length > 0) {
+        params.append('status', debouncedFilters.status[0]); // API seems to accept single value
+      }
+      if (debouncedFilters.search.length > 0 && debouncedFilters.search[0].trim()) {
+        params.append('search', debouncedFilters.search[0].trim());
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/admin/contact?${params.toString()}`, {
+        headers: {
+          accept: '*/*',
+        },
+      });
+
+      // Handle API response
+      if (response.data && response.data.data) {
+        const apiData: ApiResponse = response.data;
+        setRequestData(apiData.data);
+        setTotalCount(apiData.total);
+      } else {
+        throw new Error('Invalid API response format');
+      }
     } catch (err) {
-      const errorMessage = 'Failed to fetch requests';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch requests';
       setError(errorMessage);
       message.error(errorMessage);
+      console.error('API Error:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, pageSize, sortBy, sortOrder, debouncedFilters]);
 
+  // Fetch requests when dependencies change
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // Update search filter when search input changes
   useEffect(() => {
     setFilters((prevFilters) => {
       if (prevFilters.search[0] === searchInput) return prevFilters;
@@ -250,7 +271,8 @@ const ManageRequest: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      // Simulate export functionality
+      // You can implement export functionality here
+      // For now, simulating export
       await new Promise((resolve) => setTimeout(resolve, 1000));
       message.success('Requests exported successfully');
     } catch (error) {
@@ -268,47 +290,24 @@ const ManageRequest: React.FC = () => {
     navigate(`/request-detail/${record.id}`);
   };
 
-  // Get unique values for filter options
+  // Get unique values for filter options (these will be populated from API data)
   const getUniqueCountries = () => {
+    // You might want to fetch this from a separate API endpoint
+    // For now, using static data
     return ['America', 'Vietnam', 'Japan', 'Korea', 'Australia', 'India'];
   };
 
-  const getUniqueRequestTypes = () => {
-    return ['New University', 'Update Information', 'Remove University'];
-  };
+  const getUniqueRequestTypes = () => contactRequestTypes;
+  const getUniqueStatuses = () => contactSubmissionStatuses;
 
-  const getUniqueStatuses = () => {
-    return ['Pending', 'In Progress', 'Rejected', 'Completed'];
-  };
-
-  // Enhanced filter function
-  const filteredRequests = requestData.filter((request) => {
-    const searchValue = filters.search[0] || '';
-
-    const searchMatch =
-      !searchValue ||
-      request.universityName.toLowerCase().includes(searchValue.toLowerCase()) ||
-      request.country.toLowerCase().includes(searchValue.toLowerCase()) ||
-      request.requestType.toLowerCase().includes(searchValue.toLowerCase());
-
-    return (
-      searchMatch &&
-      (filters.country.length === 0 || filters.country.includes(request.country)) &&
-      (filters.requestType.length === 0 || filters.requestType.includes(request.requestType)) &&
-      (filters.status.length === 0 || filters.status.includes(request.status))
-    );
-  });
-
-  const sortedRequests = [...filteredRequests].sort((a, b) => {
-    switch (sortBy) {
-      case 'new-to-old':
-        return a.number - b.number;
-      case 'old-to-new':
-        return b.number - a.number;
-      default:
-        return 0;
+  // Handle sort change
+  const handleSortChange = (value: string) => {
+    const option = sortOptions.find((opt) => opt.value === value);
+    if (option) {
+      setSortOrder(value);
+      setCurrentPage(1);
     }
-  });
+  };
 
   // Check if any filters are active
   const hasActiveFilters = Object.values(filters).some(
@@ -433,12 +432,6 @@ const ManageRequest: React.FC = () => {
     },
   ];
 
-  // Pagination for current page data
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const currentPageData = sortedRequests.slice(startIndex, endIndex);
-  const totalCount = sortedRequests.length;
-
   // Filter component for desktop (without search)
   const FilterSection = () => (
     <Row gutter={[16, 16]} style={{ marginBottom: 24 }} wrap>
@@ -474,6 +467,7 @@ const ManageRequest: React.FC = () => {
           onChange={(values) => handleMultiFilterChange('requestType', values || [])}
           style={{ width: '100%' }}
           placeholder='All Type'
+          loading={loadingRequestTypes}
         >
           {getUniqueRequestTypes().map((type) => (
             <Option key={type} value={type}>
@@ -494,6 +488,7 @@ const ManageRequest: React.FC = () => {
           onChange={(values) => handleMultiFilterChange('status', values || [])}
           style={{ width: '100%' }}
           placeholder='All Status'
+          loading={loadingSubmissionStatuses}
         >
           {getUniqueStatuses().map((status) => (
             <Option key={status} value={status}>
@@ -529,7 +524,11 @@ const ManageRequest: React.FC = () => {
             Reset Filter
           </button>
         </div>
-        <Select value={sortBy} onChange={setSortBy} style={{ width: '100%', marginTop: '8px' }}>
+        <Select
+          value={sortOrder}
+          onChange={handleSortChange}
+          style={{ width: '100%', marginTop: '8px' }}
+        >
           {sortOptions.map((option) => (
             <Option key={option.value} value={option.value}>
               {option.label}
@@ -712,7 +711,7 @@ const ManageRequest: React.FC = () => {
             {/* Table */}
             <Table
               columns={columns}
-              dataSource={currentPageData}
+              dataSource={requestData}
               rowKey='id'
               loading={loading}
               onRow={(record) => ({

@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
+import devplusLogo from '../assets/images/devplus.png';
 import { removeStorageData } from '@app/config/storage';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
 import { logout } from '@app/redux/features/auth/authSlice';
@@ -94,28 +95,29 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   return (
     <>
       {/* Mobile menu button */}
-      <div className='lg:hidden fixed top-4 left-4 z-50'>
-        <button
-          onClick={() => setIsOpen(true)}
-          className='p-2 bg-white rounded-lg shadow-md text-gray-700 hover:bg-gray-50'
-        >
-          <Menu className='w-6 h-6' />
-        </button>
+      <div className='lg:hidden fixed top-3 left-3 z-50'>
+        {!isOpen && (
+          <button
+            onClick={() => setIsOpen(true)}
+            className='p-2 bg-white rounded-lg shadow text-gray-700 hover:bg-gray-50'
+          >
+            <Menu className='w-6 h-6' />
+          </button>
+        )}
       </div>
 
       {/* Sidebar */}
       <div
-        className={`fixed z-30 w-64 bg-white flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
-        style={{
-          top: '64px', // Position below header
-          bottom: '0', // Extend to bottom
-          height: 'calc(100vh - 64px)', // Subtract header height (64px = h-16)
-        }}
+        className={`w-64 bg-white flex flex-col justify-between transform transition-transform duration-300 ease-in-out shadow-lg
+        fixed top-0 left-0 h-full
+        ${isOpen ? 'z-50 translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        lg:top-[48px] lg:h-[calc(100vh-48px)] lg:z-30
+      `}
       >
-        {/* Mobile close button */}
-        <div className='lg:hidden flex justify-end p-4'>
+        {/* ✅ Mobile-only top bar: DevPlus logo + Close button in same row */}
+        <div className='block lg:hidden px-4 pt-4 pb-2 flex items-center justify-between'>
+          <img src={devplusLogo} alt='DevPlus Logo' className='h-10' />
+
           <button onClick={() => setIsOpen(false)} className='p-1 hover:bg-gray-100 rounded'>
             <X className='w-6 h-6 text-gray-700' />
           </button>
