@@ -1,4 +1,5 @@
-import { Table, Select } from 'antd';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { Table, Select, Modal, Input, Button } from 'antd';
 import axios from 'axios';
 import {
   Users,
@@ -39,6 +40,13 @@ const ManageAccount: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Account | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const [showStatusWarning, setShowStatusWarning] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   const colorMap: Record<Account['status'], { text: string; bg: string }> = {
     Active: { text: '#00B69B', bg: 'rgba(0, 182, 155, 0.3)' },
@@ -114,6 +122,7 @@ const ManageAccount: React.FC = () => {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      render: (text) => text,
     },
     {
       title: (
@@ -172,7 +181,28 @@ const ManageAccount: React.FC = () => {
                 color: text,
                 fontWeight: 600,
               }}
-              getPopupContainer={(trigger) => trigger.parentNode}
+              getPopupContainer={(trigger: HTMLElement) => trigger.parentNode as HTMLElement}
+              onDropdownVisibleChange={(open: boolean) => {
+                if (open) {
+                  Modal.confirm({
+                    title: 'Warning',
+                    icon: <ExclamationCircleOutlined />,
+                    content: (
+                      <div style={{ fontSize: 16, marginBottom: 32 }}>
+                        This action will disable the admin&apos;s access. Do you want to continue?
+                      </div>
+                    ),
+                    okText: 'Yes',
+                    cancelText: 'No',
+                    onOk() {
+                      console.log('OK');
+                    },
+                    onCancel() {
+                      console.log('Cancel');
+                    },
+                  });
+                }
+              }}
             >
               {Object.entries(colorMap).map(([key, value]) => (
                 <Option key={key} value={key}>
@@ -277,13 +307,199 @@ const ManageAccount: React.FC = () => {
             current: currentPage,
             pageSize: pageSize,
             total: totalCount,
-            onChange: (page) => setCurrentPage(page),
+            onChange: (page: number) => setCurrentPage(page),
             position: ['bottomCenter'],
           }}
           scroll={{ x: '100%' }}
           bordered
           className='px-5'
+          onRow={(record: Account) => ({
+            onClick: () => {
+              setSelectedUser(record);
+              setIsModalOpen(true);
+              setIsEditMode(false);
+            },
+            style: { cursor: 'pointer' },
+          })}
         />
+        <Modal
+          open={isModalOpen}
+          onCancel={() => setIsModalOpen(false)}
+          footer={null}
+          centered
+          width={650}
+          bodyStyle={{ borderRadius: 20, padding: 8 }}
+        >
+          <h2
+            style={{
+              fontWeight: 600,
+              fontSize: 24,
+              marginBottom: 16,
+              borderBottom: '2px solid #e67c3f',
+              paddingBottom: 8,
+            }}
+          >
+            Edit Account
+          </h2>
+          <div style={{ marginBottom: 10 }}>
+            <label htmlFor='edit-account-name'>Name</label>
+            <Input
+              id='edit-account-name'
+              value={selectedUser?.name}
+              disabled={!isEditMode}
+              style={{
+                marginTop: 4,
+                marginBottom: 10,
+                background: !isEditMode ? '#eee' : undefined,
+                height: 44,
+                fontSize: 15,
+              }}
+              placeholder='Example'
+            />
+            <label htmlFor='edit-account-email'>Email</label>
+            <Input
+              id='edit-account-email'
+              value={selectedUser?.email}
+              disabled={!isEditMode}
+              style={{
+                marginTop: 4,
+                marginBottom: 10,
+                background: !isEditMode ? '#eee' : undefined,
+                height: 44,
+                fontSize: 15,
+              }}
+              placeholder='example@gmail.com'
+            />
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label htmlFor='edit-account-role'>Role</label>
+                <Select
+                  id='edit-account-role'
+                  value={selectedUser?.role}
+                  disabled={!isEditMode}
+                  style={{
+                    width: '100%',
+                    marginTop: 4,
+                    background: !isEditMode ? '#eee' : undefined,
+                    height: 44,
+                    fontSize: 14,
+                    borderRadius: !isEditMode ? 8 : undefined,
+                  }}
+                >
+                  <Select.Option value='Marketing'>Marketing</Select.Option>
+                  <Select.Option value='Admin'>Admin</Select.Option>
+                </Select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label htmlFor='edit-account-status'>Status</label>
+                <Select
+                  id='edit-account-status'
+                  value={selectedUser?.status}
+                  disabled={!isEditMode}
+                  open={statusDropdownOpen}
+                  onDropdownVisibleChange={(open: boolean) => {
+                    if (isEditMode && open) {
+                      setShowStatusWarning(true);
+                    } else {
+                      setStatusDropdownOpen(open);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    marginTop: 4,
+                    background: !isEditMode ? '#eee' : undefined,
+                    height: 44,
+                    fontSize: 14,
+                    borderRadius: !isEditMode ? 8 : undefined,
+                  }}
+                >
+                  <Select.Option value='Active'>Active</Select.Option>
+                  <Select.Option value='Blocked'>Blocked</Select.Option>
+                  <Select.Option value='Deactivated'>Deactivated</Select.Option>
+                  <Select.Option value='Pending'>Pending</Select.Option>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+            {!isEditMode ? (
+              <Button
+                type='primary'
+                style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
+                onClick={() => setIsEditMode(true)}
+              >
+                Edit
+              </Button>
+            ) : (
+              <Button
+                type='primary'
+                style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
+                onClick={() => setIsEditMode(false)}
+              >
+                Save
+              </Button>
+            )}
+          </div>
+        </Modal>
+        <Modal
+          open={showStatusWarning}
+          onCancel={() => setShowStatusWarning(false)}
+          footer={null}
+          centered
+          width={450}
+          bodyStyle={{ borderRadius: 24, padding: 32, textAlign: 'center' }}
+          maskClosable={false}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div
+              style={{
+                background: '#FFF2F0',
+                borderRadius: '50%',
+                width: 100,
+                height: 100,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 24px auto',
+              }}
+            >
+              <ExclamationCircleOutlined style={{ color: '#EF3826', fontSize: 48 }} />
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Warning</div>
+            <div style={{ fontSize: 16, marginBottom: 32 }}>
+              This action will disable the admin&apos;s access. Do you want to continue?
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+              <Button
+                onClick={() => setShowStatusWarning(false)}
+                style={{
+                  minWidth: 120,
+                  background: '#fff',
+                  border: '1px solid #ddd',
+                  color: '#444',
+                  borderRadius: 8,
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type='primary'
+                style={{
+                  minWidth: 120,
+                  background: '#e67c3f',
+                  borderColor: '#e67c3f',
+                  borderRadius: 8,
+                }}
+                onClick={() => {
+                  setShowStatusWarning(false);
+                  setStatusDropdownOpen(true);
+                }}
+              >
+                OK
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </LayoutWrapper>
     </div>
   );
