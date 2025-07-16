@@ -7,9 +7,12 @@ import {
   UserRoundMinus,
   UserSearch,
   ChevronDown,
+  Plus,
+  ClipboardPaste,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+import CreateAccount from './modals/CreateAccount';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
@@ -24,6 +27,9 @@ interface Account {
 }
 
 const ManageAccount: React.FC = () => {
+  const [createAccountModal, setCreateAccountModal] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
   const [stats, setStats] = useState<{
     total: number;
     Active: number;
@@ -109,14 +115,14 @@ const ManageAccount: React.FC = () => {
 
   const columns: ColumnsType<Account> = [
     {
-      title: 'Name',
+      title: 'NAME',
       dataIndex: 'name',
       key: 'name',
     },
     {
       title: (
         <div className='flex items-center gap-1'>
-          <span>Role</span>
+          <span>ROLE</span>
           <ChevronDown className='w-4 h-4 text-gray-400' />
         </div>
       ),
@@ -124,19 +130,19 @@ const ManageAccount: React.FC = () => {
       key: 'role',
     },
     {
-      title: 'Email',
+      title: 'EMAIL',
       dataIndex: 'email',
       key: 'email',
     },
     {
-      title: 'Create Date',
+      title: 'CREATE TIME',
       dataIndex: 'createdAt',
       key: 'createdAt',
     },
     {
       title: (
         <div className='flex items-center gap-1'>
-          <span>Status</span>
+          <span>STATUS</span>
           <ChevronDown className='w-4 h-4 text-gray-400' />
         </div>
       ),
@@ -240,6 +246,21 @@ const ManageAccount: React.FC = () => {
 
   return (
     <div className='flex flex-1 flex-col px-4 py-6 overflow-x-hidden w-auto'>
+      <div className='flex justify-end mb-4 flex-row gap-2'>
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+        >
+          <Plus width={'15px'} height={'15px'} /> Create Account
+        </button>
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+        >
+          <ClipboardPaste width={'15px'} height={'15px'} /> Export
+        </button>
+      </div>
+
       <h3 className='my-5 text-lg font-semibold'>Overview</h3>
 
       <div className='flex flex-1 flex-wrap gap-2 mb-10 items-center justify-center'>
@@ -265,6 +286,39 @@ const ManageAccount: React.FC = () => {
       </div>
 
       <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
+      <CreateAccount
+        open={isCreateOpen}
+        onCancel={() => setIsCreateOpen(false)}
+        onSubmit={async (values) => {
+          try {
+            const payload = {
+              name: values.name,
+              email: values.email,
+              job: values.role,
+            };
+            await axios.post('/users', payload);
+            const res = await axios.get('/users');
+            const users = res.data.data;
+            const total = res.data.meta?.totalItems ?? users.length;
+            const formattedUsers = users.map((user: any) => ({
+              key: String(user.id),
+              name: user.name,
+              role: user.job ?? '-',
+              email: user.email,
+              createdAt: user.createdAt,
+              status: mapBackendStatus(user.status),
+            }));
+
+            setAccounts(formattedUsers);
+            setTotalCount(total);
+            setIsCreateOpen(false);
+          } catch (error: any) {
+            console.error('Error creating account:', error);
+            alert(error.response?.data?.message || 'Failed to create account.');
+          }
+        }}
+      />
+
       <Table
         columns={columns}
         dataSource={accounts}
