@@ -1,7 +1,8 @@
+import { VerticalAlignBottomOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { getNames } from 'country-list';
 import { Paperclip } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // Import the configured axios instance
 // Assuming SuccessNotification componet exists and takes `show`, `type`, `message` props
 // If you don't have this component, you'll need to define it or replace it with inline notification logic.
@@ -43,7 +44,13 @@ interface FormErrors {
 }
 
 // Enums and constants for dropdowns
-const universityTypes = ['Public', 'Private', 'Academic', 'College', 'International'];
+const universityTypes = [
+  { label: 'Public', value: 'public' },
+  { label: 'Private', value: 'private' },
+  { label: 'Academy', value: 'academy' },
+  { label: 'College', value: 'college' },
+  { label: 'International', value: 'international' },
+];
 const fieldsOfStudy = [
   { label: 'Natural Sciences', value: 'natural_sciences', id: '9' },
   { label: 'Engineering & Technology', value: 'engineering_technology', id: '5' },
@@ -79,16 +86,16 @@ export default function ConnectWithUs() {
   // --- New University Form State ---
   const [newUniData, setNewUniData] = useState({
     universityName: '',
+    abbreviation: '', // Added abbreviation
     location: '',
     website: '',
     type: '',
     numberOfStudents: '',
-    fieldsOfStudy: '',
     description: '',
     country: '',
     email: '',
     phone: '',
-    FieldofStudy: '',
+    subjectsFile: null as File | null, // For file upload
   });
   const [newUniErrors, setNewUniErrors] = useState<any>({});
 
@@ -110,6 +117,12 @@ export default function ConnectWithUs() {
   const [submissionStatus, setSubmissionStatus] = useState<
     'idle' | 'success' | 'error' | 'submitting'
   >('idle');
+
+  // Add state for drag-and-drop
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Add ref for subjects file input
+  const subjectsFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCountries(getNames());
@@ -139,7 +152,6 @@ export default function ConnectWithUs() {
     if (!newUniData.universityName) errors.universityName = 'Required.';
     if (!newUniData.location) errors.location = 'Required.';
     if (!newUniData.type) errors.type = 'Required.';
-    if (!newUniData.fieldsOfStudy) errors.fieldsOfStudy = 'Required.';
     if (!newUniData.country) errors.country = 'Required.';
     if (!newUniData.website) errors.website = 'Required.';
     if (!newUniData.email) errors.email = 'Required.';
@@ -147,7 +159,6 @@ export default function ConnectWithUs() {
       errors.email = 'Invalid email.';
     if (!newUniData.phone) errors.phone = 'Required.';
     else if (!/^\+?\d+$/.test(newUniData.phone)) errors.phone = 'Only numbers and +.';
-    if (!newUniData.FieldofStudy) errors.FieldofStudy = 'Required.';
     // description is now optional, so no validation here
     return errors;
   };
@@ -161,64 +172,106 @@ export default function ConnectWithUs() {
     }
     setSubmissionStatus('submitting');
     try {
-      // Map frontend fields to API fields
-      const payload = {
-        name: newUniData.universityName, // Use universityName as name
-        email: newUniData.email,
-        message: newUniData.description, // Use description as message
-        requestType: 'New University',
-        universityName: newUniData.universityName,
-        phoneNumber: newUniData.phone,
-        country: newUniData.country,
-        location: newUniData.location,
-        type: newUniData.type,
-        universityEmail: newUniData.email, // Use email as universityEmail
-        website: newUniData.website,
-        broadFieldOfStudy: newUniData.fieldsOfStudy,
-        specificFieldOfStudy: newUniData.FieldofStudy,
-        rank: '',
-        numberOfStudents: newUniData.numberOfStudents,
-        // No files for new university
-      };
-      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', payload);
+      const formData = new FormData();
+      formData.append('representativeNumber', newUniData.phone); // university phone
+      formData.append('representativeName', ''); // not collected, send empty
+      formData.append('requestType', 'New University');
+      formData.append('universityEmail', newUniData.email);
+      formData.append('abbreviation', newUniData.abbreviation);
+      if (newUniData.subjectsFile) {
+        formData.append('subjectsExcel', newUniData.subjectsFile);
+      }
+      formData.append('location', newUniData.location);
+      formData.append('country', newUniData.country);
+      formData.append('files', 'string'); // as in curl
+      formData.append('universityNumber', newUniData.phone); // university phone again
+      formData.append('numberOfStudents', newUniData.numberOfStudents);
+      formData.append('universityName', newUniData.universityName);
+      formData.append('type', newUniData.type.toLowerCase());
+      formData.append('website', newUniData.website);
+      formData.append('description', newUniData.description);
+      formData.append('representativeEmail', newUniData.email);
+
+      // Debug: Log all FormData entries before sending
+      for (const pair of formData.entries()) {
+        console.log(pair[0] + ':', pair[1]);
+      }
+
+      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setSubmissionStatus('success');
       showNotification('University submitted successfully.', 'success');
       setNewUniData({
         universityName: '',
+        abbreviation: '',
         location: '',
         website: '',
         type: '',
         numberOfStudents: '',
-        fieldsOfStudy: '',
         description: '',
         country: '',
         email: '',
         phone: '',
-        FieldofStudy: '',
+        subjectsFile: null,
       });
     } catch (err: any) {
       setSubmissionStatus('error');
-      showNotification('Submission failed.', 'error');
+      if (err.response) {
+        console.error('API error:', err.response.data);
+        showNotification(
+          `Submission failed: ${err.response.data.message || 'Unknown error'}`,
+          'error',
+        );
+      } else {
+        showNotification('Submission failed.', 'error');
+      }
     }
   };
 
   // Fetch subjects when broad field changes
-  useEffect(() => {
-    const selectedBroadField = fieldsOfStudy.find((f) => f.value === newUniData.fieldsOfStudy);
-    if (selectedBroadField) {
-      axios
-        .get(
-          `https://api.uniscout.dev.stunited.vn/api/universities/subjects?academicFieldId=${selectedBroadField.id}`,
-        )
-        .then((res) => {
-          setFieldOfStudyOptions(res.data.data.map((subject: any) => subject.name));
-        });
-      setNewUniData((prev) => ({ ...prev, FieldofStudy: '' })); // Clear specific field when broad changes
-    } else {
-      setFieldOfStudyOptions([]);
-      setNewUniData((prev) => ({ ...prev, FieldofStudy: '' }));
+  // useEffect(() => {
+  //   const selectedBroadField = fieldsOfStudy.find((f) => f.value === newUniData.fieldsOfStudy);
+  //   if (selectedBroadField) {
+  //     axios
+  //       .get(
+  //         `https://api.uniscout.dev.stunited.vn/api/universities/subjects?academicFieldId=${selectedBroadField.id}`,
+  //       )
+  //       .then((res) => {
+  //         setFieldOfStudyOptions(res.data.data.map((subject: any) => subject.name));
+  //       });
+  //     setNewUniData((prev) => ({ ...prev, FieldofStudy: '' })); // Clear specific field when broad changes
+  //   } else {
+  //     setFieldOfStudyOptions([]);
+  //     setNewUniData((prev) => ({ ...prev, FieldofStudy: '' }));
+  //   }
+  // }, [newUniData.fieldsOfStudy]);
+
+  const handleSubjectsFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewUniData((prev) => ({ ...prev, subjectsFile: e.target.files![0] }));
     }
-  }, [newUniData.fieldsOfStudy]);
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await fetch(
+        'https://api.uniscout.dev.stunited.vn/api/contact/template/Sample.xlsx',
+      );
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Example.xls'; // or 'Sample.xlsx' if you want the original name
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Failed to download template. Please try again later.');
+    }
+  };
 
   // --- Handlers for Update Information ---
   const handleUpdateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -286,25 +339,31 @@ export default function ConnectWithUs() {
     }
     setSubmissionStatus('submitting');
     try {
-      // Map frontend fields to API fields
-      const dataToSend = new FormData();
-      dataToSend.append('name', updateData.representativeName);
-      dataToSend.append('email', updateData.email);
-      dataToSend.append('message', updateData.message);
-      dataToSend.append('requestType', 'Update Information');
-      dataToSend.append('universityName', updateData.universityName);
-      dataToSend.append('phoneNumber', updateData.phone);
-      dataToSend.append('country', '');
-      dataToSend.append('location', '');
-      dataToSend.append('type', '');
-      dataToSend.append('universityEmail', '');
-      dataToSend.append('website', '');
-      dataToSend.append('broadFieldOfStudy', '');
-      dataToSend.append('specificFieldOfStudy', '');
-      dataToSend.append('rank', '');
-      dataToSend.append('numberOfStudents', '');
-      updateData.attachment.forEach((file) => dataToSend.append('files', file));
-      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', dataToSend, {
+      const formData = new FormData();
+      formData.append('representativeNumber', updateData.phone || '');
+      formData.append('message', updateData.message || '');
+      formData.append('representativeName', updateData.representativeName || '');
+      formData.append('requestType', 'Update Information');
+      formData.append('universityEmail', '');
+      formData.append('abbreviation', '');
+      formData.append('subjectsExcel', '');
+      formData.append('location', '');
+      formData.append('country', '');
+      formData.append('files', '');
+      formData.append('universityNumber', '');
+      formData.append('numberOfStudents', '');
+      formData.append('universityName', updateData.universityName || '');
+      formData.append('type', '');
+      formData.append('website', '');
+      formData.append('description', '');
+      formData.append('representativeEmail', updateData.email || '');
+
+      // Debug: Log all FormData entries before sending
+      for (const pair of formData.entries()) {
+        console.log(pair[0] + ':', pair[1]);
+      }
+
+      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
@@ -322,6 +381,26 @@ export default function ConnectWithUs() {
     } catch (err: any) {
       setSubmissionStatus('error');
       showNotification('Submission failed.', 'error');
+    }
+  };
+
+  // Add drag-and-drop handlers for subjects file
+  const handleSubjectsDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleSubjectsDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  const handleSubjectsDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setNewUniData((prev) => ({ ...prev, subjectsFile: e.dataTransfer.files[0] }));
     }
   };
 
@@ -409,6 +488,23 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label
+                htmlFor='new-abbreviation'
+                className='block mb-2 text-sm font-medium text-orange-600'
+              >
+                Abbreviation
+              </label>
+              <input
+                id='new-abbreviation'
+                type='text'
+                name='abbreviation'
+                value={newUniData.abbreviation}
+                onChange={handleNewUniChange}
+                className='w-full border-0 border-b-2 border-[#E85A0C] rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400'
+                placeholder='Enter your abbreviation'
+              />
+            </div>
+            <div>
+              <label
                 htmlFor='new-country'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
@@ -478,6 +574,25 @@ export default function ConnectWithUs() {
               )}
             </div>
             <div>
+              <label htmlFor='new-phone' className='block mb-2 text-sm font-medium text-orange-600'>
+                Phone
+              </label>
+              <input
+                id='new-phone'
+                type='text'
+                name='phone'
+                value={newUniData.phone}
+                onChange={handleNewUniChange}
+                className={`w-full border-0 border-b-2 ${
+                  newUniErrors.phone ? 'border-red-500' : 'border-[#E85A0C]'
+                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400`}
+                placeholder='Enter your phone'
+              />
+              {newUniErrors.phone && (
+                <p className='text-red-500 text-sm mt-1'>{newUniErrors.phone}</p>
+              )}
+            </div>
+            <div>
               <label
                 htmlFor='new-website'
                 className='block mb-2 text-sm font-medium text-orange-600'
@@ -498,25 +613,6 @@ export default function ConnectWithUs() {
               )}
             </div>
             <div>
-              <label htmlFor='new-phone' className='block mb-2 text-sm font-medium text-orange-600'>
-                Phone
-              </label>
-              <input
-                id='new-phone'
-                type='text'
-                name='phone'
-                value={newUniData.phone}
-                onChange={handleNewUniChange}
-                className={`w-full border-0 border-b-2 ${
-                  newUniErrors.phone ? 'border-red-500' : 'border-[#E85A0C]'
-                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400`}
-                placeholder='Enter your phone'
-              />
-              {newUniErrors.phone && (
-                <p className='text-red-500 text-sm mt-1'>{newUniErrors.phone}</p>
-              )}
-            </div>
-            <div>
               <label htmlFor='new-type' className='block mb-2 text-sm font-medium text-orange-600'>
                 Type
               </label>
@@ -533,71 +629,13 @@ export default function ConnectWithUs() {
                   Select your type
                 </option>
                 {universityTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+                  <option key={type.value} value={type.value}>
+                    {type.label}
                   </option>
                 ))}
               </select>
               {newUniErrors.type && (
                 <p className='text-red-500 text-sm mt-1'>{newUniErrors.type}</p>
-              )}
-            </div>
-            <div>
-              <label
-                htmlFor='new-fieldsOfStudy'
-                className='block mb-2 text-sm font-medium text-orange-600'
-              >
-                Broad Fields
-              </label>
-              <select
-                id='new-fieldsOfStudy'
-                name='fieldsOfStudy'
-                value={newUniData.fieldsOfStudy}
-                onChange={handleNewUniChange}
-                className={`!text-[#6B7280] w-full border-0 border-b-2 ${
-                  newUniErrors.fieldsOfStudy ? 'border-red-500' : 'border-[#E85A0C]'
-                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors text-gray-700`}
-              >
-                <option value='' disabled>
-                  Select your fields
-                </option>
-                {fieldsOfStudy.map((field) => (
-                  <option key={field.value} value={field.value}>
-                    {field.label}
-                  </option>
-                ))}
-              </select>
-              {newUniErrors.fieldsOfStudy && (
-                <p className='text-red-500 text-sm mt-1'>{newUniErrors.fieldsOfStudy}</p>
-              )}
-            </div>
-            <div>
-              <label
-                htmlFor='FieldofStudy'
-                className='block mb-2 text-sm font-medium text-orange-600'
-              >
-                Field of Study
-              </label>
-              <select
-                id='FieldofStudy'
-                name='FieldofStudy'
-                value={newUniData.FieldofStudy}
-                onChange={handleNewUniChange}
-                className={`!text-[#6B7280] w-full border-0 border-b-2 ${
-                  newUniErrors.FieldofStudy ? 'border-red-500' : 'border-[#E85A0C]'
-                } rounded-none bg-transparent py-3 px-0 focus:outline-none focus:border-orange-500 transition-colors text-gray-700`}
-              >
-                <option value='' disabled>
-                  Select your Field of Study
-                </option>
-                {fieldOfStudyOptions.map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-              {newUniErrors.FieldofStudy && (
-                <p className='text-red-500 text-sm mt-1'>{newUniErrors.FieldofStudy}</p>
               )}
             </div>
             <div>
@@ -638,20 +676,107 @@ export default function ConnectWithUs() {
                 className={`w-full border-2 ${
                   newUniErrors.description ? 'border-red-500' : 'border-[#E85A0C]'
                 } rounded-xl py-4 px-4 resize-y focus:outline-none focus:border-orange-500 transition-colors placeholder-gray-400 shadow-sm min-h-[80px]`}
+                placeholder='Enter description about your university'
               />
               {newUniErrors.description && (
                 <p className='text-red-500 text-sm mt-1'>{newUniErrors.description}</p>
               )}
             </div>
-            <div className='md:col-span-2 flex justify-end'>
-              <button
-                type='submit'
-                className='px-10 py-3 font-medium text-white transition-all duration-200 transform rounded-full shadow-md bg-gradient-to-r from-orange-400 to-orange-600 hover:shadow-lg hover:scale-105 hover:from-orange-500 hover:to-orange-700'
-                disabled={submissionStatus === 'submitting'}
-              >
-                {submissionStatus === 'submitting' ? 'Sending...' : 'Send'}
-              </button>
+          </div>
+          {/* Subjects Section */}
+          <div className='mt-8'>
+            <div className='text-lg font-semibold text-orange-600 mb-2'>Subjects</div>
+            <div className='text-sm text-gray-500 mb-2'>
+              Please download this Excel file to fill in the subjects, then upload the completed
+              file.
             </div>
+            <div className='flex items-center gap-4 mb-4'>
+              <div className='flex items-center border border-gray-200 rounded-lg px-14 py-2 bg-white shadow-sm'>
+                <img
+                  src='./src/assets/images/excel-logo.png'
+                  alt='Excel'
+                  className='w-11 h-11 mr-3'
+                />
+                <span className='font-medium text-gray-700 text-l mr-28'>Example.xls</span>
+                <span
+                  onClick={handleDownloadTemplate}
+                  className='text-orange-600 hover:text-orange-800 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 cursor-pointer'
+                  title='Download Example.xls'
+                  style={{ border: 'none', background: 'none', boxShadow: 'none' }}
+                  role='button'
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleDownloadTemplate();
+                    }
+                  }}
+                >
+                  <VerticalAlignBottomOutlined style={{ fontSize: 36 }} />
+                </span>
+              </div>
+            </div>
+            <div className='mb-2 text-sm text-gray-500'>
+              Please upload your completed file below:
+            </div>
+            <div
+              className={`border-2 border-dashed border-orange-300 rounded-xl p-6 flex flex-col items-center justify-center bg-orange-50 mb-4 ${
+                isDragging ? 'bg-orange-100' : ''
+              }`}
+              onDragOver={handleSubjectsDragOver}
+              onDragLeave={handleSubjectsDragLeave}
+              onDrop={handleSubjectsDrop}
+            >
+              <input
+                type='file'
+                id='subjectsFile'
+                name='subjectsFile'
+                accept='.xls,.xlsx'
+                onChange={handleSubjectsFileChange}
+                className='hidden'
+                ref={subjectsFileInputRef}
+              />
+              {!newUniData.subjectsFile && (
+                <label htmlFor='subjectsFile' className='flex flex-col items-center cursor-pointer'>
+                  <CloudUploadOutlined
+                    style={{ fontSize: 40, color: '#f97316', marginBottom: '0.5rem' }}
+                  />
+                  <span className='text-gray-500'>
+                    Drag your file or <span className='text-orange-500 underline'>browse</span>
+                  </span>
+                  <span className='text-xs text-gray-400 mt-1'>Max 5 MB files are allowed</span>
+                </label>
+              )}
+              {newUniData.subjectsFile && (
+                <div className='mt-2 flex items-center justify-center gap-2'>
+                  <span className='text-base text-gray-800 font-medium bg-orange-100 px-3 py-1 rounded-full flex items-center'>
+                    {newUniData.subjectsFile.name}
+                    <button
+                      type='button'
+                      onClick={() => {
+                        setNewUniData((prev) => ({ ...prev, subjectsFile: null }));
+                        if (subjectsFileInputRef.current) {
+                          subjectsFileInputRef.current.value = '';
+                        }
+                      }}
+                      className='ml-2 w-5 h-5 flex items-center justify-center rounded-full bg-white border border-orange-300 text-orange-600 hover:bg-orange-100 hover:text-orange-800 transition-colors'
+                      title='Remove file'
+                    >
+                      &times;
+                    </button>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className='flex justify-end mt-8'>
+            <button
+              type='submit'
+              className='px-10 py-3 font-medium text-white transition-all duration-200 transform rounded-full shadow-md bg-gradient-to-r from-orange-400 to-orange-600 hover:shadow-lg hover:scale-105 hover:from-orange-500 hover:to-orange-700 text-lg'
+              disabled={submissionStatus === 'submitting'}
+            >
+              {submissionStatus === 'submitting' ? 'Sending...' : 'Send'}
+            </button>
           </div>
         </form>
       ) : (
@@ -771,16 +896,6 @@ export default function ConnectWithUs() {
                   multiple
                   className='hidden'
                 />
-                <label
-                  htmlFor='attachment'
-                  className='absolute p-1 text-gray-400 transition-colors rounded-full cursor-pointer bottom-4 right-4 hover:text-orange-500 hover:bg-orange-50'
-                  title={`Attach files (max ${MAX_FRONTEND_FILES}, 5MB each)`}
-                >
-                  <Paperclip size={20} />
-                  {updateData.attachment.length > 0 && (
-                    <span className='ml-1 text-sm'>{updateData.attachment.length}</span>
-                  )}
-                </label>
               </div>
               {updateErrors.message && (
                 <p className='text-red-500 text-sm mt-1'>{updateErrors.message}</p>
@@ -806,10 +921,6 @@ export default function ConnectWithUs() {
               {updateErrors.attachment && (
                 <p className='mt-2 text-sm text-red-500'>{updateErrors.attachment}</p>
               )}
-              <div className='text-s text-gray-500 mt-2'>
-                You can upload up to 5 files in PNG, JPG, JPEG, DOCX, DOC, or PDF format. Each file
-                must be no larger than 5MB
-              </div>
             </div>
             <div className='md:col-span-2 flex justify-end'>
               <button
