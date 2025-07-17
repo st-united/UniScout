@@ -17,6 +17,9 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import AdminHeader from '../../components/AdminHeader';
+import LayoutWrapper from '../../components/LayoutWrapper';
+
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title } = Typography;
@@ -328,530 +331,534 @@ const CreateUniversity = () => {
       }}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '16px' }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/universities')}
-            style={buttonStyles.back}
-            size='middle'
-            onMouseEnter={(e) => {
-              Object.assign(e.currentTarget.style, buttonStyles.backHover);
-            }}
-            onMouseLeave={(e) => {
-              Object.assign(e.currentTarget.style, buttonStyles.back);
-            }}
-          >
-            Back
-          </Button>
-          <Title
-            level={2}
+        <AdminHeader />
+        <LayoutWrapper>
+          {/* Header */}
+          <div style={{ marginBottom: '16px' }}>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate('/universities')}
+              style={buttonStyles.back}
+              size='middle'
+              onMouseEnter={(e) => {
+                Object.assign(e.currentTarget.style, buttonStyles.backHover);
+              }}
+              onMouseLeave={(e) => {
+                Object.assign(e.currentTarget.style, buttonStyles.back);
+              }}
+            >
+              Back
+            </Button>
+            <Title
+              level={2}
+              style={{
+                marginBottom: '8px',
+                fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                lineHeight: '1.2',
+              }}
+            >
+              Create University Information
+            </Title>
+          </div>
+          {/* Create University Form */}
+          <Card
             style={{
-              marginBottom: '8px',
-              fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-              lineHeight: '1.2',
+              marginBottom: '24px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            }}
+            bodyStyle={{
+              padding: '16px',
             }}
           >
-            Create University Information
-          </Title>
-        </div>
-
-        {/* Create University Form */}
-        <Card
-          style={{
-            marginBottom: '24px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          }}
-          bodyStyle={{
-            padding: '16px',
-          }}
-        >
-          <Form
-            form={form}
-            layout='vertical'
-            onFinish={onFinish}
-            initialValues={{
-              website: 'https://',
-              academicFields: [],
-              exchange: false,
-            }}
-            scrollToFirstError
-          >
-            {/* University Name, Abbreviation, Logo */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24} sm={24} md={8} lg={8}>
-                <Form.Item
-                  label='University Name'
-                  name='university'
-                  rules={[{ required: true, message: 'Please enter university name' }]}
-                >
-                  <Input placeholder='Enter your university name' size='large' />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={24} md={8} lg={8}>
-                <Form.Item
-                  label='Abbreviation'
-                  name='abbreviation'
-                  rules={[{ required: true, message: 'Please enter abbreviation' }]}
-                >
-                  <Input placeholder='Enter your abbreviation' size='large' />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={24} md={8} lg={8}>
-                <Form.Item
-                  label='Logo'
-                  name='logo'
-                  rules={[{ required: true, message: 'Please upload a logo' }]}
-                >
-                  <Dragger
-                    {...uploadProps}
-                    fileList={logoFile ? [logoFile as any] : []}
-                    style={{
-                      height: '150px',
-                      borderColor: '#ff8c00',
-                      backgroundColor: '#fff7e6',
-                      textAlign: 'center',
-                    }}
-                    itemRender={() => null}
-                  >
-                    {logoPreviewUrl ? (
-                      <img
-                        src={logoPreviewUrl}
-                        alt='Logo Preview'
-                        style={{
-                          width: '120px',
-                          height: '120px',
-                          objectFit: 'contain',
-                          display: 'block',
-                          margin: '0 auto',
-                        }}
-                      />
-                    ) : (
-                      <>
-                        <p className='ant-upload-drag-icon'>
-                          <InboxOutlined style={{ color: '#ff8c00', fontSize: '32px' }} />
-                        </p>
-                        <p
-                          className='ant-upload-text'
-                          style={{ fontSize: '14px', color: '#ff8c00' }}
-                        >
-                          Click or drag file to upload
-                        </p>
-                        <p
-                          className='ant-upload-hint'
-                          style={{ fontSize: '12px', color: '#ff8c00' }}
-                        >
-                          Support for single image upload. Max 5MB.
-                        </p>
-                      </>
-                    )}
-                  </Dragger>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Country, Location */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Country'
-                  name='country'
-                  rules={[{ required: true, message: 'Please enter country' }]}
-                >
-                  <Select placeholder='Select your country' size='large'>
-                    {availableCountries.map((country) => (
-                      <Option key={country} value={country}>
-                        {country}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Location'
-                  name='location'
-                  rules={[{ required: true, message: 'Please enter location' }]}
-                >
-                  <Input placeholder='Enter city or province' size='large' />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Latitude, Longitude */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Latitude'
-                  name='latitude'
-                  rules={[
-                    {
-                      pattern: /^-?([1-8]?[0-9]\.{1}\d{1,6}$|90\.{1}0{1,6}$)/,
-                      message: 'Please enter valid latitude',
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Input placeholder=' Enter your latitude e.g. 40.7128' size='large' />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Longitude'
-                  name='longitude'
-                  rules={[
-                    {
-                      pattern: /^-?([1]?[0-7][0-9]\.{1}\d{1,6}$|180\.{1}0{1,6}$)/,
-                      message: 'Please enter valid longitude',
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Input placeholder='Enter your longtitude e.g. -74.0060' size='large' />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Type, Student Population, Rank */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24} sm={24} md={8} lg={8}>
-                <Form.Item
-                  label='University Type'
-                  name='type'
-                  rules={[{ required: true, message: 'Please select university type' }]}
-                >
-                  <Select placeholder='Select your university type' size='large'>
-                    {universityTypes.map((type) => (
-                      <Option key={type.value} value={type.value}>
-                        {type.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8}>
-                <Form.Item
-                  label='Number of Students'
-                  name='studentPopulation'
-                  rules={[
-                    { required: true, message: 'Student population is required' },
-                    {
-                      type: 'integer',
-                      min: 1,
-                      message: 'Student population must be a positive integer',
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    min={1}
-                    precision={0}
-                    style={{ width: '100%' }}
-                    placeholder='Enter your number of students'
-                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    size='large'
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8}>
-                <Form.Item
-                  label='Rank'
-                  name='rank'
-                  rules={[
-                    {
-                      type: 'number',
-                      min: 1,
-                      message: 'Ranking must be a positive number',
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    min={1}
-                    style={{ width: '100%' }}
-                    placeholder='Enter your rank'
-                    size='large'
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Year, Contact */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Year Established'
-                  name='year'
-                  rules={[
-                    { required: true, message: 'Year is required' },
-                    {
-                      type: 'integer',
-                      min: 1000,
-                      max: new Date().getFullYear(),
-                      message: 'Year must be a valid integer and cannot be in the future',
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    min={1000}
-                    max={new Date().getFullYear()}
-                    precision={0}
-                    style={{ width: '100%' }}
-                    placeholder='Enter year established'
-                    size='large'
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Phone'
-                  name='contact'
-                  rules={[
-                    { required: true, message: 'Contact is required' },
-                    {
-                      validator: async (_, value) => {
-                        if (value) {
-                          if (typeof value !== 'string' || !/^\d+$/.test(value)) {
-                            throw new Error('Phone number must contain only digits');
-                          }
-
-                          if (value.length > 15) {
-                            throw new Error('Phone number must not exceed 15 digits');
-                          }
-                        }
-                      },
-                    },
-                  ]}
-                >
-                  <Input placeholder='Enter your phone (e.g., 84123456789)' size='large' />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Email, Website */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Email'
-                  name='email'
-                  rules={[
-                    { required: true, message: 'Please enter email' },
-                    { type: 'email', message: 'Please enter valid email' },
-                    {
-                      validator: async (_, value) => {
-                        value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-                      },
-                    },
-                  ]}
-                >
-                  <Input placeholder='Enter your email' size='large' />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={12}>
-                <Form.Item
-                  label='Website'
-                  name='website'
-                  rules={[
-                    { required: true, message: 'Please enter website URL' },
-                    {
-                      pattern: /^https?:\/\/.+/,
-                      message: 'Website URL must start with http:// or https://',
-                    },
-                    {
-                      validator: async (_, value: string) => {
-                        if (!value) return Promise.resolve();
-
-                        try {
-                          const url = new URL(value);
-                          const domain = url.hostname;
-
-                          if (!domain.includes('.')) {
-                            return Promise.reject(
-                              'Website must contain at least one dot (e.g., example.com)',
-                            );
-                          }
-
-                          if (/^[-.]/.test(domain) || /[-.]$/.test(domain)) {
-                            return Promise.reject(
-                              'Website must not start or end with a hyphen or dot',
-                            );
-                          }
-
-                          if (!/^[a-zA-Z0-9.-]+$/.test(domain)) {
-                            return Promise.reject(
-                              'Website contains invalid characters in domain (only letters, numbers, dots, and hyphens allowed)',
-                            );
-                          }
-
-                          if (/(\.\.|--)/.test(domain)) {
-                            return Promise.reject(
-                              'Website must not contain consecutive dots or hyphens',
-                            );
-                          }
-                          // If all checks pass, return resolved promise
-                          return Promise.resolve();
-                        } catch {
-                          return Promise.reject(
-                            'Invalid URL format. Must start with http:// or https://',
-                          );
-                        }
-                      },
-                    },
-                  ]}
-                >
-                  <Input placeholder='Enter your website e.g. https://example.com' size='large' />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Strength, Exchange */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24} sm={20} md={20}>
-                <Form.Item label='University Strength' name='strength'>
-                  <Input placeholder='Enter university strength/specialty' size='large' />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={4} md={4}>
-                <Form.Item
-                  label='Exchange Program'
-                  name='exchange'
-                  valuePropName='checked'
-                  style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
-                  labelCol={{ span: 24 }}
-                  colon={false}
-                >
-                  <Switch checkedChildren='Yes' unCheckedChildren='No' />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Description */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24}>
-                <Form.Item label='Description' name='description'>
-                  <TextArea
-                    rows={4}
-                    placeholder='Enter description about the university'
-                    showCount
-                    maxLength={250}
-                    style={{ fontSize: '16px' }}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Broad Fields */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24}>
-                <Form.Item
-                  label='Broad Fields'
-                  name='academicFields'
-                  rules={[{ required: true, message: 'Please select at least one academic field' }]}
-                >
-                  <Select
-                    mode='multiple'
-                    placeholder='Select broad fields of university'
-                    style={{ width: '100%' }}
-                    size='large'
-                    maxTagCount='responsive'
-                    onChange={handleAcademicFieldsChange}
-                  >
-                    {fieldNamesOptions.map((field) => (
-                      <Option key={field.value} value={field.value}>
-                        {field.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* Subjects - IMPROVED VERSION */}
-            <Row gutter={[12, 16]}>
-              <Col xs={24}>
-                {form.getFieldValue('academicFields')?.map((field: string) => (
+            <Form
+              form={form}
+              layout='vertical'
+              onFinish={onFinish}
+              initialValues={{
+                website: 'https://',
+                academicFields: [],
+                exchange: false,
+              }}
+              scrollToFirstError
+            >
+              {/* University Name, Abbreviation, Logo */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24} sm={24} md={8} lg={8}>
                   <Form.Item
-                    key={field}
-                    label={`Field of Study for ${
-                      fieldNamesOptions.find((f) => f.value === field)?.label || field
-                    }`}
-                    name={`subjects_${field}`}
+                    label='University Name'
+                    name='university'
+                    rules={[{ required: true, message: 'Please enter university name' }]}
+                  >
+                    <Input placeholder='Enter your university name' size='large' />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={24} md={8} lg={8}>
+                  <Form.Item
+                    label='Abbreviation'
+                    name='abbreviation'
+                    rules={[{ required: true, message: 'Please enter abbreviation' }]}
+                  >
+                    <Input placeholder='Enter your abbreviation' size='large' />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={24} md={8} lg={8}>
+                  <Form.Item
+                    label='Logo'
+                    name='logo'
+                    rules={[{ required: true, message: 'Please upload a logo' }]}
+                  >
+                    <Dragger
+                      {...uploadProps}
+                      fileList={logoFile ? [logoFile as any] : []}
+                      style={{
+                        height: '150px',
+                        borderColor: '#ff8c00',
+                        backgroundColor: '#fff7e6',
+                        textAlign: 'center',
+                      }}
+                      itemRender={() => null}
+                    >
+                      {logoPreviewUrl ? (
+                        <img
+                          src={logoPreviewUrl}
+                          alt='Logo Preview'
+                          style={{
+                            width: '120px',
+                            height: '120px',
+                            objectFit: 'contain',
+                            display: 'block',
+                            margin: '0 auto',
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <p className='ant-upload-drag-icon'>
+                            <InboxOutlined style={{ color: '#ff8c00', fontSize: '32px' }} />
+                          </p>
+                          <p
+                            className='ant-upload-text'
+                            style={{ fontSize: '14px', color: '#ff8c00' }}
+                          >
+                            Click or drag file to upload
+                          </p>
+                          <p
+                            className='ant-upload-hint'
+                            style={{ fontSize: '12px', color: '#ff8c00' }}
+                          >
+                            Support for single image upload. Max 5MB.
+                          </p>
+                        </>
+                      )}
+                    </Dragger>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Country, Location */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Country'
+                    name='country'
+                    rules={[{ required: true, message: 'Please enter country' }]}
+                  >
+                    <Select placeholder='Select your country' size='large'>
+                      {availableCountries.map((country) => (
+                        <Option key={country} value={country}>
+                          {country}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Location'
+                    name='location'
+                    rules={[{ required: true, message: 'Please enter location' }]}
+                  >
+                    <Input placeholder='Enter city or province' size='large' />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Latitude, Longitude */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Latitude'
+                    name='latitude'
                     rules={[
                       {
+                        pattern: /^-?([1-8]?[0-9]\.{1}\d{1,6}$|90\.{1}0{1,6}$)/,
+                        message: 'Please enter valid latitude',
                         required: true,
-                        message: `Please select at least one subject for ${field}`,
                       },
+                    ]}
+                  >
+                    <Input placeholder=' Enter your latitude e.g. 40.7128' size='large' />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Longitude'
+                    name='longitude'
+                    rules={[
+                      {
+                        pattern: /^-?([1]?[0-7][0-9]\.{1}\d{1,6}$|180\.{1}0{1,6}$)/,
+                        message: 'Please enter valid longitude',
+                        required: true,
+                      },
+                    ]}
+                  >
+                    <Input placeholder='Enter your longtitude e.g. -74.0060' size='large' />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Type, Student Population, Rank */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24} sm={24} md={8} lg={8}>
+                  <Form.Item
+                    label='University Type'
+                    name='type'
+                    rules={[{ required: true, message: 'Please select university type' }]}
+                  >
+                    <Select placeholder='Select your university type' size='large'>
+                      {universityTypes.map((type) => (
+                        <Option key={type.value} value={type.value}>
+                          {type.label}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12} md={8} lg={8}>
+                  <Form.Item
+                    label='Number of Students'
+                    name='studentPopulation'
+                    rules={[
+                      { required: true, message: 'Student population is required' },
+                      {
+                        type: 'integer',
+                        min: 1,
+                        message: 'Student population must be a positive integer',
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={1}
+                      precision={0}
+                      style={{ width: '100%' }}
+                      placeholder='Enter your number of students'
+                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      size='large'
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12} md={8} lg={8}>
+                  <Form.Item
+                    label='Rank'
+                    name='rank'
+                    rules={[
+                      {
+                        type: 'number',
+                        min: 1,
+                        message: 'Ranking must be a positive number',
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={1}
+                      style={{ width: '100%' }}
+                      placeholder='Enter your rank'
+                      size='large'
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Year, Contact */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Year Established'
+                    name='year'
+                    rules={[
+                      { required: true, message: 'Year is required' },
+                      {
+                        type: 'integer',
+                        min: 1000,
+                        max: new Date().getFullYear(),
+                        message: 'Year must be a valid integer and cannot be in the future',
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={1000}
+                      max={new Date().getFullYear()}
+                      precision={0}
+                      style={{ width: '100%' }}
+                      placeholder='Enter year established'
+                      size='large'
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Phone'
+                    name='contact'
+                    rules={[
+                      { required: true, message: 'Contact is required' },
+                      {
+                        validator: async (_, value) => {
+                          if (value) {
+                            if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+                              throw new Error('Phone number must contain only digits');
+                            }
+
+                            if (value.length > 15) {
+                              throw new Error('Phone number must not exceed 15 digits');
+                            }
+                          }
+                        },
+                      },
+                    ]}
+                  >
+                    <Input placeholder='Enter your phone (e.g., 84123456789)' size='large' />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Email, Website */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Email'
+                    name='email'
+                    rules={[
+                      { required: true, message: 'Please enter email' },
+                      { type: 'email', message: 'Please enter valid email' },
+                      {
+                        validator: async (_, value) => {
+                          value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+                        },
+                      },
+                    ]}
+                  >
+                    <Input placeholder='Enter your email' size='large' />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12} md={12}>
+                  <Form.Item
+                    label='Website'
+                    name='website'
+                    rules={[
+                      { required: true, message: 'Please enter website URL' },
+                      {
+                        pattern: /^https?:\/\/.+/,
+                        message: 'Website URL must start with http:// or https://',
+                      },
+                      {
+                        validator: async (_, value: string) => {
+                          if (!value) return Promise.resolve();
+
+                          try {
+                            const url = new URL(value);
+                            const domain = url.hostname;
+
+                            if (!domain.includes('.')) {
+                              return Promise.reject(
+                                'Website must contain at least one dot (e.g., example.com)',
+                              );
+                            }
+
+                            if (/^[-.]/.test(domain) || /[-.]$/.test(domain)) {
+                              return Promise.reject(
+                                'Website must not start or end with a hyphen or dot',
+                              );
+                            }
+
+                            if (!/^[a-zA-Z0-9.-]+$/.test(domain)) {
+                              return Promise.reject(
+                                'Website contains invalid characters in domain (only letters, numbers, dots, and hyphens allowed)',
+                              );
+                            }
+
+                            if (/(\.\.|--)/.test(domain)) {
+                              return Promise.reject(
+                                'Website must not contain consecutive dots or hyphens',
+                              );
+                            }
+                            // If all checks pass, return resolved promise
+                            return Promise.resolve();
+                          } catch {
+                            return Promise.reject(
+                              'Invalid URL format. Must start with http:// or https://',
+                            );
+                          }
+                        },
+                      },
+                    ]}
+                  >
+                    <Input placeholder='Enter your website e.g. https://example.com' size='large' />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Strength, Exchange */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24} sm={20} md={20}>
+                  <Form.Item label='University Strength' name='strength'>
+                    <Input placeholder='Enter university strength/specialty' size='large' />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={4} md={4}>
+                  <Form.Item
+                    label='Exchange Program'
+                    name='exchange'
+                    valuePropName='checked'
+                    style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}
+                    labelCol={{ span: 24 }}
+                    colon={false}
+                  >
+                    <Switch checkedChildren='Yes' unCheckedChildren='No' />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Description */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24}>
+                  <Form.Item label='Description' name='description'>
+                    <TextArea
+                      rows={4}
+                      placeholder='Enter description about the university'
+                      showCount
+                      maxLength={250}
+                      style={{ fontSize: '16px' }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Broad Fields */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24}>
+                  <Form.Item
+                    label='Broad Fields'
+                    name='academicFields'
+                    rules={[
+                      { required: true, message: 'Please select at least one academic field' },
                     ]}
                   >
                     <Select
                       mode='multiple'
-                      placeholder={
-                        loadingSubjects[field] ? 'Loading subjects...' : 'Select subjects'
-                      }
-                      options={fieldSubjectsMap[field]?.map((subject) => ({
-                        label: subject,
-                        value: subject,
-                      }))}
-                      disabled={loadingSubjects[field]}
-                      loading={loadingSubjects[field]}
-                      notFoundContent={
-                        loadingSubjects[field]
-                          ? 'Loading...'
-                          : !fieldSubjectsMap[field] || fieldSubjectsMap[field].length === 0
-                          ? 'No subjects available'
-                          : null
-                      }
+                      placeholder='Select broad fields of university'
+                      style={{ width: '100%' }}
                       size='large'
-                    />
+                      maxTagCount='responsive'
+                      onChange={handleAcademicFieldsChange}
+                    >
+                      {fieldNamesOptions.map((field) => (
+                        <Option key={field.value} value={field.value}>
+                          {field.label}
+                        </Option>
+                      ))}
+                    </Select>
                   </Form.Item>
-                ))}
-              </Col>
-            </Row>
+                </Col>
+              </Row>
 
-            {/* Submit Button */}
-            <Row gutter={[8, 16]}>
-              <Col xs={24} sm={12} md={12} lg={12}>
-                <Button
-                  onClick={handleReset}
-                  style={buttonStyles.reset}
-                  size='large'
-                  onMouseEnter={(e) => {
-                    Object.assign(e.currentTarget.style, {
-                      ...buttonStyles.reset,
-                      ...buttonStyles.resetHover,
-                    });
-                  }}
-                  onMouseLeave={(e) => {
-                    Object.assign(e.currentTarget.style, buttonStyles.reset);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </Col>
-              <Col xs={24} sm={12} md={12} lg={12}>
-                <Button
-                  type='primary'
-                  htmlType='submit'
-                  loading={loading}
-                  icon={<SaveOutlined />}
-                  size='large'
-                  style={buttonStyles.save}
-                  onMouseEnter={(e) => {
-                    if (!loading) {
+              {/* Subjects - IMPROVED VERSION */}
+              <Row gutter={[12, 16]}>
+                <Col xs={24}>
+                  {form.getFieldValue('academicFields')?.map((field: string) => (
+                    <Form.Item
+                      key={field}
+                      label={`Field of Study for ${
+                        fieldNamesOptions.find((f) => f.value === field)?.label || field
+                      }`}
+                      name={`subjects_${field}`}
+                      rules={[
+                        {
+                          required: true,
+                          message: `Please select at least one subject for ${field}`,
+                        },
+                      ]}
+                    >
+                      <Select
+                        mode='multiple'
+                        placeholder={
+                          loadingSubjects[field] ? 'Loading subjects...' : 'Select subjects'
+                        }
+                        options={fieldSubjectsMap[field]?.map((subject) => ({
+                          label: subject,
+                          value: subject,
+                        }))}
+                        disabled={loadingSubjects[field]}
+                        loading={loadingSubjects[field]}
+                        notFoundContent={
+                          loadingSubjects[field]
+                            ? 'Loading...'
+                            : !fieldSubjectsMap[field] || fieldSubjectsMap[field].length === 0
+                            ? 'No subjects available'
+                            : null
+                        }
+                        size='large'
+                      />
+                    </Form.Item>
+                  ))}
+                </Col>
+              </Row>
+
+              {/* Submit Button */}
+              <Row gutter={[8, 16]}>
+                <Col xs={24} sm={12} md={12} lg={12}>
+                  <Button
+                    onClick={handleReset}
+                    style={buttonStyles.reset}
+                    size='large'
+                    onMouseEnter={(e) => {
                       Object.assign(e.currentTarget.style, {
-                        ...buttonStyles.save,
-                        ...buttonStyles.saveHover,
+                        ...buttonStyles.reset,
+                        ...buttonStyles.resetHover,
                       });
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    Object.assign(e.currentTarget.style, buttonStyles.save);
-                  }}
-                >
-                  {loading ? 'Creating...' : 'Save'}
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Card>
+                    }}
+                    onMouseLeave={(e) => {
+                      Object.assign(e.currentTarget.style, buttonStyles.reset);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Col>
+                <Col xs={24} sm={12} md={12} lg={12}>
+                  <Button
+                    type='primary'
+                    htmlType='submit'
+                    loading={loading}
+                    icon={<SaveOutlined />}
+                    size='large'
+                    style={buttonStyles.save}
+                    onMouseEnter={(e) => {
+                      if (!loading) {
+                        Object.assign(e.currentTarget.style, {
+                          ...buttonStyles.save,
+                          ...buttonStyles.saveHover,
+                        });
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      Object.assign(e.currentTarget.style, buttonStyles.save);
+                    }}
+                  >
+                    {loading ? 'Creating...' : 'Save'}
+                  </Button>
+                </Col>
+              </Row>
+            </Form>
+          </Card>
+        </LayoutWrapper>
       </div>
     </div>
   );
