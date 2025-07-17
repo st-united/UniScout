@@ -170,7 +170,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className='flex min-h-screen bg-gray-50 flex-col px-4 overflow-y-auto flex-1'>
+    <div className='flex min-h-screen bg-gray-50 flex-col px-8 overflow-y-auto flex-1'>
       {/* Sidebar on the left */}
       <AdminHeader />
       <LayoutWrapper>
@@ -194,7 +194,7 @@ const DashboardPage = () => {
             </div>
           </div>
           {/* Charts Section */}
-          <div className='grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6 flex-1'>
+          <div className='grid grid-cols-1 gap-6 mb-6 flex-1'>
             {/* Website Traffic - full width */}
             <div className='col-span-1 xl:col-span-3 bg-white p-0 rounded-xl shadow-sm border overflow-hidden mb-8 flex-1'>
               <div className=' relative py-10 bg-[#f9fafb] rounded-3xl'>
