@@ -107,6 +107,7 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
                 !item.isRead ? 'bg-blue-50' : 'bg-white'
               }`}
               onClick={() => handleNotificationItemClick(item)}
+              style={{ paddingLeft: '10px' }} // Adjust padding inside the list item
             >
               <div className='w-full'>
                 <div className='flex justify-between items-start'>
@@ -151,7 +152,7 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
         <Dropdown
           overlay={notificationDropdown}
           trigger={['click']}
-          placement='bottomRight'
+          placement='bottomLeft' // Align dropdown to the left
           overlayStyle={{ zIndex: 9999 }}
           getPopupContainer={(trigger) => trigger.parentElement || document.body}
         >
