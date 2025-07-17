@@ -27,6 +27,7 @@ import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import ExportUniversityModal from './modals/ExportUniversityModal';
 import AdminHeader from '../../components/AdminHeader';
 import AdminSearchbar from '../../components/AdminSearchbar';
 import LayoutWrapper from '../../components/LayoutWrapper';
@@ -80,6 +81,7 @@ interface NotificationItem {
 // Custom hook for debouncing input values
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedValue(value), delay);
@@ -98,6 +100,7 @@ type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'se
 
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // State for university data
   const [universityData, setUniversityData] = useState<UniversityApiResponse>();
@@ -817,7 +820,7 @@ const UniversityListPage: React.FC = () => {
                     </Button>
                     <Button
                       icon={<ExportOutlined />}
-                      onClick={handleExport}
+                      onClick={() => setIsExportModalOpen(true)}
                       style={{
                         backgroundColor: '#ff7a00',
                         borderColor: '#ff7a00',
@@ -1049,6 +1052,11 @@ const UniversityListPage: React.FC = () => {
             <p className='text-sm text-gray-700 m-0'>{getConfirmationMessage()}</p>
           </div>
         </Modal>
+        <ExportUniversityModal
+          open={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          appliedFilters={filters}
+        />
       </LayoutWrapper>
     </div>
   );
