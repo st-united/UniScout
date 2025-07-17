@@ -51,7 +51,7 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
   const handleSubmit = async (values: ISignInForm) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await axios.post('/auth/login', {
         email: values.email,
         password: values.password,
       });
@@ -120,7 +120,9 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
             <Input
               placeholder='Enter your email'
               className='h-12 rounded-lg border-gray-200 text-base px-4'
-              onChange={(e) => onInputChange('email', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                onInputChange('email', e.target.value)
+              }
             />
           </Form.Item>
           <Form.Item
@@ -132,8 +134,12 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
             <Password
               placeholder='Enter your password'
               className='h-12 rounded-lg border-gray-200 text-base'
-              iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-              onChange={(e) => onInputChange('password', e.target.value)}
+              iconRender={(visible: boolean) =>
+                visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
+              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                onInputChange('password', e.target.value)
+              }
             />
           </Form.Item>
 
@@ -147,8 +153,12 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
                 backgroundColor: '#f97316', // orange-500
                 border: 'none',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fb923c')} // orange-300
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f97316')}
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
+                (e.currentTarget.style.backgroundColor = '#fb923c')
+              } // orange-300
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
+                (e.currentTarget.style.backgroundColor = '#f97316')
+              }
             >
               Login now
             </Button>
