@@ -89,7 +89,10 @@ export default {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [
+    require('tailwindcss-animate'),
+    require('@tailwindcss/typography'), // <--- ADD THIS LINE
+  ],
   corePlugins: {
     preflight: false,
   },
