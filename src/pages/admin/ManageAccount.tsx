@@ -376,6 +376,7 @@ const ManageAccount: React.FC = () => {
             columns={columns}
             dataSource={accounts}
             loading={loading}
+            rowKey='id'
             pagination={{
               current: currentPage,
               pageSize: pageSize,
@@ -384,8 +385,8 @@ const ManageAccount: React.FC = () => {
               position: ['bottomCenter'],
             }}
             scroll={{ x: '100%' }}
-            bordered
-            className='px-5 w-[85%] m-auto'
+            bordered={false}
+            className='px-5'
             onRow={(record: Account) => ({
               onClick: () => {
                 setSelectedUser(record);
