@@ -20,7 +20,8 @@ import {
   LabelProps,
 } from 'recharts';
 
-import AdminSearchFilter from '../../components/AdminSearchFilter';
+import AdminHeader from '../../components/AdminHeader';
+import LayoutWrapper from '../../components/LayoutWrapper';
 import Sidebar from '../../components/Sidebar';
 import type { MenuProps } from 'antd';
 
@@ -169,137 +170,137 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className='flex min-h-screen bg-gray-50 flex-col px-4 overflow-y-auto flex-1'>
+    <div className='flex min-h-screen bg-gray-50 flex-col px-8 relative h-auto'>
       {/* Sidebar on the left */}
-      <AdminSearchFilter className='flex justify-end !p-0 ' />
-
-      {/* Main Content Area */}
-      <div className='flex-1 py-3 px-auto overflow-y-auto w-full'>
-        <div className='mb-6'>
-          <h1 className='text-xl font-bold text-gray-800 mb-2'>Overview</h1>
-        </div>
-
-        {/* Top Stats */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 flex-1'>
-          <div className='bg-blue-50 p-8 rounded-2xl border border-blue-100 h-18'>
-            <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Universities</h3>
-            <p className='text-4xl font-bold text-gray-900'>
-              {summary.universityCount.toLocaleString()}
-            </p>
+      <AdminHeader />
+      <LayoutWrapper>
+        {/* Main Content Area */}
+        <div className='flex-1 py-3 px-auto  w-full'>
+          <div className='mb-6'>
+            <h1 className='text-xl font-bold text-gray-800 mb-2'>Overview</h1>
           </div>
-          <div className='bg-orange-50 p-8 rounded-2xl border border-orange-100 h-18'>
-            <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Contact Request</h3>
-            <p className='text-4xl font-bold text-gray-900'>{summary.contactCount}</p>
-          </div>
-        </div>
-        {/* Charts Section */}
-        <div className='grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6 flex-1'>
-          {/* Website Traffic - full width */}
-          <div className='col-span-1 xl:col-span-3 bg-white p-0 rounded-xl shadow-sm border overflow-hidden mb-8 flex-1'>
-            <div className=' relative py-10 bg-[#f9fafb] rounded-3xl'>
-              {/* Title + Legend inside the chart */}
-              <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-4'>
-                <div className='flex items-center space-x-4 text-sm font-medium text-gray-700 gap-8 px-4'>
-                  <span className='text-orange-600 text-base font-semibold'>
-                    Website traffic tracking
-                  </span>
-                  <span className='text-[#ccc] text-lg'>|</span>
-                  <div className='flex items-center space-x-4'>
-                    <div className='flex items-center space-x-1'>
-                      <span className='w-2 h-2 rounded-full bg-blue-500'></span>
-                      <span className='text-sm'>This year</span>
-                    </div>
-                    <div className='flex items-center space-x-1'>
-                      <span className='w-2 h-2 rounded-full bg-[#cbd5e1]'></span>
-                      <span className='text-sm'>Last year</span>
-                    </div>
-                  </div>
-                </div>
 
-                <Dropdown menu={{ items: filterMenuItems }} trigger={['click']}>
-                  <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
-                    <Filter className='w-4 h-4' />
-                    <span>Filter</span>
-                  </div>
-                </Dropdown>
-              </div>
-
-              <ResponsiveContainer width='100%' height={300}>
-                <LineChart
-                  data={dashboardData.trafficData}
-                  margin={{ top: 60, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
-                      <stop offset='0%' stopColor='#ff7a00' stopOpacity={1} />
-                      <stop offset='100%' stopColor='#ff7a00' stopOpacity={0.2} />
-                    </linearGradient>
-                  </defs>
-
-                  <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-                  <XAxis
-                    dataKey='month'
-                    tick={{ fill: '#F97316', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: '#F97316', fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v) => `${v / 1000}K`}
-                  />
-
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload || !payload.length) return null;
-                      return (
-                        <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
-                          <p className='font-semibold mb-1'>{label}</p>
-                          <p className='text-orange-500'>
-                            thisYear : {payload[0]?.value?.toLocaleString?.()}
-                          </p>
-                          <p className='text-gray-400'>
-                            lastYear : {payload[1]?.value?.toLocaleString?.()}
-                          </p>
-                        </div>
-                      );
-                    }}
-                  />
-
-                  <Area
-                    type='monotone'
-                    dataKey='thisYear'
-                    stroke='none'
-                    fill='url(#colorTraffic)'
-                  />
-
-                  <Line
-                    type='monotone'
-                    dataKey='thisYear'
-                    stroke='#3b82f6'
-                    strokeWidth={2}
-                    dot={false}
-                  />
-
-                  <Line
-                    type='monotone'
-                    dataKey='lastYear'
-                    stroke='#cbd5e1'
-                    strokeWidth={1.5}
-                    strokeDasharray='3 3'
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+          {/* Top Stats */}
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 flex-1'>
+            <div className='bg-blue-50 p-8 rounded-2xl border border-blue-100 h-18'>
+              <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Universities</h3>
+              <p className='text-4xl font-bold text-gray-900'>
+                {summary.universityCount.toLocaleString()}
+              </p>
+            </div>
+            <div className='bg-orange-50 p-8 rounded-2xl border border-orange-100 h-18'>
+              <h3 className='text-sm font-medium text-gray-600 mb-2'>Total of Contact Request</h3>
+              <p className='text-4xl font-bold text-gray-900'>{summary.contactCount}</p>
             </div>
           </div>
+          {/* Charts Section */}
+          <div className='grid grid-cols-1 gap-6 flex-1'>
+            {/* Website Traffic - full width */}
+            <div className='col-span-1 xl:col-span-3 bg-white p-0 rounded-xl shadow-sm border overflow-hidden mb-8 flex-1'>
+              <div className=' relative py-10 bg-[#f9fafb] rounded-3xl'>
+                {/* Title + Legend inside the chart */}
+                <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-4'>
+                  <div className='flex items-center space-x-4 text-sm font-medium text-gray-700 gap-8 px-4'>
+                    <span className='text-orange-600 text-base font-semibold'>
+                      Website traffic tracking
+                    </span>
+                    <span className='text-[#ccc] text-lg'>|</span>
+                    <div className='flex items-center space-x-4'>
+                      <div className='flex items-center space-x-1'>
+                        <span className='w-2 h-2 rounded-full bg-blue-500'></span>
+                        <span className='text-sm'>This year</span>
+                      </div>
+                      <div className='flex items-center space-x-1'>
+                        <span className='w-2 h-2 rounded-full bg-[#cbd5e1]'></span>
+                        <span className='text-sm'>Last year</span>
+                      </div>
+                    </div>
+                  </div>
 
+                  <Dropdown menu={{ items: filterMenuItems }} trigger={['click']}>
+                    <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
+                      <Filter className='w-4 h-4' />
+                      <span>Filter</span>
+                    </div>
+                  </Dropdown>
+                </div>
+
+                <ResponsiveContainer width='100%' height={300}>
+                  <LineChart
+                    data={dashboardData.trafficData}
+                    margin={{ top: 60, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
+                        <stop offset='0%' stopColor='#ff7a00' stopOpacity={1} />
+                        <stop offset='100%' stopColor='#ff7a00' stopOpacity={0.2} />
+                      </linearGradient>
+                    </defs>
+
+                    <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
+                    <XAxis
+                      dataKey='month'
+                      tick={{ fill: '#F97316', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: '#F97316', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `${v / 1000}K`}
+                    />
+
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || !payload.length) return null;
+                        return (
+                          <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
+                            <p className='font-semibold mb-1'>{label}</p>
+                            <p className='text-orange-500'>
+                              thisYear : {payload[0]?.value?.toLocaleString?.()}
+                            </p>
+                            <p className='text-gray-400'>
+                              lastYear : {payload[1]?.value?.toLocaleString?.()}
+                            </p>
+                          </div>
+                        );
+                      }}
+                    />
+
+                    <Area
+                      type='monotone'
+                      dataKey='thisYear'
+                      stroke='none'
+                      fill='url(#colorTraffic)'
+                    />
+
+                    <Line
+                      type='monotone'
+                      dataKey='thisYear'
+                      stroke='#3b82f6'
+                      strokeWidth={2}
+                      dot={false}
+                    />
+
+                    <Line
+                      type='monotone'
+                      dataKey='lastYear'
+                      stroke='#cbd5e1'
+                      strokeWidth={1.5}
+                      strokeDasharray='3 3'
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
           {/* Row for the two side-by-side charts */}
 
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
+          <div className='flex flex-col md:flex-row gap-6 w-auto justify-between mb-8 flex-1'>
             {/* Track number of contact requests */}
-            <div className='bg-[#f9fafb] p-6 rounded-3xl shadow-sm border'>
+            <div className='bg-[#f9fafb] p-6 rounded-3xl shadow-sm border w-auto md:w-1/2 gap-6'>
               <div className='flex justify-between items-center mb-4'>
                 <h3 className='text-base font-semibold text-gray-800'>
                   Track number of contact requests
@@ -360,8 +361,8 @@ const DashboardPage = () => {
             </div>
 
             {/* Traffic by Location */}
-            <div className='bg-[#f9fafb] p-6 rounded-3xl border'>
-              <div className='flex justify-between items-center mb-4'>
+            <div className='bg-[#f9fafb] p-6 rounded-3xl border w-auto md:w-1/2'>
+              <div className='flex justify-between items-center mb-4 lg:px-5'>
                 <h3 className='text-base font-semibold text-gray-800'>Traffic by Location</h3>
                 <Dropdown menu={{ items: locationFilterItems }} trigger={['click']}>
                   <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer'>
@@ -373,7 +374,7 @@ const DashboardPage = () => {
               {trafficLoading ? (
                 <p className='text-gray-500'>loading...</p>
               ) : (
-                <div className='flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6'>
+                <div className='flex flex-col lg:flex-row items-center lg:items-start justify-around gap-6 '>
                   <div className='w-48 h-48'>
                     <ResponsiveContainer width='100%' height='100%'>
                       <PieChart>
@@ -413,7 +414,7 @@ const DashboardPage = () => {
           </div>
 
           {/* Top Search University  */}
-          <div className='flex flex-col bg-[#f9fafb] rounded-3xl p-6 shadow-sm border flex-1 min-w-0 lg:w-1/3'>
+          <div className='flex flex-col bg-[#f9fafb] rounded-3xl p-6 shadow-sm border w-auto md:w-1/3'>
             <h3 className='text-base font-semibold text-gray-800 mb-6'>Top Search University</h3>
 
             <div className='flex flex-col gap-3'>
@@ -459,7 +460,7 @@ const DashboardPage = () => {
             </div>
           </div>
         </div>
-      </div>
+      </LayoutWrapper>
     </div>
   );
 };
