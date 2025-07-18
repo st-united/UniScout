@@ -1,5 +1,5 @@
 import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { Table, Select, Modal, Input, Button } from 'antd';
+import { Table, Select, Modal, Input, Button, message } from 'antd';
 import axios from 'axios';
 import {
   Users,
@@ -26,7 +26,7 @@ interface Account {
   role: string;
   email: string;
   createdAt: string;
-  status: 'Active' | 'Deactivated' | 'Blocked' | 'Pending';
+  status: string;
 }
 
 const ManageAccount: React.FC = () => {
@@ -50,9 +50,11 @@ const ManageAccount: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Account | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [showStatusWarning, setShowStatusWarning] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [jobRoles, setJobRoles] = useState<string[]>([]);
 
   const colorMap: Record<Account['status'], { text: string; bg: string }> = {
     Active: { text: '#00B69B', bg: 'rgba(0, 182, 155, 0.3)' },
@@ -118,6 +120,20 @@ const ManageAccount: React.FC = () => {
         setLoading(false);
       }
     };
+
+    const fetchJobRoles = async () => {
+      try {
+        const res = await axios.get('/users/job-roles');
+        if (Array.isArray(res.data)) {
+          setJobRoles(res.data);
+        } else if (Array.isArray(res.data.data)) {
+          setJobRoles(res.data.data);
+        }
+      } catch (error) {
+        setJobRoles([]);
+      }
+    };
+    fetchJobRoles();
 
     fetchStats();
     fetchUsers();
@@ -399,6 +415,11 @@ const ManageAccount: React.FC = () => {
                     id='edit-account-role'
                     value={selectedUser?.role}
                     disabled={!isEditMode}
+                    onChange={(value: string) => {
+                      if (selectedUser) {
+                        setSelectedUser({ ...selectedUser, role: value });
+                      }
+                    }}
                     style={{
                       width: '100%',
                       marginTop: 4,
@@ -408,8 +429,11 @@ const ManageAccount: React.FC = () => {
                       borderRadius: !isEditMode ? 8 : undefined,
                     }}
                   >
-                    <Select.Option value='Marketing'>Marketing</Select.Option>
-                    <Select.Option value='Admin'>Admin</Select.Option>
+                    {jobRoles.map((role) => (
+                      <Select.Option key={role} value={role}>
+                        {role}
+                      </Select.Option>
+                    ))}
                   </Select>
                 </div>
                 <div style={{ flex: 1 }}>
@@ -424,6 +448,11 @@ const ManageAccount: React.FC = () => {
                         setShowStatusWarning(true);
                       } else {
                         setStatusDropdownOpen(open);
+                      }
+                    }}
+                    onChange={(value: string) => {
+                      if (selectedUser) {
+                        setSelectedUser({ ...selectedUser, status: value });
                       }
                     }}
                     style={{
@@ -456,9 +485,36 @@ const ManageAccount: React.FC = () => {
                 <Button
                   type='primary'
                   style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
-                  onClick={() => setIsEditMode(false)}
+                  onClick={async () => {
+                    if (!selectedUser) return;
+                    setIsSaving(true);
+                    try {
+                      await axios.patch(
+                        `https://api.uniscout.dev.stunited.vn/api/users/${selectedUser.key}`,
+                        {
+                          name: selectedUser.name,
+                          email: selectedUser.email,
+                          job: selectedUser.role,
+                          status: selectedUser.status?.toLowerCase(),
+                        },
+                      );
+                      setAccounts((prev) =>
+                        prev.map((acc) =>
+                          acc.key === selectedUser.key ? { ...acc, ...selectedUser } : acc,
+                        ),
+                      );
+                      setIsEditMode(false);
+                      setIsModalOpen(false);
+                      message.success('User updated successfully');
+                    } catch (err) {
+                      message.error('Failed to update user');
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  disabled={isSaving}
                 >
-                  Save
+                  {isSaving ? 'Saving...' : 'Save'}
                 </Button>
               )}
             </div>
@@ -522,41 +578,6 @@ const ManageAccount: React.FC = () => {
               </div>
             </div>
           </Modal>
-          <CreateAccount
-            open={isCreateOpen}
-            onCancel={() => setIsCreateOpen(false)}
-            onSubmit={async (values) => {
-              try {
-                const payload = {
-                  name: values.name,
-                  email: values.email,
-                  job: values.role,
-                };
-
-                await axios.post('/users', payload);
-
-                const res = await axios.get('/users');
-                const users = res.data.data;
-                const total = res.data.meta?.totalItems ?? users.length;
-
-                const formattedUsers = users.map((user: any) => ({
-                  key: String(user.id),
-                  name: user.name,
-                  role: user.job ?? '-',
-                  email: user.email,
-                  createdAt: user.createdAt,
-                  status: mapBackendStatus(user.status),
-                }));
-
-                setAccounts(formattedUsers);
-                setTotalCount(total);
-                setIsCreateOpen(false);
-              } catch (error: any) {
-                console.error('Error creating account:', error);
-                alert(error.response?.data?.message || 'Failed to create account.');
-              }
-            }}
-          />
         </div>
       </LayoutWrapper>
     </div>

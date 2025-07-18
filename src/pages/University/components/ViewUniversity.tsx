@@ -254,6 +254,19 @@ const ViewUniversity = () => {
 
   return (
     <div className='min-h-screen w-full px-4 py-6'>
+      {/* Orange border for search and sort on hover/focus, no outer ring */}
+      <style>{`
+        .ant-input-affix-wrapper:hover,
+        .ant-input-affix-wrapper-focused {
+          border-color: #f97316 !important;
+          box-shadow: none !important;
+        }
+        .ant-select-selector:hover,
+        .ant-select-focused .ant-select-selector {
+          border-color: #f97316 !important;
+          box-shadow: none !important;
+        }
+      `}</style>
       <WorldMap
         onCountryClick={handleMapCountryClick}
         onCountryCountClick={handleCountryCountClick}
@@ -275,7 +288,7 @@ const ViewUniversity = () => {
               className='flex flex-col bg-[#F5F5F5] pt-6 mb-4'
               style={{ position: 'sticky', top: '63px', zIndex: 10 }}
             >
-              <div className='flex flex-row items-center gap-4 w-full'>
+              <div className='flex flex-row items-center gap-4 w-full mb-2'>
                 {/* Search bar */}
                 <Input.Search
                   allowClear

@@ -1,5 +1,5 @@
 import { DownOutlined } from '@ant-design/icons';
-import { Input, Tooltip, TreeSelect } from 'antd';
+import { Input, Tooltip, TreeSelect, ConfigProvider } from 'antd';
 import axios from 'axios';
 import { Filter, MapPin, ChevronDown, BookOpenText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -211,193 +211,200 @@ const UniversityFilter = ({
   };
 
   return (
-    <div
-      className='lg:w-80 w-full lg:sticky lg:top-6 self-start'
-      style={{ position: 'sticky', top: '90px', zIndex: 10 }}
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#f97316', // Tailwind orange-500
+        },
+      }}
     >
-      <div className='lg:hidden flex justify-between items-center mb-4'>
-        <button
-          className='flex items-center gap-2 text-orange-500 font-semibold bg-transparent border-none shadow-none p-0 hover:bg-transparent focus:bg-transparent'
-          onClick={() => setIsMobileOpen((prev) => !prev)}
-        >
-          <Filter className='w-5 h-5' />
-          {isMobileOpen ? 'Hide Filters' : 'Show Filters'}
-        </button>
-      </div>
-
       <div
-        className={`border border-gray-200 bg-white rounded-xl p-4 space-y-6 shadow-sm transition-all duration-300 w-[320px] ${
-          isMobileOpen ? 'block' : 'hidden'
-        } lg:block`}
+        className='lg:w-80 w-full lg:sticky lg:top-6 self-start'
+        style={{ position: 'sticky', top: '90px', zIndex: 10 }}
       >
-        <div className='flex items-center justify-between'>
-          <span className='text-orange-500 font-semibold text-base'>Filter</span>
+        <div className='lg:hidden flex justify-between items-center mb-4'>
           <button
-            onClick={handleReset}
-            className='bg-transparent border-0 text-orange-500 font-semibold text-base cursor-pointer hover:text-orange-700'
+            className='flex items-center gap-2 text-orange-500 font-semibold bg-transparent border-none shadow-none p-0 hover:bg-transparent focus:bg-transparent'
+            onClick={() => setIsMobileOpen((prev) => !prev)}
           >
-            Reset Filter
+            <Filter className='w-5 h-5' />
+            {isMobileOpen ? 'Hide Filters' : 'Show Filters'}
           </button>
         </div>
 
-        {/* Country Multi-select */}
-        <div className='rounded-lg p-4 shadow-sm relative' ref={countryDropdownRef}>
-          <h3 className='text-base font-semibold mb-3'>Country</h3>
-          <button
-            type='button'
-            className='relative w-full rounded-lg bg-white text-sm focus:outline-none cursor-pointer p-2 flex items-center justify-between'
-            onClick={() => setIsCountryDropdownOpen((prev) => !prev)}
-          >
-            <div className='flex items-center'>
-              <MapPin className='w-4 h-4 text-gray-500 mr-2' />
-              <span>
-                {filters.country.length === 0
-                  ? 'All Countries'
-                  : filters.country.length === 1
-                  ? filters.country[0]
-                  : `${filters.country.length} selected`}
-              </span>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-gray-500 transform transition-transform ${
-                isCountryDropdownOpen ? 'rotate-180' : 'rotate-0'
-              }`}
-            />
-          </button>
+        <div
+          className={`border border-gray-200 bg-white rounded-xl p-4 space-y-6 shadow-sm transition-all duration-300 w-[320px] ${
+            isMobileOpen ? 'block' : 'hidden'
+          } lg:block`}
+        >
+          <div className='flex items-center justify-between'>
+            <span className='text-orange-500 font-semibold text-base'>Filter</span>
+            <button
+              onClick={handleReset}
+              className='bg-transparent border-0 text-orange-500 font-semibold text-base cursor-pointer hover:text-orange-700'
+            >
+              Reset Filter
+            </button>
+          </div>
 
-          {isCountryDropdownOpen && (
-            <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg'>
-              <label className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  checked={filters.country.length === availableCountries.length}
-                  onChange={() => {
-                    if (filters.country.length === availableCountries.length) {
-                      handleFilterChange('country', []);
-                    } else {
-                      handleFilterChange('country', availableCountries);
-                    }
-                  }}
-                  className='accent-orange-500'
-                />
-                <span className='text-sm font-semibold'>Select All</span>
-              </label>
-              {availableCountries.map((countryName) => (
-                <label
-                  key={countryName}
-                  className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'
-                >
+          {/* Country Multi-select */}
+          <div className='rounded-lg p-4 shadow-sm relative' ref={countryDropdownRef}>
+            <h3 className='text-base font-semibold mb-3'>Country</h3>
+            <button
+              type='button'
+              className='relative w-full rounded-lg bg-white text-sm focus:outline-none cursor-pointer p-2 flex items-center justify-between'
+              onClick={() => setIsCountryDropdownOpen((prev) => !prev)}
+            >
+              <div className='flex items-center'>
+                <MapPin className='w-4 h-4 text-gray-500 mr-2' />
+                <span>
+                  {filters.country.length === 0
+                    ? 'All Countries'
+                    : filters.country.length === 1
+                    ? filters.country[0]
+                    : `${filters.country.length} selected`}
+                </span>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-500 transform transition-transform ${
+                  isCountryDropdownOpen ? 'rotate-180' : 'rotate-0'
+                }`}
+              />
+            </button>
+
+            {isCountryDropdownOpen && (
+              <div className='absolute bg-white rounded-lg mt-2 py-2 w-full max-h-60 overflow-y-auto z-10 shadow-lg'>
+                <label className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'>
                   <input
                     type='checkbox'
-                    value={countryName}
-                    checked={filters.country.includes(countryName)}
-                    onChange={() => handleCountryChange(countryName)}
+                    checked={filters.country.length === availableCountries.length}
+                    onChange={() => {
+                      if (filters.country.length === availableCountries.length) {
+                        handleFilterChange('country', []);
+                      } else {
+                        handleFilterChange('country', availableCountries);
+                      }
+                    }}
                     className='accent-orange-500'
                   />
-                  <span className='text-sm'>{countryName}</span>
+                  <span className='text-sm font-semibold'>Select All</span>
+                </label>
+                {availableCountries.map((countryName) => (
+                  <label
+                    key={countryName}
+                    className='flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer'
+                  >
+                    <input
+                      type='checkbox'
+                      value={countryName}
+                      checked={filters.country.includes(countryName)}
+                      onChange={() => handleCountryChange(countryName)}
+                      className='accent-orange-500'
+                    />
+                    <span className='text-sm'>{countryName}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* University Type */}
+          <div className='border border-gray-200 bg-white rounded-lg p-4 shadow-sm'>
+            <h3 className='text-base font-semibold mb-3'>University Type</h3>
+            <div className='grid grid-cols-2 gap-3'>
+              {['Public', 'Private', 'Academic', 'College', 'International'].map((type) => (
+                <label key={type} className='flex items-center gap-2'>
+                  <input
+                    type='checkbox'
+                    value={type.toLowerCase()}
+                    checked={filters.type.includes(type.toLowerCase())}
+                    onChange={(e) => {
+                      const newTypes = e.target.checked
+                        ? [...filters.type, type.toLowerCase()]
+                        : filters.type.filter((t) => t !== type.toLowerCase());
+                      handleFilterChange('type', newTypes);
+                    }}
+                    className='accent-orange-500'
+                  />
+                  <span className='text-sm'>{type}</span>
                 </label>
               ))}
             </div>
-          )}
-        </div>
-
-        {/* University Type */}
-        <div className='border border-gray-200 bg-white rounded-lg p-4 shadow-sm'>
-          <h3 className='text-base font-semibold mb-3'>University Type</h3>
-          <div className='grid grid-cols-2 gap-3'>
-            {['Public', 'Private', 'Academic', 'College', 'International'].map((type) => (
-              <label key={type} className='flex items-center gap-2'>
-                <input
-                  type='checkbox'
-                  value={type.toLowerCase()}
-                  checked={filters.type.includes(type.toLowerCase())}
-                  onChange={(e) => {
-                    const newTypes = e.target.checked
-                      ? [...filters.type, type.toLowerCase()]
-                      : filters.type.filter((t) => t !== type.toLowerCase());
-                    handleFilterChange('type', newTypes);
-                  }}
-                  className='accent-orange-500'
-                />
-                <span className='text-sm'>{type}</span>
-              </label>
-            ))}
           </div>
-        </div>
 
-        {/* Size */}
-        <div className='border border-gray-200 bg-white rounded-lg p-4'>
-          <h3 className='text-base font-semibold mb-3'>Size</h3>
-          <div className='grid grid-cols-2 gap-3'>
-            {['Small', 'Medium', 'Large', 'Extra Large'].map((size) => {
-              let tooltip = '';
-              switch (size) {
-                case 'Small':
-                  tooltip = '<20,000';
-                  break;
-                case 'Medium':
-                  tooltip = '<40,000';
-                  break;
-                case 'Large':
-                  tooltip = '<100,000';
-                  break;
-                case 'Extra Large':
-                  tooltip = '>=100,000';
-                  break;
-                default:
-                  tooltip = '';
+          {/* Size */}
+          <div className='border border-gray-200 bg-white rounded-lg p-4'>
+            <h3 className='text-base font-semibold mb-3'>Size</h3>
+            <div className='grid grid-cols-2 gap-3'>
+              {['Small', 'Medium', 'Large', 'Extra Large'].map((size) => {
+                let tooltip = '';
+                switch (size) {
+                  case 'Small':
+                    tooltip = '<20,000';
+                    break;
+                  case 'Medium':
+                    tooltip = '<40,000';
+                    break;
+                  case 'Large':
+                    tooltip = '<100,000';
+                    break;
+                  case 'Extra Large':
+                    tooltip = '>=100,000';
+                    break;
+                  default:
+                    tooltip = '';
+                }
+                return (
+                  <Tooltip
+                    key={size}
+                    title={tooltip}
+                    placement='top'
+                    color='#F1F1F1'
+                    overlayInnerStyle={{ color: 'black' }}
+                  >
+                    <label className='flex items-center gap-2'>
+                      <input
+                        type='checkbox'
+                        value={size.toLowerCase()}
+                        checked={filters.size.includes(size.toLowerCase())}
+                        onChange={(e) => {
+                          const newSizes = e.target.checked
+                            ? [...filters.size, size.toLowerCase()]
+                            : filters.size.filter((s) => s !== size.toLowerCase());
+                          handleFilterChange('size', newSizes);
+                        }}
+                        className='accent-orange-500'
+                      />
+                      <span className='text-sm'>{size}</span>
+                    </label>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Subjects Multi-select */}
+          <div className='rounded-lg p-4 shadow-sm'>
+            <h3 className='text-base font-semibold mb-3'>Subjects</h3>
+            <TreeSelect
+              treeData={subjectOptions}
+              value={filters.field}
+              onChange={handleSubjectChange}
+              treeCheckable={true}
+              maxTagCount={MAX_COUNT}
+              style={{ width: '100%' }}
+              suffixIcon={
+                <span>
+                  {filters.field.length} / {MAX_COUNT} <DownOutlined />
+                </span>
               }
-              return (
-                <Tooltip
-                  key={size}
-                  title={tooltip}
-                  placement='top'
-                  color='#F1F1F1'
-                  overlayInnerStyle={{ color: 'black' }}
-                >
-                  <label className='flex items-center gap-2'>
-                    <input
-                      type='checkbox'
-                      value={size.toLowerCase()}
-                      checked={filters.size.includes(size.toLowerCase())}
-                      onChange={(e) => {
-                        const newSizes = e.target.checked
-                          ? [...filters.size, size.toLowerCase()]
-                          : filters.size.filter((s) => s !== size.toLowerCase());
-                        handleFilterChange('size', newSizes);
-                      }}
-                      className='accent-orange-500'
-                    />
-                    <span className='text-sm'>{size}</span>
-                  </label>
-                </Tooltip>
-              );
-            })}
+              placeholder='Please select'
+              showCheckedStrategy={TreeSelect.SHOW_ALL}
+            />
           </div>
-        </div>
-
-        {/* Subjects Multi-select */}
-        <div className='rounded-lg p-4 shadow-sm'>
-          <h3 className='text-base font-semibold mb-3'>Subjects</h3>
-          <TreeSelect
-            treeData={subjectOptions}
-            value={filters.field}
-            onChange={handleSubjectChange}
-            multiple
-            maxCount={MAX_COUNT}
-            style={{ width: '100%' }}
-            suffixIcon={
-              <span>
-                {filters.field.length} / {MAX_COUNT} <DownOutlined />
-              </span>
-            }
-            treeCheckable={false}
-            placeholder='Please select'
-            showCheckedStrategy={TreeSelect.SHOW_ALL}
-          />
         </div>
       </div>
-    </div>
+    </ConfigProvider>
   );
 };
 
