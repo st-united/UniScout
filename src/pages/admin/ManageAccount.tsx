@@ -313,11 +313,11 @@ const ManageAccount: React.FC = () => {
 
           <h3 className='my-5 text-lg font-semibold'>Overview</h3>
 
-          <div className='flex flex-wrap gap-2 lg:gap-6 mb-10 items-center justify-center m-none w-full '>
+          <div className='flex flex-wrap gap-2 lg:gap-6 mb-10 items-center justify-center m-none w-full box-border '>
             {items.map((item) => (
               <div
                 key={item.label}
-                className={`flex flex-wrap gap-2 justify-between items-center rounded-xl px-4 lg:px-6 py-6 w-[130px] lg:w-[200px] bg-white`}
+                className={`flex flex-wrap gap-2 justify-between items-center rounded-xl px-4 lg:px-6 py-6 lg:w-[145px] min-w-[150px] bg-white`}
                 style={{
                   boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06)',
                 }}
@@ -327,7 +327,7 @@ const ManageAccount: React.FC = () => {
                   <p className='text-[23px] lg:text-[28px] font-semibold'>{item.value}</p>
                 </div>
                 <div
-                  className={`flex h-[50px] w-[50px] lg:h-[70px] lg:w-[70px] items-center justify-center rounded-[17px] lg:rounded-[23px] ${item.bg}`}
+                  className={`flex h-[50px] w-[50px] lg:h-[60px] lg:w-[60px] items-center justify-center rounded-[17px] lg:rounded-[23px] ${item.bg}`}
                 >
                   {item.icon}
                 </div>
