@@ -313,11 +313,11 @@ const ManageAccount: React.FC = () => {
 
           <h3 className='my-5 text-lg font-semibold'>Overview</h3>
 
-          <div className='flex flex-wrap gap-2 lg:gap-6 mb-10 items-center justify-center m-none w-full box-border '>
+          <div className='flex flex-wrap md:grid md:grid-cols-5 justify-center gap-6 md:gap-6 md:justify-between mb-10 m-none w-full box-border '>
             {items.map((item) => (
               <div
                 key={item.label}
-                className={`flex flex-wrap gap-2 justify-between items-center rounded-xl px-4 lg:px-6 py-6 lg:w-[145px] min-w-[150px] bg-white`}
+                className={`flex flex-wrap gap-2 justify-between items-center rounded-xl px-4 lg:px-6 py-6 min-w-[150px] md:min-w-[160px] lg:min-w-[120px] bg-white`}
                 style={{
                   boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06)',
                 }}
