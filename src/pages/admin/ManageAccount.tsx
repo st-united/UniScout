@@ -416,16 +416,10 @@ const ManageAccount: React.FC = () => {
                 id='edit-account-status'
                 value={selectedUser?.status}
                 disabled={!isEditMode}
-                open={statusDropdownOpen}
-                onDropdownVisibleChange={(open: boolean) => {
-                  if (isEditMode && open) {
-                    setShowStatusWarning(true);
-                  } else {
-                    setStatusDropdownOpen(open);
-                  }
-                }}
                 onChange={(value: string) => {
-                  if (selectedUser) {
+                  if (isEditMode && value === 'Deactivated') {
+                    setShowStatusWarning(true);
+                  } else if (selectedUser) {
                     setSelectedUser({ ...selectedUser, status: value });
                   }
                 }}
@@ -462,15 +456,24 @@ const ManageAccount: React.FC = () => {
               onClick={async () => {
                 if (!selectedUser) return;
                 setIsSaving(true);
+                const statusMap = {
+                  Active: 'active',
+                  Blocked: 'BLOCKED',
+                  Deactivated: 'inactive',
+                  Pending: 'PENDING',
+                };
+                const payload = {
+                  name: selectedUser.name,
+                  email: selectedUser.email,
+                  job: selectedUser.role,
+                  status:
+                    statusMap[selectedUser.status as keyof typeof statusMap] || selectedUser.status,
+                };
+                console.log('PATCH payload:', payload);
                 try {
                   await axios.patch(
                     `https://api.uniscout.dev.stunited.vn/api/users/${selectedUser.key}`,
-                    {
-                      name: selectedUser.name,
-                      email: selectedUser.email,
-                      job: selectedUser.role,
-                      status: selectedUser.status?.toLowerCase(),
-                    },
+                    payload,
                   );
                   setAccounts((prev) =>
                     prev.map((acc) =>
@@ -543,8 +546,10 @@ const ManageAccount: React.FC = () => {
                 borderRadius: 8,
               }}
               onClick={() => {
+                if (selectedUser) {
+                  setSelectedUser({ ...selectedUser, status: 'Deactivated' });
+                }
                 setShowStatusWarning(false);
-                setStatusDropdownOpen(true);
               }}
             >
               OK
