@@ -92,8 +92,8 @@ export function useDebounce<T>(value: T, delay: number): T {
 }
 
 const sortOptions = [
-  { label: 'High to Low Rank', value: 'rank-asc' },
-  { label: 'Low to High Rank', value: 'rank-desc' },
+  { label: 'Sort by: high to low', value: 'rank-asc' },
+  { label: 'Sort by: low to high', value: 'rank-desc' },
 ];
 
 type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'search'; // Updated to academicFields
@@ -119,7 +119,7 @@ const UniversityListPage: React.FC = () => {
 
   const debouncedFilters = useDebounce(filters, 400);
 
-  const [sortBy, setSortBy] = useState('High to Low Rank');
+  const [sortBy, setSortBy] = useState('Sort by: high to low');
   const [searchInput, setSearchInput] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
@@ -692,7 +692,7 @@ const UniversityListPage: React.FC = () => {
         </Select>
       </Col>
 
-      <Col xs={24} sm={12} md={8} lg={8}>
+      <Col xs={24} sm={12} md={8} lg={7}>
         <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
           Broad Field
         </div>
@@ -714,7 +714,7 @@ const UniversityListPage: React.FC = () => {
         </Select>
       </Col>
 
-      <Col xs={24} sm={24} md={6} lg={4}>
+      <Col xs={24} sm={24} md={6} lg={5}>
         <div
           style={{
             fontSize: '12px',

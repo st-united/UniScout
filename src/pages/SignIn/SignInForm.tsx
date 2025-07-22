@@ -87,14 +87,7 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
   };
 
   return (
-    <Col
-      xs={24}
-      sm={24}
-      md={12}
-      lg={12}
-      xl={12}
-      className={`bg-[#e2e3e3] flex items-center justify-center min-h-screen p-0 order-1 md:order-2 ${className}`}
-    >
+    <div className='bg-[#e2e3e3] flex items-center justify-center min-h-screen p-0 w-full'>
       <div className='w-full max-w-md px-4'>
         <div className='text-center mb-8'>
           <Title level={1} className='text-4xl font-bold text-gray-900'>
@@ -165,7 +158,7 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
           </Form.Item>
         </Form>
       </div>
-    </Col>
+    </div>
   );
 };
 
