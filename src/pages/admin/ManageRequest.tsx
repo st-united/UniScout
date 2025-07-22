@@ -29,19 +29,6 @@ const { Title } = Typography;
 // API Base URL
 const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
 
-// Interface for API responses
-interface ContactRequestType {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-interface ContactSubmissionStatus {
-  id: string;
-  name: string;
-  description?: string;
-}
-
 // Interface for user request (updated to match API response)
 interface UserRequest {
   id: string;
@@ -144,7 +131,7 @@ const ManageRequest: React.FC = () => {
   const fetchContactSubmissionStatuses = async () => {
     setLoadingSubmissionStatuses(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/contact/submission-statuses`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/contact/status`, {
         headers: {
           accept: '*/*',
         },
