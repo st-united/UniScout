@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { X, MessageCircle } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
+//import ReactMarkdown from 'react-markdown';
+//import rehypeRaw from 'rehype-raw';
 
 import styles from './chatbot.module.css';
 
@@ -199,7 +199,7 @@ const Chatbot = () => {
                         : 'bg-[#fef4e8] text-gray-800 rounded-bl-none'
                     } prose`}
                   >
-                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.text}</ReactMarkdown>
+                    {/* <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.text}</ReactMarkdown> */}
 
                     {msg.fileData && (
                       <button

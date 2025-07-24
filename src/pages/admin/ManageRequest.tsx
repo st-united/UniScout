@@ -902,7 +902,7 @@ const ManageRequest: React.FC = () => {
               dataSource={requestData}
               rowKey='id'
               loading={loading}
-              onRow={(record) => ({
+              onRow={(record: UserRequest) => ({
                 onClick: () => handleRowClick(record),
                 style: { cursor: 'pointer' },
               })}
@@ -910,10 +910,10 @@ const ManageRequest: React.FC = () => {
                 current: currentPage,
                 pageSize: pageSize,
                 total: totalCount,
-                onChange: (page) => setCurrentPage(page),
+                onChange: (page: number) => setCurrentPage(page),
                 showSizeChanger: false,
                 showQuickJumper: false,
-                itemRender: (page, type, originalElement) => {
+                itemRender: (page: number, type: string, originalElement: React.ReactNode) => {
                   const totalPages = Math.ceil(totalCount / pageSize);
                   const baseStyle: React.CSSProperties = {
                     fontWeight: 500,

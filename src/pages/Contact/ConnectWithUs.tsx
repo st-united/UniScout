@@ -182,7 +182,9 @@ export default function ConnectWithUs() {
         formData.append('subjectsExcel', newUniData.subjectsFile);
       }
       formData.append('location', newUniData.location);
-      formData.append('country', newUniData.country);
+      // Map 'Viet Nam' to 'Vietnam' for API
+      const apiCountry = newUniData.country === 'Viet Nam' ? 'Vietnam' : newUniData.country;
+      formData.append('country', apiCountry);
       formData.append('files', 'string'); // as in curl
       formData.append('universityNumber', newUniData.phone); // university phone again
       formData.append('numberOfStudents', newUniData.numberOfStudents);

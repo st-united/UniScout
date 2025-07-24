@@ -1,5 +1,5 @@
 import { DownOutlined } from '@ant-design/icons';
-import { Input, Tooltip, TreeSelect, ConfigProvider } from 'antd';
+import { Input, Tooltip, TreeSelect, ConfigProvider, Empty } from 'antd';
 import axios from 'axios';
 import { Filter, MapPin, ChevronDown, BookOpenText } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -69,7 +69,7 @@ interface TreeNode {
 
 // Remove initialTreeData, will fetch subjects from API
 
-const MAX_COUNT = 1000;
+//const MAX_COUNT = 1000;
 
 const UniversityFilter = ({
   onFiltersUpdate,
@@ -391,15 +391,21 @@ const UniversityFilter = ({
               value={filters.field}
               onChange={handleSubjectChange}
               treeCheckable={true}
-              maxTagCount={MAX_COUNT}
+              // maxTagCount={MAX_COUNT}
               style={{ width: '100%' }}
-              suffixIcon={
-                <span>
-                  {filters.field.length} / {MAX_COUNT} <DownOutlined />
-                </span>
-              }
+              //suffixIcon={
+              //<span>
+              //{filters.field.length} / {MAX_COUNT} <DownOutlined />
+              //</span>
+              //}
               placeholder='Please select'
               showCheckedStrategy={TreeSelect.SHOW_ALL}
+              notFoundContent={
+                <Empty
+                  description='No matching subjects found'
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              }
             />
           </div>
         </div>
