@@ -1,139 +1,471 @@
-import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
-import { Card, Row, Col, Input, Select, Button, Typography, Space, Spin, message } from 'antd';
+import { EditOutlined, SaveOutlined, DownloadOutlined } from '@ant-design/icons';
+import {
+  Card,
+  Row,
+  Col,
+  Button,
+  Typography,
+  Spin,
+  message,
+  Select,
+  Form,
+  Input,
+  Modal,
+} from 'antd';
+import axios from 'axios';
+import {
+  GraduationCap,
+  MapPin,
+  Mail,
+  Phone,
+  Globe,
+  Users,
+  FileText,
+  Building,
+  Flag,
+  User,
+} from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-
-import AdminHeader from '../../components/AdminHeader';
-import LayoutWrapper from '../../components/LayoutWrapper';
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
 const { Option } = Select;
+
+// API Base URL
+const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
 
 // Interface for detailed request data
 interface RequestDetailData {
-  id: string;
-  number: number;
+  id: number;
   requestType: string;
   universityName: string;
+  representativeName: string;
+  representativeEmail: string;
+  representativeNumber: string;
+  message: string | null;
+  abbreviation: string;
   country: string;
   location: string;
-  email: string;
-  website: string;
-  phone: string;
-  numberOfStudents: string;
   type: string;
+  universityEmail: string;
+  universityNumber: string;
+  website: string;
+  subjectsExcelFilePath: string | null;
+  numberOfStudents: string | null;
+  description: string;
+  submittedAt: string;
   status: 'Pending' | 'In Progress' | 'Rejected' | 'Completed';
-  submittedBy: string;
-  submittedDate: string;
-  description?: string;
+  rejectionReason: string | null;
 }
 
-const RequestDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+interface RequestDetailModalContentProps {
+  requestId: string;
+  onClose: () => void;
+  onUpdate?: () => void; // Callback to refresh data in parent after update
+}
+
+interface RejectModalProps {
+  visible: boolean;
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+  loading: boolean;
+}
+
+// Status transition rules
+const getAvailableStatusTransitions = (currentStatus: string): string[] => {
+  switch (currentStatus?.toLowerCase()) {
+    case 'pending':
+      return ['In Progress', 'Completed', 'Rejected'];
+    case 'in progress':
+      return ['Completed', 'Rejected'];
+    case 'completed':
+    case 'rejected':
+      return []; // Final states
+    default:
+      return [];
+  }
+};
+
+const getStatusColor = (status: string): string => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return '#faad14';
+    case 'in progress':
+      return '#1890ff';
+    case 'completed':
+      return '#52c41a';
+    case 'rejected':
+      return '#f5222d';
+    default:
+      return '#d9d9d9';
+  }
+};
+
+// Reject Modal Component
+const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel, loading }) => {
+  const [form] = Form.useForm();
+
+  const handleSubmit = () => {
+    form.validateFields().then((values) => {
+      onConfirm(values.reason);
+    });
+  };
+
+  const handleCancel = () => {
+    form.resetFields();
+    onCancel();
+  };
+
+  return (
+    <Modal
+      title={null}
+      open={visible}
+      onCancel={handleCancel}
+      footer={null}
+      width={600}
+      centered
+      closable={false}
+      bodyStyle={{
+        padding: '24px 40px',
+        textAlign: 'center',
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        maxHeight: '450px',
+      }}
+      style={{
+        borderRadius: 12,
+      }}
+    >
+      <div
+        style={{
+          width: 100,
+          height: 100,
+          borderRadius: '50%',
+          backgroundColor: '#ffebee',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 12px',
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
+            backgroundColor: '#ffcdd2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+        >
+          <div
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '15px solid transparent',
+              borderRight: '15px solid transparent',
+              borderBottom: '25px solid #f44336',
+              position: 'relative',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '14px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: 'bold',
+            }}
+          >
+            !
+          </div>
+        </div>
+      </div>
+
+      <Title
+        level={3}
+        style={{
+          color: '#333',
+          marginBottom: 12,
+          fontSize: 22,
+          fontWeight: 700,
+          textAlign: 'center',
+        }}
+      >
+        Reject Request
+      </Title>
+
+      <Text
+        style={{
+          color: '#666',
+          fontSize: 16,
+          fontWeight: 500,
+          textAlign: 'left',
+          marginBottom: 12,
+        }}
+      >
+        Please provide a reason for rejection
+      </Text>
+
+      <Form form={form} layout='vertical'>
+        <Form.Item
+          name='reason'
+          rules={[
+            { required: true, message: 'Please provide a rejection reason' },
+            { min: 10, message: 'Reason must be at least 10 characters' },
+            { max: 500, message: 'Reason cannot exceed 500 characters' },
+          ]}
+          style={{ textAlign: 'left', marginBottom: 12 }}
+        >
+          <TextArea
+            rows={2}
+            showCount
+            maxLength={500}
+            style={{
+              borderRadius: 10,
+              padding: '12px 18px',
+              fontSize: 16,
+              border: '1px solid #d9d9d9',
+              backgroundColor: '#ffffff',
+            }}
+          />
+        </Form.Item>
+
+        <Text
+          style={{
+            color: '#999',
+            fontSize: 14,
+            fontStyle: 'italic',
+            textAlign: 'left',
+            marginTop: -10,
+            marginBottom: 20,
+            display: 'block',
+          }}
+        >
+          This field is required (10-500 characters)
+        </Text>
+      </Form>
+
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+        <Button
+          onClick={handleCancel}
+          size='large'
+          style={{
+            minWidth: 120,
+            height: 48,
+            borderRadius: 24,
+            border: '1px solid #d9d9d9',
+            backgroundColor: '#ffffff',
+            color: '#666',
+            fontSize: 16,
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#e3f2fd';
+            e.currentTarget.style.borderColor = '#1976d2';
+            e.currentTarget.style.color = '#1976d2';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#ffffff';
+            e.currentTarget.style.borderColor = '#d9d9d9';
+            e.currentTarget.style.color = '#666';
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          loading={loading}
+          size='large'
+          style={{
+            minWidth: 120,
+            height: 48,
+            borderRadius: 24,
+            backgroundColor: '#ff7043',
+            borderColor: '#ff7043',
+            color: 'white',
+            fontSize: 16,
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7934d')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
+        >
+          OK
+        </Button>
+      </div>
+    </Modal>
+  );
+};
+
+const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
+  requestId,
+  onClose,
+  onUpdate,
+}) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false); // Used for form submission
+  const [pageLoading, setPageLoading] = useState(true); // Used for initial page load
+  const [rejectModalLoading, setRejectModalLoading] = useState(false); // New state for reject modal
   const [requestData, setRequestData] = useState<RequestDetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string>('');
+  const [isEditable, setIsEditable] = useState(false);
 
-  // Mock data for demonstration - in real app, this would come from API
-  const mockDetailData: Record<string, RequestDetailData> = {
-    '1': {
-      id: '1',
-      number: 1,
-      requestType: 'New University',
-      universityName: 'Harvard University',
-      country: 'America',
-      location: 'Cambridge, Massachusetts',
-      email: 'admissions@harvard.edu',
-      website: 'https://www.harvard.edu',
-      phone: '+1-617-495-1000',
-      numberOfStudents: '23000',
-      type: 'Academic',
-      status: 'Pending',
-      submittedBy: 'john.doe@email.com',
-      submittedDate: '2024-01-15',
-      description: 'Request to add Harvard University to the system database.',
-    },
-    '2': {
-      id: '2',
-      number: 2,
-      requestType: 'Update Information',
-      universityName: 'Harvard University',
-      country: 'America',
-      location: 'Cambridge, Massachusetts',
-      email: 'info@harvard.edu',
-      website: 'https://www.harvard.edu',
-      phone: '+1-617-495-1000',
-      numberOfStudents: '23500',
-      type: 'Academic',
-      status: 'Rejected',
-      submittedBy: 'jane.smith@email.com',
-      submittedDate: '2024-01-14',
-      description: 'Request to update contact information and student count.',
-    },
-    '3': {
-      id: '3',
-      number: 3,
-      requestType: 'New University',
-      universityName: 'MIT',
-      country: 'America',
-      location: 'Cambridge, Massachusetts',
-      email: 'admissions@mit.edu',
-      website: 'https://www.mit.edu',
-      phone: '+1-617-253-1000',
-      numberOfStudents: '11500',
-      type: 'Technical',
-      status: 'In Progress',
-      submittedBy: 'bob.wilson@email.com',
-      submittedDate: '2024-01-13',
-      description: 'Request to add Massachusetts Institute of Technology to the system.',
-    },
+  // Mock data for demonstration when API fails
+  const mockDetailData: RequestDetailData = {
+    id: 1,
+    requestType: 'New University',
+    universityName: 'Harvard University',
+    representativeName: 'John Doe',
+    representativeEmail: 'phuasien@gmail.com',
+    representativeNumber: '98808251',
+    message: null,
+    abbreviation: 'HU',
+    country: 'US',
+    location: 'Cambridge, Massachusetts',
+    type: 'Public',
+    universityEmail: 'admissions@harvard.edu',
+    universityNumber: '+1-617-495-1000',
+    website: 'harvard.edu',
+    subjectsExcelFilePath:
+      'uploads/excel-submissions/1752743239306-subjectsExcel-1752743239291-98621669.xlsx',
+    numberOfStudents: '50000',
+    description: 'Example',
+    submittedAt: '2025-07-17T09:07:25.339Z',
+    status: 'In Progress',
+    rejectionReason: null,
   };
 
   useEffect(() => {
     const fetchRequestDetail = async () => {
-      setLoading(true);
+      setPageLoading(true); // Set page loading to true at the start of fetch
       setError(null);
 
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        console.log('Fetching request detail for ID:', requestId);
+        const response = await axios.get(`${API_BASE_URL}/admin/contact/${requestId}`);
+        const data = response.data;
 
-        if (id && mockDetailData[id]) {
-          setRequestData(mockDetailData[id]);
-        } else {
-          throw new Error('Request not found');
-        }
+        console.log('API Response:', data);
+        setRequestData(data);
+        form.setFieldsValue({ status: data.status });
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch request details';
-        setError(errorMessage);
-        message.error(errorMessage);
+        console.warn('API failed, loading mock data instead:', err);
+        setRequestData(mockDetailData);
+        form.setFieldsValue({ status: mockDetailData.status });
+        message.warning('Loaded fallback mock data - API endpoint may be unavailable');
       } finally {
-        setLoading(false);
+        setPageLoading(false); // Always set page loading to false
+        setLoading(false); // Reset general loading after initial fetch
       }
     };
 
-    if (id) {
+    if (requestId) {
       fetchRequestDetail();
     }
-  }, [id]);
+  }, [requestId, form]);
 
-  const handleBack = () => {
-    navigate(-1);
+  // Handle status change
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === 'Rejected') {
+      setPendingStatus(newStatus);
+      setRejectModalVisible(true);
+    } else {
+      form.setFieldsValue({ status: newStatus });
+    }
   };
 
-  const handleEdit = () => {
-    navigate(`/edit-request/${id}`);
+  // Submit form
+  const onFinish = async (values: any) => {
+    setLoading(true); // Set general loading for form submission
+    try {
+      const payload: any = {
+        status: values.status,
+      };
+
+      if (values.status === 'Rejected' && values.rejectionReason) {
+        payload.rejectionReason = values.rejectionReason;
+      }
+
+      console.log('Submitting payload:', payload);
+      await axios.patch(`${API_BASE_URL}/admin/contact/${requestId}/status`, payload);
+
+      message.success('Request updated successfully!');
+      setIsEditable(false);
+
+      // Update local state
+      setRequestData((prev) =>
+        prev
+          ? { ...prev, status: values.status, rejectionReason: values.rejectionReason || null }
+          : null,
+      ); // Also update rejection reason
+      if (onUpdate) onUpdate(); // Call onUpdate to refresh parent data
+    } catch (err: any) {
+      console.error('Update failed:', err);
+      const msg = err?.response?.data?.message;
+      message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Update failed');
+    } finally {
+      setLoading(false); // Reset general loading after submission
+    }
   };
 
-  if (loading) {
+  // Handle reject confirmation
+  const handleRejectConfirm = async (reason: string) => {
+    setRejectModalLoading(true); // Set loading for reject modal specifically
+    try {
+      // Set the form values, but the actual submission happens via onFinish
+      form.setFieldsValue({
+        status: 'Rejected',
+        rejectionReason: reason,
+      });
+      setRejectModalVisible(false);
+      setPendingStatus('');
+      await onFinish({ status: 'Rejected', rejectionReason: reason }); // Manually trigger form submission
+    } finally {
+      setRejectModalLoading(false); // Reset loading for reject modal
+    }
+  };
+
+  // Handle reject cancel
+  const handleRejectCancel = () => {
+    setRejectModalVisible(false);
+    setPendingStatus('');
+    form.setFieldsValue({ status: requestData?.status });
+  };
+
+  // Reset form
+  const handleReset = () => {
+    form.setFieldsValue({ status: requestData?.status });
+    setIsEditable(false);
+    message.info('Changes cancelled');
+  };
+
+  const handleDownload = () => {
+    if (requestData?.subjectsExcelFilePath) {
+      // Create download link
+      const link = document.createElement('a');
+      link.href = `${API_BASE_URL.replace('/api', '')}/${requestData.subjectsExcelFilePath}`;
+      link.download = 'subjects.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  if (pageLoading) {
     return (
       <div
         style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          minHeight: '50vh',
+          minHeight: '300px',
         }}
       >
         <Spin size='large' />
@@ -143,7 +475,7 @@ const RequestDetail: React.FC = () => {
 
   if (error || !requestData) {
     return (
-      <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', padding: '24px' }}>
+      <div style={{ padding: '24px' }}>
         <Card>
           <div style={{ textAlign: 'center', padding: '48px 20px' }}>
             <Title level={4} style={{ color: '#ff4d4f' }}>
@@ -151,10 +483,10 @@ const RequestDetail: React.FC = () => {
             </Title>
             <Button
               type='primary'
-              onClick={handleBack}
+              onClick={onClose}
               style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
             >
-              Go Back
+              Close
             </Button>
           </div>
         </Card>
@@ -162,190 +494,325 @@ const RequestDetail: React.FC = () => {
     );
   }
 
+  const availableStatuses = getAvailableStatusTransitions(requestData.status);
+  const isStatusChangeable = availableStatuses.length > 0;
+
   return (
-    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', padding: '24px' }}>
-      <AdminHeader />
-      <Card>
-        <LayoutWrapper>
-          {/* Form Fields */}
-          <Row gutter={[24, 24]}>
-            {/* University Name */}
-            <Col span={24}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>University Name</Text>
-              </div>
-              <Input
-                value={requestData.universityName}
-                readOnly
-                style={{
-                  height: '48px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  cursor: 'not-allowed',
-                }}
-              />
-            </Col>
+    <div style={{ marginTop: '-20px' }}>
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px',
+        }}
+      ></div>
 
-            {/* Country and Location */}
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Country</Text>
-              </div>
-              <Input
-                value={requestData.country}
-                readOnly
-                style={{
-                  height: '48px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  cursor: 'not-allowed',
-                }}
-              />
-            </Col>
+      <div className='bg-white rounded-lg shadow-sm p-4'>
+        <Form form={form} layout='vertical' onFinish={onFinish}>
+          {/* General Information Container */}
+          <div
+            className='mb-6 p-4 rounded-lg'
+            style={{
+              border: '1px solid #e8e8e8',
+              backgroundColor: 'white',
+            }}
+          >
+            <Title level={4} style={{ color: '#ff7a00', marginBottom: '16px' }}>
+              General Information
+            </Title>
 
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Location</Text>
-              </div>
-              <Input
-                value={requestData.location}
-                readOnly
-                style={{
-                  height: '48px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  cursor: 'not-allowed',
-                }}
-              />
-            </Col>
+            <Row gutter={[24, 16]}>
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <GraduationCap
+                    style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }}
+                  />
+                  <Text strong>University name</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>
+                  {requestData.universityName}
+                </Text>
+              </Col>
 
-            {/* Email and Website */}
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Email</Text>
-              </div>
-              <Input
-                value={requestData.email}
-                readOnly
-                style={{
-                  height: '48px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  cursor: 'not-allowed',
-                }}
-              />
-            </Col>
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <Building style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Abbreviation</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>{requestData.abbreviation}</Text>
+              </Col>
 
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Website</Text>
-              </div>
-              <Input
-                value={requestData.website}
-                readOnly
-                style={{
-                  height: '48px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  cursor: 'not-allowed',
-                }}
-              />
-            </Col>
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <Flag style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Country</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>{requestData.country}</Text>
+              </Col>
 
-            {/* Phone and Number of Students */}
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Phone</Text>
-              </div>
-              <Input
-                value={requestData.phone}
-                readOnly
-                style={{
-                  height: '48px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  cursor: 'not-allowed',
-                }}
-              />
-            </Col>
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <MapPin style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Location</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>{requestData.location}</Text>
+              </Col>
 
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Number of Students</Text>
-              </div>
-              <Input
-                value={requestData.numberOfStudents}
-                readOnly
-                style={{
-                  height: '48px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  cursor: 'not-allowed',
-                }}
-              />
-            </Col>
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <FileText style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Type</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>
+                  {requestData.type.charAt(0).toUpperCase() + requestData.type.slice(1)}
+                </Text>
+              </Col>
 
-            {/* Type and Status */}
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Type</Text>
-              </div>
-              <Select
-                value={requestData.type}
-                disabled
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <Users style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Number of students</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>
+                  {requestData.numberOfStudents || 'Not specified'}
+                </Text>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Contact Information Container */}
+          <div
+            className='mb-6 p-4 rounded-lg'
+            style={{
+              border: '1px solid #e8e8e8',
+              backgroundColor: 'white',
+            }}
+          >
+            <Title level={4} style={{ color: '#ff7a00', marginBottom: '16px' }}>
+              Contact Information
+            </Title>
+
+            <Row gutter={[24, 16]}>
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <Mail style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Email</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>
+                  {requestData.universityEmail || requestData.representativeEmail}
+                </Text>
+              </Col>
+
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <Phone style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Phone</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>
+                  {requestData.universityNumber || requestData.representativeNumber}
+                </Text>
+              </Col>
+
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <Globe style={{ color: '#ff7a00', marginRight: '8px', fontSize: '16px' }} />
+                  <Text strong>Website</Text>
+                </div>
+                <Text style={{ color: '#666', fontSize: '14px' }}>{requestData.website}</Text>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Subjects Container */}
+          {requestData.subjectsExcelFilePath && (
+            <div
+              className='mb-6 p-4 rounded-lg'
+              style={{
+                border: '1px solid #e8e8e8',
+                backgroundColor: 'white',
+              }}
+            >
+              <Title level={4} style={{ color: '#ff7a00', marginBottom: '16px' }}>
+                Subjects
+              </Title>
+
+              <div
                 style={{
-                  height: '48px',
-                  width: '100%',
-                  backgroundColor: '#f5f5f5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  border: '1px solid #e8e8e8',
+                  borderRadius: '8px',
+                  backgroundColor: '#fafafa',
                 }}
               >
-                <Option value='Academic'>Academic</Option>
-                <Option value='Technical'>Technical</Option>
-                <Option value='Research'>Research</Option>
-              </Select>
-            </Col>
-
-            <Col xs={24} md={12}>
-              <div style={{ marginBottom: 8 }}>
-                <Text strong>Status</Text>
+                <FileText style={{ color: '#52c41a', marginRight: '12px', fontSize: '16px' }} />
+                <div style={{ flex: 1 }}>
+                  <Text strong>Example.xls</Text>
+                  <br />
+                  <Text type='secondary' style={{ fontSize: '12px' }}>
+                    Excel file
+                  </Text>
+                </div>
+                <Button
+                  type='text'
+                  icon={<DownloadOutlined />}
+                  onClick={handleDownload}
+                  style={{ color: '#666' }}
+                />
               </div>
-              <Select
-                value={requestData.status}
-                disabled
-                style={{
-                  height: '48px',
-                  width: '100%',
-                  backgroundColor: '#f5f5f5',
-                }}
-              >
-                <Option value='Pending'>Pending</Option>
-                <Option value='In Progress'>In Progress</Option>
-                <Option value='Rejected'>Rejected</Option>
-                <Option value='Completed'>Completed</Option>
-              </Select>
-            </Col>
-          </Row>
+            </div>
+          )}
+
+          {/* Description Container */}
+          <div
+            className='mb-6 p-4 rounded-lg'
+            style={{
+              border: '1px solid #e8e8e8',
+              backgroundColor: 'white',
+            }}
+          >
+            <Title level={4} style={{ color: '#ff7a00', marginBottom: '16px' }}>
+              Description
+            </Title>
+
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '8px',
+                border: '1px solid #e8e8e8',
+              }}
+            >
+              <Text style={{ color: '#666', fontSize: '14px' }}>
+                {requestData.description || requestData.message || 'No description provided'}
+              </Text>
+            </div>
+          </div>
+
+          {/* Request Information Container */}
+          <div
+            className='mb-6 p-4 rounded-lg'
+            style={{
+              border: '1px solid #e8e8e8',
+              backgroundColor: 'white',
+            }}
+          >
+            <Title level={4} style={{ color: '#ff7a00', marginBottom: 20 }}>
+              Request Information
+            </Title>
+
+            <div>
+              <Row gutter={[32, 16]} align='middle'>
+                {' '}
+                {/* Added vertical gutter for small screens */}
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3'>
+                    <Text strong style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
+                      Request Type
+                    </Text>
+                    <div style={{ flexGrow: 1 }}>
+                      <div
+                        style={{
+                          backgroundColor: '#f0f0f0',
+                          border: '1px solid #d9d9d9',
+                          borderRadius: 20,
+                          padding: '6px 12px',
+                          fontSize: 14,
+                          color: '#333',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {requestData.requestType}
+                      </div>
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3'>
+                    <Text strong style={{ fontSize: 14 }}>
+                      Status
+                    </Text>
+                    <Form.Item name='status' style={{ marginBottom: 0 }}>
+                      <Select
+                        disabled={!isEditable || !isStatusChangeable}
+                        style={{
+                          minWidth: 160,
+                          borderRadius: 20,
+                        }}
+                        size='middle'
+                        onChange={handleStatusChange}
+                        suffixIcon={isEditable && isStatusChangeable ? undefined : null}
+                      >
+                        <Option value='Pending'>Pending</Option>
+                        <Option value='In Progress'>In Progress</Option>
+                        <Option value='Completed'>Completed</Option>
+                        <Option value='Rejected'>Rejected</Option>
+                      </Select>
+                    </Form.Item>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          </div>
+
+          {/* Hidden field for rejection reason */}
+          <Form.Item name='rejectionReason' style={{ display: 'none' }}>
+            <Input />
+          </Form.Item>
 
           {/* Action Buttons */}
-          <Row justify='end' style={{ marginTop: 32 }}>
-            <Col>
-              <Space>
-                <Button onClick={handleBack}>Cancel</Button>
+          <div className='flex justify-end space-x-3 mt-8'>
+            {!isEditable ? (
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => setIsEditable(true)}
+                style={{
+                  backgroundColor: '#ff7a00',
+                  borderColor: '#ff7a00',
+                  color: 'white',
+                  borderRadius: 6,
+                }}
+                disabled={!isStatusChangeable}
+              >
+                Edit
+              </Button>
+            ) : (
+              <>
                 <Button
-                  type='primary'
-                  icon={<EditOutlined />}
-                  onClick={handleEdit}
-                  style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+                  htmlType='submit'
+                  loading={loading} // Use general loading for form submission
+                  icon={<SaveOutlined />}
+                  style={{
+                    backgroundColor: '#ff7a00',
+                    borderColor: '#ff7a00',
+                    color: 'white',
+                    borderRadius: 6,
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7a445')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
                 >
-                  Edit
+                  Save
                 </Button>
-              </Space>
-            </Col>
-          </Row>
-        </LayoutWrapper>
-      </Card>
+              </>
+            )}
+          </div>
+        </Form>
+      </div>
+
+      {/* Reject Modal */}
+      <RejectModal
+        visible={rejectModalVisible}
+        onConfirm={handleRejectConfirm}
+        onCancel={handleRejectCancel}
+        loading={rejectModalLoading} // Use rejectModalLoading here
+      />
     </div>
   );
 };
 
-export default RequestDetail;
+export default RequestDetailModalContent;

@@ -91,7 +91,7 @@ const ManageAccount: React.FC = () => {
           Pending: data.pendingUsers,
         });
       } catch (error) {
-        console.error('Error fetching overview stats:', error);
+        message.error('Error fetching overview stats');
       }
     };
 
@@ -99,7 +99,6 @@ const ManageAccount: React.FC = () => {
       try {
         setLoading(true);
         const res = await axios.get('/users');
-        console.log('RESPONSE /users:', res.data);
 
         const users = res.data.data;
         const total = res.data.meta?.totalItems ?? users.length;
@@ -115,7 +114,7 @@ const ManageAccount: React.FC = () => {
         setAccounts(formattedUsers);
         setTotalCount(total);
       } catch (error) {
-        console.error('Error fetching users:', error);
+        message.error('Error fetching users');
       } finally {
         setLoading(false);
       }
@@ -293,16 +292,16 @@ const ManageAccount: React.FC = () => {
   }
 
   return (
-    <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: '#fffff', minHeight: '100vh' }}>
       <AdminHeader />
       <LayoutWrapper>
-        <div className='flex flex-1 flex-col px-4 py-6 overflow-x-hidden w-auto'>
+        <div className='flex flex-1 flex-col lg:pl-8 py-6 overflow-x-hidden w-auto '>
           <div className='flex justify-end mb-4 flex-row gap-2'>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+              className='flex bg-[#FF7A00] text-white px-5 py-3 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
             >
-              <Plus width={'15px'} height={'15px'} /> Create Account
+              <Plus width={'15px'} height={'15px'} /> Create
             </button>
             <button
               onClick={() => setIsCreateOpen(true)}
@@ -314,21 +313,21 @@ const ManageAccount: React.FC = () => {
 
           <h3 className='my-5 text-lg font-semibold'>Overview</h3>
 
-          <div className='flex flex-1 flex-wrap gap-2 mb-10 items-center justify-center'>
+          <div className='flex flex-wrap md:grid md:grid-cols-5 justify-center gap-6 md:gap-6 md:justify-between mb-10 m-none w-full box-border '>
             {items.map((item) => (
               <div
                 key={item.label}
-                className={`flex flex-wrap justify-between items-center rounded-xl px-0 sm:px-6 py-4 w-[150px] bg-white sm:scale-[1] scale-[0.8]`}
+                className={`flex flex-wrap gap-2 justify-between items-center rounded-xl px-4 lg:px-6 py-6 min-w-[150px] md:min-w-[160px] lg:min-w-[120px] bg-white`}
                 style={{
                   boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.06)',
                 }}
               >
-                <div className='flex flex-col items-start justify-center gap-1 w-1/2 h-[60px]'>
+                <div className='flex flex-col items-start justify-between  w-1/2 h-[50px] '>
                   <p className={`text-sm ${item.color} font-semibold`}>{item.label}</p>
-                  <p className='text-[28px] font-semibold text-gray-500'>{item.value}</p>
+                  <p className='text-[23px] lg:text-[28px] font-semibold'>{item.value}</p>
                 </div>
                 <div
-                  className={`flex h-[60px] w-[60px] items-center justify-center rounded-[23px] ${item.bg}`}
+                  className={`flex h-[50px] w-[50px] lg:h-[60px] lg:w-[60px] items-center justify-center rounded-[17px] lg:rounded-[23px] ${item.bg}`}
                 >
                   {item.icon}
                 </div>
@@ -337,10 +336,47 @@ const ManageAccount: React.FC = () => {
           </div>
 
           <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
+          <CreateAccount
+            open={isCreateOpen}
+            onCancel={() => setIsCreateOpen(false)}
+            onSubmit={async (values) => {
+              try {
+                const payload = {
+                  name: values.name,
+                  email: values.email,
+                  job: values.role,
+                };
+                await axios.post('/users', payload);
+
+                // Refresh list
+                const res = await axios.get('/users');
+                const users = res.data.data;
+                const total = res.data.meta?.totalItems ?? users.length;
+                const formattedUsers = users.map((user: any) => ({
+                  key: String(user.id),
+                  name: user.name,
+                  role: user.job ?? '-',
+                  email: user.email,
+                  createdAt: user.createdAt,
+                  status: mapBackendStatus(user.status),
+                }));
+
+                setAccounts(formattedUsers);
+                setTotalCount(total);
+
+                message.success('Account created successfully');
+                setIsCreateOpen(false);
+              } catch (error: any) {
+                message.error(error.response?.data?.message || 'Failed to create account');
+              }
+            }}
+          />
+
           <Table
             columns={columns}
             dataSource={accounts}
             loading={loading}
+            rowKey='id'
             pagination={{
               current: currentPage,
               pageSize: pageSize,
@@ -349,7 +385,7 @@ const ManageAccount: React.FC = () => {
               position: ['bottomCenter'],
             }}
             scroll={{ x: '100%' }}
-            bordered
+            bordered={false}
             className='px-5'
             onRow={(record: Account) => ({
               onClick: () => {
