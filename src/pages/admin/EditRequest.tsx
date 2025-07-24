@@ -4,33 +4,19 @@ import {
   UserOutlined,
   MailOutlined,
   PhoneOutlined,
-  CloseOutlined,
 } from '@ant-design/icons';
 import { Form, Input, Select, Button, message, Typography, Spin, Modal, Row, Col } from 'antd';
 import axios from 'axios';
 import { GraduationCap } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-
-import AdminHeader from '../../components/AdminHeader';
-import LayoutWrapper from '../../components/LayoutWrapper';
+// Removed: useParams, useNavigate, AdminHeader, LayoutWrapper as they are handled by the parent/Modal
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title, Text } = Typography;
 
-const mockRequestData: RequestData = {
-  id: 'mock-id',
-  universityName: 'Mock Nhi University',
-  representativeName: 'Nhi',
-  requestType: 'Update Information',
-  status: 'Pending',
-  representativeNumber: '093175465121',
-  representativeEmail: 'ngoc.nhi@stunited.edu',
-  message: 'Example',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
+// API Base URL
+const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
 
 // Types
 interface RequestData {
@@ -51,6 +37,12 @@ interface RejectModalProps {
   onConfirm: (reason: string) => void;
   onCancel: () => void;
   loading: boolean;
+}
+
+interface EditRequestModalContentProps {
+  requestId: string;
+  onClose: () => void; // Add an onClose prop to close the modal
+  onUpdate?: () => void; // Make onUpdate optional to align with RequestDetailModalContentProps
 }
 
 // Status transition rules
@@ -83,6 +75,20 @@ const getStatusColor = (status: string): string => {
   }
 };
 
+// Mock data moved outside the component
+const mockRequestData: RequestData = {
+  id: 'mock-id', // Will be overridden by actual requestId if available
+  universityName: 'Mock Nhi University',
+  representativeName: 'Nhi',
+  requestType: 'Update Information',
+  status: 'Pending',
+  representativeNumber: '093175465121',
+  representativeEmail: 'ngoc.nhi@stunited.edu',
+  message: 'Example',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
 // Reject Modal Component
 const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel, loading }) => {
   const [form] = Form.useForm();
@@ -104,11 +110,11 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
       open={visible}
       onCancel={handleCancel}
       footer={null}
-      width={600} // Increase the width for a larger modal
+      width={600}
       centered
       closable={false}
       bodyStyle={{
-        padding: '24px 40px', // Increased padding
+        padding: '24px 40px',
         textAlign: 'center',
         backgroundColor: '#ffffff',
         borderRadius: 12,
@@ -118,17 +124,16 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
         borderRadius: 12,
       }}
     >
-      {/* Warning Icon */}
       <div
         style={{
-          width: 100, // Increased icon size
+          width: 100,
           height: 100,
           borderRadius: '50%',
           backgroundColor: '#ffebee',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 12px', // Slightly more margin below the icon
+          margin: '0 auto 12px',
           position: 'relative',
         }}
       >
@@ -161,7 +166,7 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
               left: '50%',
               transform: 'translateX(-50%)',
               color: 'white',
-              fontSize: '18px', // Increased font size for the "!"
+              fontSize: '18px',
               fontWeight: 'bold',
             }}
           >
@@ -170,7 +175,6 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
         </div>
       </div>
 
-      {/* Title (Reject Request) */}
       <Title
         level={3}
         style={{
@@ -196,7 +200,6 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
         Please provide a reason for rejection
       </Text>
 
-      {/* Form */}
       <Form form={form} layout='vertical'>
         <Form.Item
           name='reason'
@@ -205,31 +208,30 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
             { min: 10, message: 'Reason must be at least 10 characters' },
             { max: 500, message: 'Reason cannot exceed 500 characters' },
           ]}
-          style={{ textAlign: 'left', marginBottom: 12 }} // Increased margin below the message field
+          style={{ textAlign: 'left', marginBottom: 12 }}
         >
           <TextArea
-            rows={2} // Increased rows for larger text area
+            rows={2}
             showCount
             maxLength={500}
             style={{
               borderRadius: 10,
-              padding: '12px 18px', // Increased padding inside text area
-              fontSize: 16, // Increased font size for the text
+              padding: '12px 18px',
+              fontSize: 16,
               border: '1px solid #d9d9d9',
               backgroundColor: '#ffffff',
             }}
           />
         </Form.Item>
 
-        {/* Validation hint (Text: This field is required... */}
         <Text
           style={{
             color: '#999',
-            fontSize: 14, // Increased font size for the validation hint
+            fontSize: 14,
             fontStyle: 'italic',
             textAlign: 'left',
-            marginTop: -10, // Reduced margin to bring it closer to the message field
-            marginBottom: 20, // Increased margin below the validation hint
+            marginTop: -10,
+            marginBottom: 20,
             display: 'block',
           }}
         >
@@ -237,30 +239,29 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
         </Text>
       </Form>
 
-      {/* Action Buttons */}
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
         <Button
           onClick={handleCancel}
           size='large'
           style={{
-            minWidth: 120, // Increased button width
-            height: 48, // Increased button height
-            borderRadius: 24, // Rounded buttons more
+            minWidth: 120,
+            height: 48,
+            borderRadius: 24,
             border: '1px solid #d9d9d9',
             backgroundColor: '#ffffff',
             color: '#666',
-            fontSize: 16, // Increased font size for button text
+            fontSize: 16,
             fontWeight: 500,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#e3f2fd'; // Light blue background on hover
-            e.currentTarget.style.borderColor = '#1976d2'; // Blue border on hover
-            e.currentTarget.style.color = '#1976d2'; // Change text color to blue
+            e.currentTarget.style.backgroundColor = '#e3f2fd';
+            e.currentTarget.style.borderColor = '#1976d2';
+            e.currentTarget.style.color = '#1976d2';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#ffffff'; // Reset background to white
-            e.currentTarget.style.borderColor = '#d9d9d9'; // Reset border color
-            e.currentTarget.style.color = '#666'; // Reset text color to default
+            e.currentTarget.style.backgroundColor = '#ffffff';
+            e.currentTarget.style.borderColor = '#d9d9d9';
+            e.currentTarget.style.color = '#666';
           }}
         >
           Cancel
@@ -270,16 +271,16 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
           loading={loading}
           size='large'
           style={{
-            minWidth: 120, // Increased button width
-            height: 48, // Increased button height
-            borderRadius: 24, // Rounded buttons more
+            minWidth: 120,
+            height: 48,
+            borderRadius: 24,
             backgroundColor: '#ff7043',
             borderColor: '#ff7043',
             color: 'white',
-            fontSize: 16, // Increased font size for button text
+            fontSize: 16,
             fontWeight: 500,
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7934d')} // Slightly darker orange hover
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7934d')}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
         >
           OK
@@ -289,9 +290,11 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
   );
 };
 
-const EditRequest: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+const EditRequestModalContent: React.FC<EditRequestModalContentProps> = ({
+  requestId,
+  onClose,
+  onUpdate,
+}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -305,15 +308,16 @@ const EditRequest: React.FC = () => {
     const fetchRequest = async () => {
       try {
         setPageLoading(true);
-        console.log('Fetching request data for ID:', id);
-        const response = await axios.get(`/admin/contact/${id}`);
+        console.log('Fetching request data for ID:', requestId);
+        // Using `API_BASE_URL` from the ManageRequest.tsx context, assuming it's correctly set up for API calls
+        const response = await axios.get(`${API_BASE_URL}/admin/contact/${requestId}`);
         const data = response.data;
 
         console.log('API Response:', data);
 
         // Map API response to expected format
         const mappedData: RequestData = {
-          id: data.id || id,
+          id: data.id || requestId,
           universityName: data.universityName || '',
           representativeName: data.representativeName || '',
           requestType: data.requestType || '',
@@ -330,18 +334,19 @@ const EditRequest: React.FC = () => {
         console.log('Data loaded successfully:', mappedData);
       } catch (err) {
         console.warn('API failed, loading mock data instead:', err);
-        setRequestData(mockRequestData);
-        form.setFieldsValue(mockRequestData);
+        // Use a spread to assign requestId to the mock data's ID
+        setRequestData({ ...mockRequestData, id: requestId });
+        form.setFieldsValue({ ...mockRequestData, id: requestId });
         message.warning('Loaded fallback mock data - API endpoint may be unavailable');
       } finally {
         setPageLoading(false);
       }
     };
 
-    if (id) {
+    if (requestId) {
       fetchRequest();
     }
-  }, [id, form]);
+  }, [requestId, form]); // mockRequestData is no longer a dependency here
 
   // Handle status change
   const handleStatusChange = (newStatus: string) => {
@@ -366,13 +371,15 @@ const EditRequest: React.FC = () => {
       }
 
       console.log('Submitting payload:', payload);
-      await axios.patch(`/admin/contact/${id}/status`, payload);
+      // Using `API_BASE_URL` from the ManageRequest.tsx context
+      await axios.patch(`${API_BASE_URL}/admin/contact/${requestId}/status`, payload);
 
       message.success('Request updated successfully!');
       setIsEditable(false);
 
       // Update local state
       setRequestData((prev) => (prev ? { ...prev, status: values.status } : null));
+      if (onUpdate) onUpdate(); // Call onUpdate to refresh parent data
     } catch (err: any) {
       console.error('Update failed:', err);
       const msg = err?.response?.data?.message;
@@ -408,7 +415,7 @@ const EditRequest: React.FC = () => {
 
   if (pageLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-gray-100'>
+      <div className='flex items-center justify-center p-6' style={{ minHeight: '300px' }}>
         <Spin size='large' />
       </div>
     );
@@ -416,9 +423,12 @@ const EditRequest: React.FC = () => {
 
   if (!requestData) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-gray-100'>
+      <div className='flex items-center justify-center p-6' style={{ minHeight: '300px' }}>
         <div className='text-center'>
           <Text type='secondary'>Request not found</Text>
+          <Button onClick={onClose} style={{ marginTop: 16 }}>
+            Close
+          </Button>
         </div>
       </div>
     );
@@ -428,261 +438,247 @@ const EditRequest: React.FC = () => {
   const isStatusChangeable = availableStatuses.length > 0;
 
   return (
-    <div className='p-6 bg-gray-100 min-h-screen'>
-      <AdminHeader />
-      <LayoutWrapper>
-        <div className='max-w-4xl mx-auto'>
-          {/* Header */}
-          <div className='mb-6'>
-            <div className='flex justify-between items-center mb-4'>
-              <div className='flex-1 text-center'>
-                <Title level={3} style={{ color: '#ff7a00', margin: 0 }}>
-                  Detail of requests
-                </Title>
-              </div>
+    <div className='p-4' style={{ marginTop: '-20px' }}>
+      {/* Main Content */}
+      <div className='bg-white rounded-lg shadow-sm p-4'>
+        <Form form={form} layout='vertical' onFinish={onFinish}>
+          {/* Request Details Container */}
+          <div
+            className='mb-6 p-4 rounded-lg'
+            style={{
+              border: '1px solid #e8e8e8',
+              backgroundColor: 'white',
+            }}
+          >
+            <Title level={4} style={{ color: '#ff7a00', marginBottom: 20 }}>
+              Request Details
+            </Title>
 
-              {/* Apply margin-right here */}
-              <div className='mr-8'>
-                <Button
-                  onClick={() => navigate('/manage')}
-                  type='text'
-                  size='large'
-                  icon={<CloseOutlined />}
-                  className='w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800 transition duration-200'
-                />
-              </div>
+            <div>
+              <Row gutter={[32, 20]}>
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3 mb-2'>
+                    <GraduationCap style={{ color: '#ff7a00', fontSize: 18 }} />
+                    <Text strong style={{ fontSize: 16 }}>
+                      University name
+                    </Text>
+                  </div>
+                  <Form.Item name='universityName' style={{ marginBottom: 0 }}>
+                    <div style={{ fontSize: 14, color: '#666' }}>{requestData.universityName}</div>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3 mb-2'>
+                    <UserOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
+                    <Text strong style={{ fontSize: 16 }}>
+                      Representative
+                    </Text>
+                  </div>
+                  <Form.Item name='representativeName' style={{ marginBottom: 0 }}>
+                    <div style={{ fontSize: 14, color: '#666' }}>
+                      {requestData.representativeName}
+                    </div>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3 mb-2'>
+                    <MailOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
+                    <Text strong style={{ fontSize: 16 }}>
+                      Email
+                    </Text>
+                  </div>
+                  <Form.Item name='representativeEmail' style={{ marginBottom: 0 }}>
+                    <div style={{ fontSize: 14, color: '#666' }}>
+                      {requestData.representativeEmail}
+                    </div>
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3 mb-2'>
+                    <PhoneOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
+                    <Text strong style={{ fontSize: 16 }}>
+                      Phone
+                    </Text>
+                  </div>
+                  <Form.Item name='representativeNumber' style={{ marginBottom: 0 }}>
+                    <div style={{ fontSize: 14, color: '#666' }}>
+                      {requestData.representativeNumber}
+                    </div>
+                  </Form.Item>
+                </Col>
+              </Row>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className='bg-white rounded-lg shadow-sm p-8'>
-            <Form form={form} layout='vertical' onFinish={onFinish}>
-              {/* General Information Container */}
-              <div
-                className='mb-6 p-4 rounded-lg'
+          {/* Message Container */}
+          <div
+            className='mb-6 p-4 rounded-lg'
+            style={{
+              border: '1px solid #e8e8e8',
+              backgroundColor: 'white',
+            }}
+          >
+            <Title level={4} style={{ color: '#ff7a00', marginBottom: 12 }}>
+              Message
+            </Title>
+            <Form.Item name='message' style={{ marginBottom: 0 }}>
+              <TextArea
+                rows={3}
+                disabled
+                value={requestData.message}
                 style={{
+                  backgroundColor: '#f5f5f5',
                   border: '1px solid #e8e8e8',
-                  backgroundColor: 'white',
+                  borderRadius: 8,
+                  padding: 12,
+                  fontSize: 14,
+                  color: '#333',
                 }}
-              >
-                <Title level={4} style={{ color: '#ff7a00', marginBottom: 20 }}>
-                  General Information
-                </Title>
-
-                <div>
-                  <Row gutter={[32, 20]}>
-                    <Col xs={24} md={12}>
-                      <div className='flex items-center space-x-3 mb-2'>
-                        <GraduationCap style={{ color: '#ff7a00', fontSize: 18 }} />
-                        <Text strong style={{ fontSize: 16 }}>
-                          University name
-                        </Text>
-                      </div>
-                      <Form.Item name='universityName' style={{ marginBottom: 0 }}>
-                        <div style={{ fontSize: 14, color: '#666' }}>
-                          {requestData.universityName}
-                        </div>
-                      </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                      <div className='flex items-center space-x-3 mb-2'>
-                        <UserOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
-                        <Text strong style={{ fontSize: 16 }}>
-                          Representative
-                        </Text>
-                      </div>
-                      <Form.Item name='representativeName' style={{ marginBottom: 0 }}>
-                        <div style={{ fontSize: 14, color: '#666' }}>
-                          {requestData.representativeName}
-                        </div>
-                      </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                      <div className='flex items-center space-x-3 mb-2'>
-                        <MailOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
-                        <Text strong style={{ fontSize: 16 }}>
-                          Email
-                        </Text>
-                      </div>
-                      <Form.Item name='representativeEmail' style={{ marginBottom: 0 }}>
-                        <div style={{ fontSize: 14, color: '#666' }}>
-                          {requestData.representativeEmail}
-                        </div>
-                      </Form.Item>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                      <div className='flex items-center space-x-3 mb-2'>
-                        <PhoneOutlined style={{ color: '#ff7a00', fontSize: 18 }} />
-                        <Text strong style={{ fontSize: 16 }}>
-                          Phone
-                        </Text>
-                      </div>
-                      <Form.Item name='representativeNumber' style={{ marginBottom: 0 }}>
-                        <div style={{ fontSize: 14, color: '#666' }}>
-                          {requestData.representativeNumber}
-                        </div>
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </div>
-              </div>
-
-              {/* Message Container */}
-              <div
-                className='mb-6 p-4 rounded-lg'
-                style={{
-                  border: '1px solid #e8e8e8',
-                  backgroundColor: 'white',
-                }}
-              >
-                <Title level={4} style={{ color: '#ff7a00', marginBottom: 12 }}>
-                  Message
-                </Title>
-                <Form.Item name='message' style={{ marginBottom: 0 }}>
-                  <TextArea
-                    rows={3}
-                    disabled
-                    value={requestData.message}
-                    style={{
-                      backgroundColor: '#f5f5f5',
-                      border: '1px solid #e8e8e8',
-                      borderRadius: 8,
-                      padding: 12,
-                      fontSize: 14,
-                      color: '#333',
-                    }}
-                  />
-                </Form.Item>
-              </div>
-
-              {/* Request Information Container */}
-              <div
-                className='mb-6 p-4 rounded-lg'
-                style={{
-                  border: '1px solid #e8e8e8',
-                  backgroundColor: 'white',
-                }}
-              >
-                <Title level={4} style={{ color: '#ff7a00', marginBottom: 20 }}>
-                  Request Information
-                </Title>
-
-                <div style={{ paddingLeft: 40 }}>
-                  <Row gutter={[32, 0]} align='middle'>
-                    <Col xs={24} md={12}>
-                      <div className='flex items-center space-x-3'>
-                        <Text strong style={{ fontSize: 14 }}>
-                          Request Type
-                        </Text>
-                        <Form.Item name='requestType' style={{ marginBottom: 0 }}>
-                          <div
-                            style={{
-                              backgroundColor: '#f0f0f0',
-                              border: '1px solid #d9d9d9',
-                              borderRadius: 20,
-                              padding: '6px 12px',
-                              fontSize: 14,
-                              color: '#333',
-                              display: 'inline-block',
-                              minWidth: 160,
-                            }}
-                          >
-                            {requestData.requestType}
-                          </div>
-                        </Form.Item>
-                      </div>
-                    </Col>
-
-                    <Col xs={24} md={12}>
-                      <div className='flex items-center space-x-3'>
-                        <Text strong style={{ fontSize: 14 }}>
-                          Status
-                        </Text>
-                        <Form.Item name='status' style={{ marginBottom: 0 }}>
-                          <Select
-                            disabled={!isEditable || !isStatusChangeable}
-                            style={{
-                              minWidth: 160,
-                              borderRadius: 20,
-                            }}
-                            size='middle'
-                            onChange={handleStatusChange}
-                            suffixIcon={isEditable && isStatusChangeable ? undefined : null}
-                            value={requestData.status}
-                          >
-                            <Option value='Pending'>Pending</Option>
-                            <Option value='In Progress'>In Progress</Option>
-                            <Option value='Completed'>Completed</Option>
-                            <Option value='Rejected'>Rejected</Option>
-                          </Select>
-                        </Form.Item>
-                      </div>
-                    </Col>
-                  </Row>
-                </div>
-              </div>
-
-              {/* Hidden field for rejection reason */}
-              <Form.Item name='rejectionReason' style={{ display: 'none' }}>
-                <Input />
-              </Form.Item>
-
-              {/* Action Buttons */}
-              <div className='flex justify-end space-x-3 mt-8'>
-                {!isEditable ? (
-                  <Button
-                    icon={<EditOutlined />}
-                    onClick={() => setIsEditable(true)}
-                    style={{
-                      backgroundColor: '#ff7a00',
-                      borderColor: '#ff7a00',
-                      color: 'white',
-                      borderRadius: 6,
-                    }}
-                    disabled={!isStatusChangeable}
-                  >
-                    Edit
-                  </Button>
-                ) : (
-                  <>
-                    <Button onClick={handleReset} style={{ borderRadius: 6 }}>
-                      Cancel
-                    </Button>
-                    <Button
-                      htmlType='submit'
-                      loading={loading}
-                      icon={<SaveOutlined />}
-                      style={{
-                        backgroundColor: '#ff7a00',
-                        borderColor: '#ff7a00',
-                        color: 'white',
-                        borderRadius: 6,
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7a445')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
-                    >
-                      Save
-                    </Button>
-                  </>
-                )}
-              </div>
-            </Form>
+              />
+            </Form.Item>
           </div>
 
-          {/* Reject Modal */}
-          <RejectModal
-            visible={rejectModalVisible}
-            onConfirm={handleRejectConfirm}
-            onCancel={handleRejectCancel}
-            loading={loading}
-          />
-        </div>
-      </LayoutWrapper>
+          {/* Request Information Container */}
+          <div
+            className='mb-6 p-4 rounded-lg'
+            style={{
+              border: '1px solid #e8e8e8',
+              backgroundColor: 'white',
+            }}
+          >
+            <Title level={4} style={{ color: '#ff7a00', marginBottom: 20 }}>
+              Request Information
+            </Title>
+
+            <div>
+              <Row gutter={[32, 16]} align='middle'>
+                {' '}
+                {/* Modified: Added vertical gutter for small screens */}
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3'>
+                    <Text strong style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
+                      Request Type
+                    </Text>
+                    <div style={{ flexGrow: 1 }}>
+                      <Form.Item
+                        name='requestType'
+                        style={{
+                          marginBottom: 0,
+                          display: 'inline-block', // Ensures it doesn’t break the line
+                          width: '100%',
+                        }}
+                      >
+                        <div
+                          style={{
+                            backgroundColor: '#f0f0f0',
+                            border: '1px solid #d9d9d9',
+                            borderRadius: 20,
+                            padding: '6px 12px',
+                            fontSize: 14,
+                            color: '#333',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {requestData.requestType}
+                        </div>
+                      </Form.Item>
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} md={12}>
+                  <div className='flex items-center space-x-3'>
+                    <Text strong style={{ fontSize: 14 }}>
+                      Status
+                    </Text>
+                    <Form.Item name='status' style={{ marginBottom: 0 }}>
+                      <Select
+                        disabled={!isEditable || !isStatusChangeable}
+                        style={{
+                          minWidth: 160,
+                          borderRadius: 20,
+                          width: '100%', // Modified: Make select full width on smaller screens
+                        }}
+                        size='middle'
+                        onChange={handleStatusChange}
+                        suffixIcon={isEditable && isStatusChangeable ? undefined : null}
+                        value={requestData.status}
+                      >
+                        <Option value='Pending'>Pending</Option>
+                        <Option value='In Progress'>In Progress</Option>
+                        <Option value='Completed'>Completed</Option>
+                        <Option value='Rejected'>Rejected</Option>
+                      </Select>
+                    </Form.Item>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          </div>
+
+          {/* Hidden field for rejection reason */}
+          <Form.Item name='rejectionReason' style={{ display: 'none' }}>
+            <Input />
+          </Form.Item>
+
+          {/* Action Buttons */}
+          <div className='flex justify-end space-x-3 mt-8 flex-wrap'>
+            {' '}
+            {/* Modified: Added flex-wrap for responsiveness */}
+            {!isEditable ? (
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => setIsEditable(true)}
+                style={{
+                  backgroundColor: '#ff7a00',
+                  borderColor: '#ff7a00',
+                  color: 'white',
+                  borderRadius: 6,
+                  width: '100%', // Modified: Full width on small screens
+                  maxWidth: '120px', // Max width on larger screens
+                }}
+                disabled={!isStatusChangeable}
+              >
+                Edit
+              </Button>
+            ) : (
+              <>
+                <Button
+                  htmlType='submit'
+                  loading={loading}
+                  icon={<SaveOutlined />}
+                  style={{
+                    backgroundColor: '#ff7a00',
+                    borderColor: '#ff7a00',
+                    color: 'white',
+                    borderRadius: 6,
+                    width: '100%', // Modified: Full width on small screens
+                    maxWidth: '120px', // Max width on larger screens
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7a445')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
+                >
+                  Save
+                </Button>
+              </>
+            )}
+          </div>
+        </Form>
+      </div>
+
+      {/* Reject Modal */}
+      <RejectModal
+        visible={rejectModalVisible}
+        onConfirm={handleRejectConfirm}
+        onCancel={handleRejectCancel}
+        loading={loading}
+      />
     </div>
   );
 };
 
-export default EditRequest;
+export default EditRequestModalContent;
