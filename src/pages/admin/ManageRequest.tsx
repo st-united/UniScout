@@ -545,7 +545,7 @@ const ManageRequest: React.FC = () => {
         <Button
           type='text'
           icon={<EditOutlined style={{ fontSize: '18px', color: '#ff7a00' }} />}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation(); // Prevent row click when clicking edit button
             handleEdit(record.id);
           }}
@@ -565,7 +565,7 @@ const ManageRequest: React.FC = () => {
           mode='multiple'
           allowClear
           value={filters.country}
-          onChange={(values) => handleMultiFilterChange('country', values || [])}
+          onChange={(values: string[]) => handleMultiFilterChange('country', values || [])}
           style={{ width: '100%' }}
           placeholder='All Countries'
           optionLabelProp='label'
@@ -586,7 +586,7 @@ const ManageRequest: React.FC = () => {
           mode='multiple'
           allowClear
           value={filters.requestType}
-          onChange={(values) => handleMultiFilterChange('requestType', values || [])}
+          onChange={(values: string[]) => handleMultiFilterChange('requestType', values || [])}
           style={{ width: '100%' }}
           placeholder='All Type'
           loading={loadingRequestTypes}
@@ -607,7 +607,7 @@ const ManageRequest: React.FC = () => {
           mode='multiple'
           allowClear
           value={filters.status}
-          onChange={(values) => handleMultiFilterChange('status', values || [])}
+          onChange={(values: string[]) => handleMultiFilterChange('status', values || [])}
           style={{ width: '100%' }}
           placeholder='All Status'
           loading={loadingSubmissionStatuses}
@@ -706,7 +706,9 @@ const ManageRequest: React.FC = () => {
                     <Input
                       placeholder='Search'
                       value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setSearchInput(e.target.value)
+                      }
                       bordered={false}
                       style={{
                         flex: 1,
@@ -836,7 +838,7 @@ const ManageRequest: React.FC = () => {
               dataSource={requestData}
               rowKey='id'
               loading={loading}
-              onRow={(record) => ({
+              onRow={(record: UserRequest) => ({
                 onClick: () => handleRowClick(record),
                 style: { cursor: 'pointer' },
               })}
@@ -844,10 +846,10 @@ const ManageRequest: React.FC = () => {
                 current: currentPage,
                 pageSize: pageSize,
                 total: totalCount,
-                onChange: (page) => setCurrentPage(page),
+                onChange: (page: number) => setCurrentPage(page),
                 showSizeChanger: false,
                 showQuickJumper: false,
-                itemRender: (page, type, originalElement) => {
+                itemRender: (page: number, type: string, originalElement: React.ReactNode) => {
                   const totalPages = Math.ceil(totalCount / pageSize);
                   const baseStyle: React.CSSProperties = {
                     fontWeight: 500,
