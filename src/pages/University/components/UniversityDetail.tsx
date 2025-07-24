@@ -16,6 +16,7 @@ interface FieldConfig {
   icon: string;
   description: string;
   apiFieldName: string;
+  academicFieldId: number; // Added academicFieldId
 }
 
 interface Subject {
@@ -29,84 +30,98 @@ interface SubjectsResponse {
   data: Subject[] | string[];
 }
 
+// Updated fieldConfigs with academicFieldId based on API response example (assuming these IDs are static)
 const fieldConfigs: Record<string, FieldConfig> = {
   agricultural_veterinary_sciences: {
     name: 'Agricultural & Veterinary Sciences',
     icon: '🌾',
     description: '',
     apiFieldName: 'agricultural_veterinary_sciences',
+    academicFieldId: 1, // Placeholder: Replace with actual ID
   },
   arts_design: {
     name: 'Arts & Design',
     icon: '🎨',
     description: '',
     apiFieldName: 'arts_design',
+    academicFieldId: 2, // Placeholder: Replace with actual ID
   },
   business_management_law: {
     name: 'Business, Management & Law',
     icon: '💼',
     description: '',
     apiFieldName: 'business_management_law',
+    academicFieldId: 3, // As per your API response, academicFieldId for 'business_management_law' is 3
   },
   education_training: {
     name: 'Education & Training',
     icon: '🎓',
     description: '',
     apiFieldName: 'education_training',
+    academicFieldId: 4, // Placeholder: Replace with actual ID
   },
   engineering_technology: {
     name: 'Engineering & Technology',
     icon: '⚙️',
     description: '',
     apiFieldName: 'engineering_technology',
+    academicFieldId: 5, // Placeholder: Replace with actual ID
   },
   health_medicine: {
     name: 'Health & Medicine',
     icon: '🏥',
     description: '',
     apiFieldName: 'health_medicine',
+    academicFieldId: 6, // Placeholder: Replace with actual ID
   },
   humanities_languages: {
     name: 'Humanities & Languages',
     icon: '📖',
     description: '',
     apiFieldName: 'humanities_languages',
+    academicFieldId: 7, // Placeholder: Replace with actual ID
   },
   ict: {
     name: 'Information & Communication Technology',
     icon: '💻',
     description: '',
     apiFieldName: 'ict',
+    academicFieldId: 8, // Placeholder: Replace with actual ID
   },
   natural_sciences: {
     name: 'Natural Sciences',
     icon: '🔬',
     description: '',
     apiFieldName: 'natural_sciences',
+    academicFieldId: 9, // Placeholder: Replace with actual ID
   },
   others: {
     name: 'Others',
     icon: '📚',
     description: '',
     apiFieldName: 'others',
+    academicFieldId: 10, // Placeholder: Replace with actual ID
   },
   services: {
     name: 'Services',
     icon: '🛎️',
     description: '',
     apiFieldName: 'services',
+    academicFieldId: 11, // Placeholder: Replace with actual ID
   },
   social_behavioral_sciences: {
     name: 'Social & Behavioral Sciences',
     icon: '🧠',
     description: '',
     apiFieldName: 'social_behavioral_sciences',
+    academicFieldId: 12, // Placeholder: Replace with actual ID
   },
   transport_safety_security_military: {
     name: 'Transport, Safety, Security & Military',
     icon: '🚁',
     description: '',
     apiFieldName: 'transport_safety_security_military',
+    academicFieldId: 13, // Placeholder: Replace with actual ID
   },
 };
 
@@ -131,14 +146,15 @@ const BroadFieldPopup: React.FC<{
 
   useEffect(() => {
     if (isOpen && field) fetchSubjects();
-  }, [isOpen, field?.apiFieldName]);
+  }, [isOpen, field?.academicFieldId]); // Changed dependency to academicFieldId
 
   const fetchSubjects = async () => {
     setLoading(true);
     setError(null);
     try {
+      // MODIFIED: Changed 'field' query parameter to 'academicFieldId'
       const res = await axios.get<SubjectsResponse>(
-        `/universities/subjects?field=${field.apiFieldName}`,
+        `/universities/subjects?academicFieldId=${field.academicFieldId}`,
       );
       let fetched: string[] = [];
       const raw = res.data;
@@ -172,11 +188,11 @@ const BroadFieldPopup: React.FC<{
             <CloseCircleOutlined />
           </button>
           <div className='text-center'>
-            <h2 className='text-4xl font-extrabold text-orange-600 mb-2'>{field.name}</h2>
+            <h2 className='text-4xl font-extrabold text-orange-600 mb-4'>{field.name}</h2>
             <p className='text-sm text-gray-100 italic'>
               Information about the fields of study related to{' '}
-              <span className='font-semibold text-gray-300'>&apos;{field.name}&apos;</span> is shown
-              below
+              <span className='font-semibold text-gray-300'>&apos;{field.name}&apos;</span>
+              <br /> is shown below
             </p>
             <div className='w-72 h-0.5 bg-orange-500 mx-auto mt-3 mb-2'></div>
           </div>
@@ -233,8 +249,9 @@ const UniversityDetail: React.FC = () => {
     universitySubjects: string,
   ): Promise<boolean> => {
     try {
+      // MODIFIED: Changed 'field' query parameter to 'academicFieldId'
       const res = await axios.get<SubjectsResponse>(
-        `/universities/subjects?field=${fieldConfig.apiFieldName}`,
+        `/universities/subjects?academicFieldId=${fieldConfig.academicFieldId}`,
       );
       let fetched: string[] = [];
       const raw = res.data;
@@ -258,7 +275,10 @@ const UniversityDetail: React.FC = () => {
     if (university && university.subjectsList) {
       const academicFields =
         university.academicFieldsCommaSeparated?.split(',').map((f) => f.trim()) || [];
-      const mappedFields = academicFields.map((f) => fieldConfigs[f]).filter(Boolean);
+      // Ensure mappedFields also include academicFieldId
+      const mappedFields = academicFields
+        .map((f) => fieldConfigs[f])
+        .filter((config) => config && config.academicFieldId !== undefined); // Ensure academicFieldId exists
 
       const checkAllFields = async () => {
         const fieldsWithSubjectsPromises = mappedFields.map(async (field) => {
@@ -279,9 +299,10 @@ const UniversityDetail: React.FC = () => {
 
   const academicFields =
     university.academicFieldsCommaSeparated?.split(',').map((f) => f.trim()) || [];
-  const mappedFields = academicFields.map((f) => fieldConfigs[f]).filter(Boolean);
-
-  // Filter fields to only show those with subjects
+  // Ensure mappedFields also include academicFieldId for rendering
+  const mappedFields = academicFields
+    .map((f) => fieldConfigs[f])
+    .filter((config) => config && config.academicFieldId !== undefined);
 
   const studentSize = getStudentSizeInfo(university.studentPopulation);
 
