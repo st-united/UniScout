@@ -1,4 +1,5 @@
-import { ExportOutlined, EditOutlined, CloseOutlined, SearchOutlined } from '@ant-design/icons';
+// ManageRequest.tsx
+import { ExportOutlined, EyeOutlined, CloseCircleFilled, SearchOutlined } from '@ant-design/icons';
 import {
   Table,
   Button,
@@ -14,11 +15,15 @@ import {
   Tag,
   Checkbox,
   Input,
+  Modal,
 } from 'antd';
 import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Removed: useNavigate as it's no longer used
+// import { useNavigate } from 'react-router-dom';
 
+import EditRequestModalContent from './EditRequest';
+import RequestDetailModalContent from './RequestDetail';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
@@ -32,14 +37,15 @@ const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
 // Interface for user request (updated to match API response)
 interface UserRequest {
   id: string;
-  number: number;
+  number?: number;
   requestType: string;
   country: string;
   universityName: string;
+  abbreviation?: string;
   status: 'Pending' | 'In Progress' | 'Rejected' | 'Completed';
   submittedBy: string;
   submittedDate: string;
-  submittedAt: string; // API timestamp field
+  submittedAt: string;
   description?: string;
 }
 
@@ -51,7 +57,7 @@ interface ApiResponse {
   pageSize: number;
 }
 
-// Custom hook for debouncing input values
+// Custom hook for debouncing input values - NO LONGER USED FOR SEARCH
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -64,8 +70,8 @@ export function useDebounce<T>(value: T, delay: number): T {
 }
 
 const sortOptions = [
-  { label: 'Sort by: newest first', value: 'DESC' },
-  { label: 'Sort by: oldest first', value: 'ASC' },
+  { label: 'Sort by: Newest first', value: 'DESC' },
+  { label: 'Sort by: Oldest first', value: 'ASC' },
 ];
 
 type FilterKey = 'country' | 'requestType' | 'status' | 'search';
@@ -76,7 +82,7 @@ const ManageRequest: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
-  const navigate = useNavigate();
+  // Removed: const navigate = useNavigate(); as it's no longer used
 
   // State for API data
   const [contactRequestTypes, setContactRequestTypes] = useState<string[]>([]);
@@ -91,17 +97,20 @@ const ManageRequest: React.FC = () => {
     search: [],
   });
 
-  const debouncedFilters = useDebounce(filters, 400);
-
-  const [sortOrder, setSortOrder] = useState('DESC'); // Changed from sortBy to sortOrder
-  const [sortBy] = useState('submittedAt'); // Fixed sort field
-  const [searchInput, setSearchInput] = useState('');
+  const [currentSearchInput, setCurrentSearchInput] = useState('');
+  const [sortOrder, setSortOrder] = useState('DESC');
+  const [sortBy] = useState('submittedAt');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
   // Mobile responsive states
   const [isMobile, setIsMobile] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
+
+  // Modal states
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(null);
 
   // API Functions
   const fetchContactRequestTypes = async () => {
@@ -121,7 +130,6 @@ const ManageRequest: React.FC = () => {
     } catch (error) {
       console.error('Error fetching contact request types:', error);
       message.error('Failed to fetch request types');
-      // fallback
       setContactRequestTypes(['New University', 'Update Information', 'Remove University']);
     } finally {
       setLoadingRequestTypes(false);
@@ -169,11 +177,27 @@ const ManageRequest: React.FC = () => {
   }, []);
 
   const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
-    setFilters({ ...filters, [field]: values });
+    let newValues = [...values];
+
+    let allOptions: string[] = [];
+    if (field === 'country') allOptions = getUniqueCountries();
+    if (field === 'requestType') allOptions = getUniqueRequestTypes();
+    if (field === 'status') allOptions = getUniqueStatuses();
+
+    if (newValues.includes('__SELECT_ALL__')) {
+      if (newValues.length === 1 || newValues.length < allOptions.length + 1) {
+        newValues = allOptions;
+      } else {
+        newValues = [];
+      }
+    }
+
+    const finalValues = newValues.filter((value) => value !== '__SELECT_ALL__');
+
+    setFilters((prevFilters) => ({ ...prevFilters, [field]: finalValues }));
     setCurrentPage(1);
   };
 
-  // Updated fetchRequests to use real API
   const fetchRequests = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -186,17 +210,17 @@ const ManageRequest: React.FC = () => {
         sortOrder: sortOrder,
       };
 
-      if (debouncedFilters.requestType.length > 0) {
-        requestParams.requestType = debouncedFilters.requestType;
+      if (filters.requestType.length > 0) {
+        requestParams.requestType = filters.requestType;
       }
-      if (debouncedFilters.country.length > 0) {
-        requestParams.country = debouncedFilters.country;
+      if (filters.country.length > 0) {
+        requestParams.country = filters.country;
       }
-      if (debouncedFilters.status.length > 0) {
-        requestParams.status = debouncedFilters.status;
+      if (filters.status.length > 0) {
+        requestParams.status = filters.status;
       }
-      if (debouncedFilters.search.length > 0 && debouncedFilters.search[0].trim()) {
-        requestParams.search = debouncedFilters.search[0].trim();
+      if (filters.search.length > 0 && filters.search[0].trim()) {
+        requestParams.search = filters.search[0].trim();
       }
 
       const response = await axios.get(`${API_BASE_URL}/admin/contact`, {
@@ -209,7 +233,7 @@ const ManageRequest: React.FC = () => {
           Object.keys(params).forEach((key) => {
             const value = params[key];
             if (Array.isArray(value)) {
-              searchParams.append(key, value.join(','));
+              value.forEach((item) => searchParams.append(key, item));
             } else if (value !== undefined) {
               searchParams.append(key, value);
             }
@@ -218,20 +242,18 @@ const ManageRequest: React.FC = () => {
         },
       });
 
-      // Handle API response
       if (response.data && response.data.data) {
         const apiData: ApiResponse = response.data;
 
-        // Check if API returned empty data and use fallback
         if (apiData.data.length === 0) {
           console.log('API returned empty data, using fallback mock data');
           const mockData: UserRequest[] = [
             {
               id: '1',
-              number: 101,
               requestType: 'New University',
               country: 'Vietnam',
               universityName: 'Mock University Vietnam',
+              abbreviation: 'MUV',
               status: 'Pending',
               submittedBy: 'John Doe',
               submittedDate: '2025-07-01',
@@ -239,10 +261,10 @@ const ManageRequest: React.FC = () => {
             },
             {
               id: '2',
-              number: 102,
               requestType: 'Update Information',
               country: 'Japan',
               universityName: 'Mock University Japan',
+              abbreviation: 'MUJ',
               status: 'Completed',
               submittedBy: 'Jane Smith',
               submittedDate: '2025-07-05',
@@ -250,10 +272,10 @@ const ManageRequest: React.FC = () => {
             },
             {
               id: '3',
-              number: 103,
               requestType: 'Remove University',
               country: 'Korea',
               universityName: 'Mock University Korea',
+              abbreviation: 'MUK',
               status: 'In Progress',
               submittedBy: 'Mike Johnson',
               submittedDate: '2025-07-10',
@@ -261,10 +283,10 @@ const ManageRequest: React.FC = () => {
             },
             {
               id: '4',
-              number: 104,
               requestType: 'New University',
               country: 'Australia',
               universityName: 'Mock University Australia',
+              abbreviation: 'MUA',
               status: 'Rejected',
               submittedBy: 'Sarah Wilson',
               submittedDate: '2025-07-12',
@@ -276,7 +298,6 @@ const ManageRequest: React.FC = () => {
           setTotalCount(mockData.length);
           message.info('No data found, showing sample data');
         } else {
-          // Use real API data
           setRequestData(apiData.data);
           setTotalCount(apiData.total);
         }
@@ -288,14 +309,13 @@ const ManageRequest: React.FC = () => {
       console.error('API Error:', err);
       setError(errorMessage);
 
-      // Provide fallback mock data when API fails
       const mockData: UserRequest[] = [
         {
           id: '1',
-          number: 101,
           requestType: 'New University',
           country: 'Vietnam',
           universityName: 'Mock University Vietnam',
+          abbreviation: 'MUV',
           status: 'Pending',
           submittedBy: 'John Doe',
           submittedDate: '2025-07-01',
@@ -303,10 +323,10 @@ const ManageRequest: React.FC = () => {
         },
         {
           id: '2',
-          number: 102,
           requestType: 'Update Information',
           country: 'Japan',
           universityName: 'Mock University Japan',
+          abbreviation: 'MUJ',
           status: 'Completed',
           submittedBy: 'Jane Smith',
           submittedDate: '2025-07-05',
@@ -314,10 +334,10 @@ const ManageRequest: React.FC = () => {
         },
         {
           id: '3',
-          number: 103,
           requestType: 'Remove University',
           country: 'Korea',
           universityName: 'Mock University Korea',
+          abbreviation: 'MUK',
           status: 'In Progress',
           submittedBy: 'Mike Johnson',
           submittedDate: '2025-07-10',
@@ -325,10 +345,10 @@ const ManageRequest: React.FC = () => {
         },
         {
           id: '4',
-          number: 104,
           requestType: 'New University',
           country: 'Australia',
           universityName: 'Mock University Australia',
+          abbreviation: 'MUA',
           status: 'Rejected',
           submittedBy: 'Sarah Wilson',
           submittedDate: '2025-07-12',
@@ -340,26 +360,26 @@ const ManageRequest: React.FC = () => {
       setTotalCount(mockData.length);
       message.warning('Using mock data fallback - API connection failed');
 
-      // Clear the error after setting fallback data so UI doesn't show error state
       setError(null);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortBy, sortOrder, debouncedFilters]);
+  }, [currentPage, pageSize, sortBy, sortOrder, filters]);
 
-  // Fetch requests when dependencies change
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Update search filter when search input changes
-  useEffect(() => {
-    setFilters((prevFilters) => {
-      if (prevFilters.search[0] === searchInput) return prevFilters;
-      return { ...prevFilters, search: [searchInput] };
-    });
+  const handleSearch = () => {
+    setFilters((prevFilters) => ({ ...prevFilters, search: [currentSearchInput] }));
     setCurrentPage(1);
-  }, [searchInput]);
+  };
+
+  const handleClearSearch = () => {
+    setCurrentSearchInput('');
+    setFilters((prevFilters) => ({ ...prevFilters, search: [] }));
+    setCurrentPage(1);
+  };
 
   const handleResetFilters = () => {
     setFilters({
@@ -368,20 +388,24 @@ const ManageRequest: React.FC = () => {
       status: [],
       search: [],
     });
-    setSearchInput('');
+    setCurrentSearchInput('');
     setCurrentPage(1);
   };
 
-  // Remove individual filter
-  const removeFilter = (field: FilterKey) => {
-    setFilters({ ...filters, [field]: [] });
-    setCurrentPage(1);
+  const removeFilter = (field: FilterKey, valueToRemove?: string) => {
+    if (field === 'search') {
+      handleClearSearch();
+    } else {
+      setFilters((prevFilters) => {
+        const newValues = prevFilters[field].filter((val) => val !== valueToRemove);
+        return { ...prevFilters, [field]: newValues };
+      });
+      setCurrentPage(1);
+    }
   };
 
   const handleExport = async () => {
     try {
-      // You can implement export functionality here
-      // For now, simulating export
       await new Promise((resolve) => setTimeout(resolve, 1000));
       message.success('Requests exported successfully');
     } catch (error) {
@@ -390,26 +414,44 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  const handleEdit = (requestId: string) => {
-    navigate(`/edit-request/${requestId}`);
+  // Handle opening different modals based on request type
+  const handleViewRequest = (record: UserRequest) => {
+    setSelectedRequest(record);
+    if (record.requestType === 'Update Information') {
+      setIsEditModalVisible(true);
+    } else if (record.requestType === 'New University') {
+      setIsDetailModalVisible(true);
+    } else {
+      // Default action if neither Update Information nor New University
+      setIsDetailModalVisible(true);
+    }
   };
 
   // Handle row click to view request details
   const handleRowClick = (record: UserRequest) => {
-    navigate(`/request-detail/${record.id}`);
+    handleViewRequest(record);
   };
 
-  // Get unique values for filter options (these will be populated from API data)
+  // Handlers to close modals
+  const handleDetailModalClose = () => {
+    setIsDetailModalVisible(false);
+    setSelectedRequest(null);
+    fetchRequests(); // Refresh data after closing detail modal (optional)
+  };
+
+  const handleEditModalClose = () => {
+    setIsEditModalVisible(false);
+    setSelectedRequest(null);
+    fetchRequests(); // Refresh data after closing edit modal (important for status updates)
+  };
+
   const getUniqueCountries = () => {
-    // You might want to fetch this from a separate API endpoint
-    // For now, using static data
     return ['America', 'Vietnam', 'Japan', 'Korea', 'Australia', 'India'];
   };
 
   const getUniqueRequestTypes = () => contactRequestTypes;
   const getUniqueStatuses = () => contactSubmissionStatuses;
 
-  // Handle sort change
   const handleSortChange = (value: string) => {
     const option = sortOptions.find((opt) => opt.value === value);
     if (option) {
@@ -418,33 +460,29 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  // Check if any filters are active
   const hasActiveFilters = Object.values(filters).some(
     (value) => Array.isArray(value) && value.some((v) => v && v.trim() !== ''),
   );
 
-  // Get active filters for floating display
   const getActiveFilters = () => {
     const activeFilters: Array<{ key: FilterKey; label: string; value: string }> = [];
 
-    if (filters.country && filters.country.length > 0) {
-      activeFilters.push({ key: 'country', label: 'Country', value: filters.country.join(', ') });
-    }
-    if (filters.requestType && filters.requestType.length > 0) {
-      activeFilters.push({
-        key: 'requestType',
-        label: 'Request Type',
-        value: filters.requestType.join(', '),
-      });
-    }
-    if (filters.status && filters.status.length > 0) {
-      activeFilters.push({ key: 'status', label: 'Status', value: filters.status.join(', ') });
+    filters.country.forEach((country) => {
+      activeFilters.push({ key: 'country', label: 'Country', value: country });
+    });
+    filters.requestType.forEach((type) => {
+      activeFilters.push({ key: 'requestType', label: 'Request Type', value: type });
+    });
+    filters.status.forEach((status) => {
+      activeFilters.push({ key: 'status', label: 'Status', value: status });
+    });
+    if (filters.search.length > 0 && filters.search[0].trim()) {
+      activeFilters.push({ key: 'search', label: 'Search', value: filters.search[0].trim() });
     }
 
     return activeFilters;
   };
 
-  // Get status color
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Pending':
@@ -460,7 +498,6 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  // Get status background color
   const getStatusBgColor = (status: string) => {
     switch (status) {
       case 'Pending':
@@ -476,14 +513,15 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  // Table columns configuration
   const columns: ColumnsType<UserRequest> = [
     {
       title: 'Number',
       dataIndex: 'number',
       key: 'number',
       width: 80,
-      render: (text: number) => <span style={{ fontWeight: 500 }}>{text}</span>,
+      render: (_, __, index) => (
+        <span style={{ fontWeight: 500 }}>{(currentPage - 1) * pageSize + index + 1}</span>
+      ),
     },
     {
       title: 'Request Type',
@@ -502,6 +540,11 @@ const ManageRequest: React.FC = () => {
       dataIndex: 'universityName',
       key: 'universityName',
       width: 300,
+      render: (text: string, record: UserRequest) => (
+        <>
+          {text} {record.abbreviation && `(${record.abbreviation})`}
+        </>
+      ),
     },
     {
       title: 'Status',
@@ -531,17 +574,16 @@ const ManageRequest: React.FC = () => {
       render: (_, record) => (
         <Button
           type='text'
-          icon={<EditOutlined style={{ fontSize: '18px', color: '#ff7a00' }} />}
+          icon={<EyeOutlined style={{ fontSize: '18px', color: '#ff7a00' }} />}
           onClick={(e) => {
-            e.stopPropagation(); // Prevent row click when clicking edit button
-            handleEdit(record.id);
+            e.stopPropagation();
+            handleViewRequest(record);
           }}
         />
       ),
     },
   ];
 
-  // Filter component for desktop (without search)
   const FilterSection = () => (
     <Row gutter={[16, 16]} style={{ marginBottom: 24 }} wrap>
       <Col xs={24} sm={12} md={6} lg={6}>
@@ -550,13 +592,21 @@ const ManageRequest: React.FC = () => {
         </div>
         <Select
           mode='multiple'
-          allowClear
           value={filters.country}
-          onChange={(values) => handleMultiFilterChange('country', values || [])}
+          onChange={(values) => handleMultiFilterChange('country', values)}
           style={{ width: '100%' }}
           placeholder='All Countries'
           optionLabelProp='label'
         >
+          <Option key='__SELECT_ALL__' value='__SELECT_ALL__' label='Select All'>
+            <Checkbox
+              checked={
+                filters.country.length === getUniqueCountries().length && filters.country.length > 0
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueCountries().map((country) => (
             <Option key={country} value={country} label={country}>
               <Checkbox checked={filters.country.includes(country)}>{country}</Checkbox>
@@ -571,15 +621,25 @@ const ManageRequest: React.FC = () => {
         </div>
         <Select
           mode='multiple'
-          allowClear
           value={filters.requestType}
-          onChange={(values) => handleMultiFilterChange('requestType', values || [])}
+          onChange={(values) => handleMultiFilterChange('requestType', values)}
           style={{ width: '100%' }}
           placeholder='All Type'
           loading={loadingRequestTypes}
+          optionLabelProp='label'
         >
+          <Option key='__SELECT_ALL_TYPES__' value='__SELECT_ALL__' label='Select All'>
+            <Checkbox
+              checked={
+                filters.requestType.length === getUniqueRequestTypes().length &&
+                filters.requestType.length > 0
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueRequestTypes().map((type) => (
-            <Option key={type} value={type}>
+            <Option key={type} value={type} label={type}>
               <Checkbox checked={filters.requestType.includes(type)}>{type}</Checkbox>
             </Option>
           ))}
@@ -592,15 +652,24 @@ const ManageRequest: React.FC = () => {
         </div>
         <Select
           mode='multiple'
-          allowClear
           value={filters.status}
-          onChange={(values) => handleMultiFilterChange('status', values || [])}
+          onChange={(values) => handleMultiFilterChange('status', values)}
           style={{ width: '100%' }}
           placeholder='All Status'
           loading={loadingSubmissionStatuses}
+          optionLabelProp='label'
         >
+          <Option key='__SELECT_ALL_STATUSES__' value='__SELECT_ALL__' label='Select All'>
+            <Checkbox
+              checked={
+                filters.status.length === getUniqueStatuses().length && filters.status.length > 0
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueStatuses().map((status) => (
-            <Option key={status} value={status}>
+            <Option key={status} value={status} label={status}>
               <Checkbox checked={filters.status.includes(status)}>{status}</Checkbox>
             </Option>
           ))}
@@ -648,7 +717,6 @@ const ManageRequest: React.FC = () => {
     </Row>
   );
 
-  // Error state - FIXED: Only show error state if we have an error AND no fallback data
   if (error && requestData.length === 0) {
     return (
       <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', padding: '24px' }}>
@@ -674,26 +742,24 @@ const ManageRequest: React.FC = () => {
 
   return (
     <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
-      {/* Main Content */}
       <AdminHeader />
       <LayoutWrapper>
         <div style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
-            {/* Top Search and Export Section */}
             <Row
               justify='space-between'
               align='middle'
               gutter={[16, 16]}
               style={{ marginBottom: 24, flexWrap: 'wrap' }}
             >
-              {/* Styled SearchBar UI */}
               <Col xs={24} md={16}>
                 <div style={{ width: '100%', maxWidth: 600 }}>
                   <div style={{ display: 'flex', height: 40 }}>
                     <Input
                       placeholder='Search'
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
+                      value={currentSearchInput}
+                      onChange={(e) => setCurrentSearchInput(e.target.value)}
+                      onPressEnter={handleSearch}
                       bordered={false}
                       style={{
                         flex: 1,
@@ -707,13 +773,32 @@ const ManageRequest: React.FC = () => {
                         backgroundColor: '#fff',
                       }}
                     />
+                    {currentSearchInput && (
+                      <Button
+                        type='text'
+                        icon={<CloseCircleFilled style={{ fontSize: '12px', color: '#999' }} />}
+                        onClick={handleClearSearch}
+                        style={{
+                          border: '1px solid #d9d9d9',
+                          borderLeft: 'none',
+                          borderRadius: 0,
+                          width: 40,
+                          height: '100%',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          padding: 0,
+                          backgroundColor: '#fff',
+                        }}
+                      />
+                    )}
                     <Button
                       type='primary'
-                      onClick={() => setFilters({ ...filters, search: [searchInput] })}
+                      onClick={handleSearch}
                       style={{
                         backgroundColor: '#ff7a00',
                         border: '1px solid #d9d9d9',
-                        borderRadius: '0 8px 8px 0',
+                        borderRadius: currentSearchInput ? '0 8px 8px 0' : '0 8px 8px 0',
                         width: 40,
                         height: '100%',
                         display: 'flex',
@@ -727,7 +812,6 @@ const ManageRequest: React.FC = () => {
                 </div>
               </Col>
 
-              {/* Export Button */}
               <Col xs={24} md={8} style={{ textAlign: isMobile ? 'left' : 'right' }}>
                 <Button
                   icon={<ExportOutlined />}
@@ -748,7 +832,6 @@ const ManageRequest: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Mobile Filter Button */}
             {isMobile && (
               <Row style={{ marginBottom: 16 }}>
                 <Col span={24}>
@@ -774,25 +857,23 @@ const ManageRequest: React.FC = () => {
               </Row>
             )}
 
-            {/* Desktop Filter Section */}
             {!isMobile && <FilterSection />}
 
-            {/* Active Filter Tags */}
             {hasActiveFilters && (
               <Row style={{ marginBottom: 16 }}>
                 <Col span={24}>
                   <Space wrap>
                     {getActiveFilters().map((filter) => (
                       <Tag
-                        key={filter.key}
+                        key={`${filter.key}-${filter.value}`}
                         closable
-                        onClose={() => removeFilter(filter.key)}
-                        closeIcon={<CloseOutlined />}
+                        onClose={() => removeFilter(filter.key, filter.value)}
+                        closeIcon={<CloseCircleFilled />}
                         style={{
-                          backgroundColor: '#fff7e6',
-                          borderColor: '#ff7a00',
-                          color: '#ff7a00',
-                          fontSize: '12px',
+                          backgroundColor: '#f7dac8',
+                          borderColor: '#FF7012',
+                          color: '#FF6600',
+                          fontSize: '14px',
                           padding: '4px 8px',
                           borderRadius: '6px',
                         }}
@@ -805,19 +886,17 @@ const ManageRequest: React.FC = () => {
               </Row>
             )}
 
-            {/* Header Section */}
             <Row justify='space-between' align='middle' style={{ marginBottom: 16 }}>
               <Col span={24}>
                 <Title
                   level={4}
                   style={{ margin: 0, color: '#333', fontSize: isMobile ? '18px' : '20px' }}
                 >
-                  User Requests ({totalCount})
+                  List of Requests ({totalCount})
                 </Title>
               </Col>
             </Row>
 
-            {/* Table */}
             <Table
               columns={columns}
               dataSource={requestData}
@@ -910,7 +989,6 @@ const ManageRequest: React.FC = () => {
           </Card>
         </div>
 
-        {/* Mobile Filter Drawer */}
         <Drawer
           title='Filters'
           placement='bottom'
@@ -938,6 +1016,57 @@ const ManageRequest: React.FC = () => {
             </Button>
           </Space>
         </Drawer>
+
+        {/* Request Detail Modal */}
+        {selectedRequest && (
+          <Modal
+            title={
+              <div
+                style={{ textAlign: 'center', color: '#FE7743', fontWeight: 'bold', fontSize: 28 }}
+              >
+                Detail of requests
+              </div>
+            }
+            open={isDetailModalVisible}
+            onCancel={handleDetailModalClose}
+            footer={null}
+            width={700}
+            destroyOnClose={true}
+            centered={false} // <--- Set centered to false
+            style={{ top: 20 }} // <--- Position it 20px from the top
+          >
+            <RequestDetailModalContent
+              requestId={selectedRequest.id}
+              onClose={handleDetailModalClose}
+            />
+          </Modal>
+        )}
+
+        {/* Edit Request Modal */}
+        {selectedRequest && (
+          <Modal
+            title={
+              <div
+                style={{ textAlign: 'center', color: '#FE7743', fontWeight: 'bold', fontSize: 28 }}
+              >
+                Detail of requests
+              </div>
+            }
+            open={isEditModalVisible}
+            onCancel={handleEditModalClose}
+            footer={null}
+            width={700}
+            destroyOnClose={true}
+            centered={false} // <--- Set centered to false
+            style={{ top: 20 }} // <--- Position it 20px from the top
+          >
+            <EditRequestModalContent
+              requestId={selectedRequest.id}
+              onClose={handleEditModalClose}
+              onUpdate={fetchRequests}
+            />
+          </Modal>
+        )}
       </LayoutWrapper>
     </div>
   );

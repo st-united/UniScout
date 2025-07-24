@@ -6,6 +6,7 @@ import {
   DeleteOutlined,
   CloseOutlined,
   ExclamationCircleFilled,
+  SearchOutlined,
 } from '@ant-design/icons';
 import {
   Table,
@@ -22,6 +23,7 @@ import {
   Badge,
   Tag,
   Checkbox,
+  Input,
 } from 'antd';
 import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -121,6 +123,7 @@ const UniversityListPage: React.FC = () => {
 
   const [sortBy, setSortBy] = useState('Sort by: high to low');
   const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState(''); // New state for actual search query
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
 
@@ -136,7 +139,7 @@ const UniversityListPage: React.FC = () => {
     try {
       const response = await axios.get<UniversityApiResponse>('/admin/universities', {
         params: {
-          search: debouncedFilters.search.length > 0 ? debouncedFilters.search[0] : undefined,
+          search: searchQuery || undefined, // Use searchQuery instead of debouncedFilters.search
           type:
             debouncedFilters.type.length > 0
               ? debouncedFilters.type.map((t) => t.toLowerCase())
@@ -176,7 +179,7 @@ const UniversityListPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedFilters, sortBy, currentPage, pageSize]);
+  }, [debouncedFilters, sortBy, currentPage, pageSize, searchQuery]);
 
   useEffect(() => {
     fetchUniversities();
@@ -213,17 +216,31 @@ const UniversityListPage: React.FC = () => {
     fetchUniversities();
   }, [currentPage, pageSize, fetchUniversities]);
 
-  useEffect(() => {
-    setFilters((prevFilters) => {
-      if (prevFilters.search[0] === searchInput) return prevFilters;
-      return { ...prevFilters, search: [searchInput] };
-    });
+  // Handle search from search input
+  const handleSearchSubmit = () => {
+    setSearchQuery(searchInput);
     setCurrentPage(1);
-  }, [searchInput]);
+  };
 
-  // Handle search from AdminSearchbar component
+  // Handle search from AdminSearchbar component (if still used)
   const handleGlobalSearch = (searchValue: string) => {
     setSearchInput(searchValue);
+    setSearchQuery(searchValue);
+    setCurrentPage(1);
+  };
+
+  // Handle Enter key press in search input
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
+
+  // Clear search input
+  const clearSearchInput = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setCurrentPage(1);
   };
 
   const handleNotificationClick = (notification: NotificationItem) => {
@@ -248,14 +265,25 @@ const UniversityListPage: React.FC = () => {
       search: [],
     });
     setSearchInput('');
+    setSearchQuery('');
     setCurrentPage(1);
     setSelectedRowKeys([]);
     // Note: sortBy is NOT reset here, so it maintains the current sort option
   };
 
   // Remove individual filter
-  const removeFilter = (field: FilterKey) => {
-    setFilters({ ...filters, [field]: [] }); // Set to empty array instead of empty string
+  const removeFilter = (field: FilterKey, value?: string) => {
+    if (
+      value &&
+      (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields')
+    ) {
+      // Remove specific value from array
+      const newValues = filters[field].filter((item) => item !== value);
+      setFilters({ ...filters, [field]: newValues });
+    } else {
+      // Remove entire filter
+      setFilters({ ...filters, [field]: [] });
+    }
     setCurrentPage(1);
   };
 
@@ -385,12 +413,13 @@ const UniversityListPage: React.FC = () => {
 
   // Enhanced filter function to include university name, location, and strength search
   const filteredUniversities = currentUniversityData.filter((u) => {
-    const searchValue = filters.search[0] || '';
+    const searchValue = searchQuery || '';
     const universityFields = parseAcademicFields(u.academicFieldsCommaSeparated);
 
     const searchMatch =
       !searchValue ||
       u.university.toLowerCase().includes(searchValue.toLowerCase()) ||
+      u.abbreviation.toLowerCase().includes(searchValue.toLowerCase()) || // Add this line for abbreviation search
       u.location.toLowerCase().includes(searchValue.toLowerCase()) ||
       u.country.toLowerCase().includes(searchValue.toLowerCase()) ||
       universityFields.some((field) =>
@@ -431,46 +460,81 @@ const UniversityListPage: React.FC = () => {
     return ['small', 'medium', 'large', 'extra large'];
   };
 
-  // Updated to use academicFieldsCommaSeparated
+  // Updated to always return all academic field options
   const getUniqueFields = () => {
-    const allFields = currentUniversityData.flatMap((u) =>
-      parseAcademicFields(u.academicFieldsCommaSeparated),
-    );
-    const uniqueFields = [...new Set(allFields)];
-
-    // Sort fields based on the order in fieldNamesOptions
-    const customFieldOrder = fieldNamesOptions.map((field) => field.value);
-    return customFieldOrder.filter((field) => uniqueFields.includes(field));
+    return fieldNamesOptions.map((option) => option.value);
   };
 
   // Check if any filters are active
-  const hasActiveFilters = Object.values(filters).some(
-    (value) => Array.isArray(value) && value.some((v) => v && v.trim() !== ''),
-  );
+  const hasActiveFilters =
+    Object.values(filters).some(
+      (value) => Array.isArray(value) && value.some((v) => v && v.trim() !== ''),
+    ) || searchQuery.trim() !== '';
 
-  // Get active filters for floating display
+  // Get active filters for floating display - Updated to show individual tags
   const getActiveFilters = () => {
-    const activeFilters: Array<{ key: FilterKey; label: string; value: string }> = [];
+    const activeFilters: Array<{
+      key: FilterKey;
+      label: string;
+      value: string;
+      itemValue?: string;
+    }> = [];
 
+    // Individual country filters
     if (filters.country && filters.country.length > 0) {
-      activeFilters.push({ key: 'country', label: 'Country', value: filters.country.join(', ') });
-    }
-    if (filters.type && filters.type.length > 0) {
-      activeFilters.push({ key: 'type', label: 'Type', value: filters.type.join(', ') });
-    }
-    if (filters.size && filters.size.length > 0) {
-      activeFilters.push({ key: 'size', label: 'Size', value: filters.size.join(', ') });
-    }
-    if (filters.academicFields && filters.academicFields.length > 0) {
-      const fieldLabels = filters.academicFields.map((field) => getFieldNameLabel(field));
-      activeFilters.push({
-        key: 'academicFields',
-        label: 'Field',
-        value: fieldLabels.join(', '),
+      filters.country.forEach((country) => {
+        activeFilters.push({
+          key: 'country',
+          label: 'Country',
+          value: country,
+          itemValue: country,
+        });
       });
     }
 
+    // Individual type filters
+    if (filters.type && filters.type.length > 0) {
+      filters.type.forEach((type) => {
+        activeFilters.push({ key: 'type', label: 'Type', value: type, itemValue: type });
+      });
+    }
+
+    // Individual size filters
+    if (filters.size && filters.size.length > 0) {
+      filters.size.forEach((size) => {
+        activeFilters.push({ key: 'size', label: 'Size', value: size, itemValue: size });
+      });
+    }
+
+    // Individual academic field filters
+    if (filters.academicFields && filters.academicFields.length > 0) {
+      filters.academicFields.forEach((field) => {
+        const fieldLabel = getFieldNameLabel(field);
+        activeFilters.push({
+          key: 'academicFields',
+          label: 'Field',
+          value: fieldLabel,
+          itemValue: field,
+        });
+      });
+    }
+
+    // Search filter
+    if (searchQuery.trim() !== '') {
+      activeFilters.push({ key: 'search', label: 'Search', value: searchQuery });
+    }
+
     return activeFilters;
+  };
+
+  // Handle pagination change with scroll to top
+  const handlePaginationChange = (page: number, size?: number) => {
+    setCurrentPage(page);
+    if (size) {
+      setPageSize(size);
+    }
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Table columns configuration
@@ -619,6 +683,48 @@ const UniversityListPage: React.FC = () => {
     return '';
   };
 
+  // Custom Search Component
+  const CustomSearchBar = () => (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <Input
+        placeholder='Search universities...'
+        value={searchInput}
+        onChange={(e) => setSearchInput(e.target.value)}
+        onKeyPress={handleSearchKeyPress}
+        prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+        suffix={
+          searchInput ? (
+            <CloseOutlined
+              style={{
+                color: '#bfbfbf',
+                cursor: 'pointer',
+                padding: '2px',
+              }}
+              onClick={clearSearchInput}
+            />
+          ) : null
+        }
+        style={{
+          paddingRight: searchInput ? '30px' : '11px',
+        }}
+      />
+      <Button
+        type='primary'
+        icon={<SearchOutlined />}
+        onClick={handleSearchSubmit}
+        style={{
+          position: 'absolute',
+          right: '-1px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          backgroundColor: '#ff7a00',
+          borderColor: '#ff7a00',
+          zIndex: 1,
+        }}
+      />
+    </div>
+  );
+
   // Filter component for desktop with adjusted widths
   const FilterSection = () => (
     <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -632,7 +738,7 @@ const UniversityListPage: React.FC = () => {
           value={filters.country}
           onChange={(values) => handleMultiFilterChange('country', values || [])}
           style={{ width: '100%' }}
-          placeholder='Select countries'
+          placeholder='All Countries'
           optionLabelProp='label'
           popupRender={(menu) => (
             <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
@@ -658,13 +764,16 @@ const UniversityListPage: React.FC = () => {
           value={filters.type}
           onChange={(values) => handleMultiFilterChange('type', values || [])}
           style={{ width: '100%' }}
-          placeholder='Select types'
+          placeholder='All Types'
+          popupRender={(menu) => (
+            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
+              {menu}
+            </span>
+          )}
         >
           {getUniqueTypes().map((type) => (
             <Option key={type} value={type}>
-              <Checkbox checked={filters.type.includes(type)}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </Checkbox>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
             </Option>
           ))}
         </Select>
@@ -680,13 +789,16 @@ const UniversityListPage: React.FC = () => {
           value={filters.size}
           onChange={(values) => handleMultiFilterChange('size', values || [])}
           style={{ width: '100%' }}
-          placeholder='Select sizes'
+          placeholder='All Size'
+          popupRender={(menu) => (
+            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
+              {menu}
+            </span>
+          )}
         >
           {getUniqueSizes().map((size) => (
             <Option key={size} value={size}>
-              <Checkbox checked={filters.size.includes(size)}>
-                {size.charAt(0).toUpperCase() + size.slice(1)}
-              </Checkbox>
+              {size.charAt(0).toUpperCase() + size.slice(1)}
             </Option>
           ))}
         </Select>
@@ -697,18 +809,21 @@ const UniversityListPage: React.FC = () => {
           Broad Field
         </div>
         <Select
-          mode='multiple' // Enable multi-select
+          mode='multiple' // Enable multi-select for Broad Field
           allowClear
           value={filters.academicFields}
           onChange={(values) => handleMultiFilterChange('academicFields', values || [])}
           style={{ width: '100%' }}
-          placeholder='Select fields'
+          placeholder='All Broad Fields'
+          popupRender={(menu) => (
+            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
+              {menu}
+            </span>
+          )}
         >
           {getUniqueFields().map((field) => (
-            <Option key={field} value={field}>
-              <Checkbox checked={filters.academicFields.includes(field)}>
-                {getFieldNameLabel(field)}
-              </Checkbox>
+            <Option key={field} value={field} label={getFieldNameLabel(field)}>
+              {getFieldNameLabel(field)}
             </Option>
           ))}
         </Select>
@@ -865,13 +980,13 @@ const UniversityListPage: React.FC = () => {
                       <Tag
                         key={filter.key}
                         closable
-                        onClose={() => removeFilter(filter.key)}
+                        onClose={() => removeFilter(filter.key, filter.itemValue)}
                         closeIcon={<CloseOutlined />}
                         style={{
                           backgroundColor: '#fff7e6',
                           borderColor: '#ff7a00',
                           color: '#ff7a00',
-                          fontSize: '12px',
+                          fontSize: '14px',
                           padding: '4px 8px',
                           borderRadius: '6px',
                           marginBottom: '4px',
@@ -880,22 +995,6 @@ const UniversityListPage: React.FC = () => {
                         {filter.label}: {filter.value}
                       </Tag>
                     ))}
-                    {hasActiveFilters && (
-                      <Button
-                        type='text'
-                        size='small'
-                        onClick={handleResetFilters}
-                        style={{
-                          color: '#ff7a00',
-                          fontSize: '12px',
-                          padding: '0 4px',
-                          height: '24px',
-                          marginBottom: '4px',
-                        }}
-                      >
-                        Clear all
-                      </Button>
-                    )}
                   </Space>
                 </Col>
               </Row>
@@ -924,10 +1023,7 @@ const UniversityListPage: React.FC = () => {
                 current: currentPage,
                 pageSize: pageSize,
                 total: universityData?.totalCount || 0,
-                onChange: (page, size) => {
-                  setCurrentPage(page);
-                  setPageSize(size || 12);
-                },
+                onChange: handlePaginationChange, // Ensure this correctly references the function
                 showSizeChanger: false,
                 showQuickJumper: false,
                 className: 'custom-pagination',
@@ -1002,7 +1098,7 @@ const UniversityListPage: React.FC = () => {
                   marginBottom: '16px',
                 },
               }}
-              scroll={{ x: 800 }}
+              scroll={{ x: 800, scrollToFirstRowOnChange: true }}
               style={{ marginBottom: 16 }}
             />
           </Card>
