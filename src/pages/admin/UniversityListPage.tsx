@@ -77,6 +77,10 @@ interface NotificationItem {
   timestamp: string;
   isRead: boolean;
 }
+const getSortByLabel = (value: string): string => {
+  const option = sortOptions.find((opt) => opt.value === value);
+  return option?.label || value;
+};
 
 // Custom hook for debouncing input values
 export function useDebounce<T>(value: T, delay: number): T {
@@ -1056,6 +1060,8 @@ const UniversityListPage: React.FC = () => {
           open={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
           appliedFilters={filters}
+          sortBy={getSortByLabel(sortBy)}
+          sortOrder={sortBy}
         />
       </LayoutWrapper>
     </div>

@@ -9,6 +9,7 @@ interface ExportUniversityModalProps {
   onClose: () => void;
   appliedFilters: Record<string, string[]>;
   sortBy?: string;
+  sortOrder?: string;
 }
 
 const allColumns = [
@@ -34,6 +35,7 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
   onClose,
   appliedFilters,
   sortBy = '',
+  sortOrder = '',
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<'csv' | 'excel'>('excel');
   const [selectedColumns, setSelectedColumns] = useState<string[]>(allColumns);
@@ -89,7 +91,9 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
         format: selectedFormat,
         columns: mappedColumns,
         ...safeFilters,
-        ...(sortBy ? { sortBy } : {}),
+        ...(sortOrder?.includes('rank')
+          ? { sortBy: 'rank', sortOrder: sortOrder.includes('desc') ? 'DESC' : 'ASC' }
+          : {}),
       };
 
       const response = await axios.get('/admin/universities/export', {
@@ -185,7 +189,7 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
               )}
               {sortBy && (
                 <Tag className='bg-[#fff7e6] border-[#ffc069] text-[#fa8c16] font-medium rounded-full px-3 py-1'>
-                  Sort by: {sortBy}
+                  {sortBy}
                 </Tag>
               )}
             </div>
