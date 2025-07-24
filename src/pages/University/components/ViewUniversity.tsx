@@ -266,6 +266,33 @@ const ViewUniversity = () => {
           border-color: #f97316 !important;
           box-shadow: none !important;
         }
+        /* Orange pagination styles */
+        .ant-pagination .ant-pagination-item-active {
+          border-color: #f97316 !important;
+        }
+        .ant-pagination .ant-pagination-item-active a {
+          color: #f97316 !important;
+        }
+        .ant-pagination .ant-pagination-item:hover a {
+          color: #f97316 !important;
+        }
+        .ant-pagination .ant-pagination-item-active {
+          background: #fff7ed !important;
+        }
+        .ant-pagination .ant-pagination-item:hover {
+          border-color: #f97316 !important;
+        }
+        .ant-pagination .ant-pagination-prev .ant-pagination-item-link,
+        .ant-pagination .ant-pagination-next .ant-pagination-item-link {
+          color: #f97316 !important;
+          border-color: #f97316 !important;
+        }
+        .ant-pagination .ant-pagination-prev:hover .ant-pagination-item-link,
+        .ant-pagination .ant-pagination-next:hover .ant-pagination-item-link {
+          color: #fff !important;
+          background: #f97316 !important;
+          border-color: #f97316 !important;
+        }
       `}</style>
       <WorldMap
         onCountryClick={handleMapCountryClick}
@@ -412,7 +439,7 @@ const ViewUniversity = () => {
           </div>
         </div>
       </div>
-      <Chatbot />
+      {/* Chatbot /> */}
     </div>
   );
 };

@@ -1,15 +1,16 @@
 import axios from 'axios';
 import { X, MessageCircle } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
+//import ReactMarkdown from 'react-markdown';
+//import rehypeRaw from 'rehype-raw';
 
-// Define the frontend Message type
+import styles from './chatbot.module.css';
+
 type Message = {
   from: 'user' | 'bot';
   text: string;
   time: string;
-  // Add a property to store potential suggested questions for the bot's turn
   suggestedQuestions?: string[];
-  // Add properties for file data
   fileData?: {
     type: 'excel' | 'pdf';
     base64: string;
@@ -17,9 +18,8 @@ type Message = {
   };
 };
 
-// Define the backend's ChatMessageDto structure for conversation history
 type BackendChatMessageDto = {
-  role: 'user' | 'model'; // 'model' is used by backend, not 'bot' for Gemini's API
+  role: 'user' | 'model';
   parts: { text: string }[];
 };
 
@@ -35,22 +35,19 @@ const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isBotTyping, setIsBotTyping] = useState(false);
 
-  // Scroll to the latest message whenever messages state changes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initial greeting when chatbot opens
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Trigger initial greeting from the backend
-      sendMessage('', true); // Send an empty message to trigger the initial greeting
+      sendMessage('', true);
     }
-  }, [isOpen]); // Only run when isOpen changes
+  }, [isOpen]);
 
-  // New function to handle the download when the user clicks a button
   const handleDownloadClick = (fileData: Message['fileData']) => {
     if (!fileData) {
       console.error('No file data provided for download.');
@@ -69,7 +66,6 @@ const Chatbot = () => {
       return;
     }
 
-    // Decode base64 string to a binary string
     const byteCharacters = atob(base64);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
@@ -77,21 +73,16 @@ const Chatbot = () => {
     }
     const byteArray = new Uint8Array(byteNumbers);
 
-    // Create a Blob from the Uint8Array
     const blob = new Blob([byteArray], { type: mimeType });
 
-    // Create a temporary URL for the Blob
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
 
-    // Set the download attribute with the desired filename
     link.download = filename;
 
-    // Programmatically click the link to trigger the download
-    document.body.appendChild(link); // Append to body is good practice for programmatic clicks
+    document.body.appendChild(link);
     link.click();
 
-    // Clean up: remove the link and revoke the object URL to free up memory
     document.body.removeChild(link);
     window.URL.revokeObjectURL(link.href);
 
@@ -103,59 +94,43 @@ const Chatbot = () => {
 
     const currentTime = formatTime(new Date());
 
-    // Update messages state immediately for user's message (unless it's the initial empty send)
-    // Only add user message if it's not the initial empty trigger
     if (!isInitialGreeting) {
       const newUserMessage: Message = { from: 'user', text: messageToSend, time: currentTime };
       setMessages((prev) => [...prev, newUserMessage]);
     }
 
-    // --- START OF HISTORY PREPARATION ---
-    // Create history for backend from current frontend messages.
-    // IMPORTANT: When building `conversationHistoryForBackend`, you need to use the `messages`
-    // state's *current value*. However, `setMessages` is asynchronous.
-    // For the current request, `messages` might not yet include `newUserMessage` if
-    // `setMessages` hasn't completed its update.
-    // The most robust way is to build the history for the backend from the `prev` state
-    // *or* explicitly include the `newUserMessage` if it's not an initial greeting.
-
-    // Let's create a temporary array that represents the full history *for this API call*
     const currentConversationHistory: BackendChatMessageDto[] = messages.map((msg) => ({
       role: msg.from === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }],
     }));
 
-    // If it's a new user message (not an initial greeting), add it to the history for *this* backend request
     if (!isInitialGreeting) {
       currentConversationHistory.push({
         role: 'user',
         parts: [{ text: messageToSend }],
       });
     }
-    // --- END OF HISTORY PREPARATION ---
+
+    setInput('');
+    setIsBotTyping(true);
 
     try {
       const response = await axios.post('http://localhost:6002/api/chatbot', {
-        message: messageToSend, // The current message
-        conversationHistory: currentConversationHistory, // Send the compiled history
+        message: messageToSend,
+        conversationHistory: currentConversationHistory,
       });
 
-      const botResponseData = response.data.data; // Access the 'data' property
+      const botResponseData = response.data.data;
 
       const botReply: Message = {
         from: 'bot',
         text: botResponseData.response,
         time: formatTime(new Date()),
         suggestedQuestions: botResponseData.suggestedQuestions,
-        fileData: botResponseData.fileData, // Capture fileData if present
+        fileData: botResponseData.fileData,
       };
 
-      // Use a functional update to ensure you're working with the latest state
       setMessages((prev) => [...prev, botReply]);
-      setInput(''); // Clear input after sending
-
-      // The automatic download logic has been moved to handleDownloadClick
-      // and will now be triggered by a user click on the rendered button/link.
     } catch (error) {
       console.error('Chatbot API error:', error);
       const errorReply: Message = {
@@ -164,19 +139,22 @@ const Chatbot = () => {
         time: formatTime(new Date()),
       };
       setMessages((prev) => [...prev, errorReply]);
+    } finally {
+      setIsBotTyping(false);
     }
   };
 
   const handleSuggestedQuestionClick = (question: string) => {
-    setInput(question); // Set the input field to the suggested question
-    sendMessage(question); // Automatically send the suggested question
+    setInput(question);
+    sendMessage(question);
   };
 
   return (
     <div className='fixed bottom-6 right-6 z-50 font-sans'>
       {isOpen ? (
-        <div className='w-80 h-[480px] rounded-xl shadow-xl border border-gray-200 bg-white flex flex-col overflow-hidden'>
-          {/* Header with fixed logo size */}
+        <div
+          className={`w-80 h-[480px] rounded-xl border border-gray-200 bg-white flex flex-col overflow-hidden ${styles.chatContainerShadow}`}
+        >
           <div className='bg-orange-500 text-white flex items-center px-4 py-3 justify-between'>
             <div className='flex items-center gap-2 font-semibold'>
               <img
@@ -189,17 +167,17 @@ const Chatbot = () => {
             <button
               onClick={() => {
                 setIsOpen(false);
-                setMessages([]); // Clear messages when closing to reset conversation
+                setMessages([]);
                 setInput('');
+                setIsBotTyping(false);
               }}
-              className='hover:text-gray-200 transition-colors'
+              className='p-1 flex items-center justify-center transition-colors bg-transparent border-none focus:outline-none'
             >
               <X size={20} />
             </button>
           </div>
 
-          {/* Chat Body */}
-          <div className='flex-1 overflow-y-auto p-3 space-y-4 bg-gray-50'>
+          <div className={`flex-1 overflow-y-auto p-3 space-y-4 bg-gray-50 ${styles.chatBody}`}>
             {messages.map((msg, idx) => (
               <React.Fragment key={idx}>
                 <div
@@ -219,10 +197,10 @@ const Chatbot = () => {
                       msg.from === 'user'
                         ? 'bg-orange-500 text-white rounded-br-none'
                         : 'bg-[#fef4e8] text-gray-800 rounded-bl-none'
-                    }`}
+                    } prose`}
                   >
-                    {msg.text}
-                    {/* Render download button if fileData exists */}
+                    {/* <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.text}</ReactMarkdown> */}
+
                     {msg.fileData && (
                       <button
                         onClick={() => handleDownloadClick(msg.fileData)}
@@ -233,7 +211,7 @@ const Chatbot = () => {
                     )}
                   </div>
                 </div>
-                {/* Display suggested questions only after a bot's message */}
+
                 {msg.from === 'bot' &&
                   msg.suggestedQuestions &&
                   msg.suggestedQuestions.length > 0 && (
@@ -251,23 +229,40 @@ const Chatbot = () => {
                   )}
               </React.Fragment>
             ))}
-            <div ref={messagesEndRef} /> {/* For auto-scrolling */}
+            {isBotTyping && (
+              <div className='flex justify-start items-center gap-2'>
+                <img
+                  src='/chat2.png'
+                  alt='Bot Logo'
+                  className='w-6 h-6 border border-orange-400 rounded-full p-0.5 bg-white'
+                />
+                <div className='bg-[#fef4e8] text-gray-800 px-3 py-2 max-w-[80%] rounded-xl rounded-bl-none text-sm'>
+                  <div className={styles.typingIndicator}>
+                    <span>.</span>
+                    <span>.</span>
+                    <span>.</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
           <div className='p-3 border-t border-gray-200 flex gap-2 items-center bg-white'>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder='Type a message...'
+              placeholder={isBotTyping ? 'Bot is typing...' : 'Type a message...'}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') sendMessage();
+                if (e.key === 'Enter' && !isBotTyping) sendMessage();
               }}
-              className='flex-1 px-4 py-2 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300'
+              disabled={isBotTyping}
+              className='flex-1 px-4 py-2 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:bg-gray-100 disabled:cursor-not-allowed'
             />
             <button
-              onClick={() => sendMessage()} // Call with no arguments to use current input
-              className='bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2 transition-colors'
+              onClick={() => sendMessage()}
+              disabled={isBotTyping}
+              className='bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed'
             >
               <img src='/send.png' alt='send' className='w-7 h-7' />
             </button>
