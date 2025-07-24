@@ -1,6 +1,7 @@
 import { FileExcelOutlined, FileTextOutlined, CloseOutlined } from '@ant-design/icons';
-import { Modal, Button, Checkbox, Tag, message } from 'antd';
+import { Modal, Button, Checkbox, Tag, message, ConfigProvider } from 'antd';
 import axios from 'axios';
+import { Check } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface ExportUniversityModalProps {
@@ -35,7 +36,7 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
   sortBy = '',
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<'csv' | 'excel'>('excel');
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(allColumns);
 
   const hasActiveFilters =
     Object.values(appliedFilters).some(
@@ -73,8 +74,8 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
         Rank: 'rank',
         Website: 'website',
         Email: 'email',
-        Phone: 'phone',
-        Subjects: 'subjects',
+        Phone: 'contact',
+        Subjects: 'subjectsList',
         Description: 'description',
         Logo: 'logo',
         Type: 'type',
@@ -128,14 +129,19 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
 
   const formatButton = (type: 'excel' | 'csv', icon: React.ReactNode, label: string) => {
     const isActive = selectedFormat === type;
+
+    const baseClasses = 'flex-1 h-12 font-medium rounded-lg border text-sm ';
+    const activeClasses = '!bg-[#fffaeb] !border-[#ff7a00] !text-[#ff7a00]';
+    const inactiveClasses = 'bg-white !border-[#d1d5db] !hover:border-[#d1d5db] !text-[#4b5563]';
+
+    //const hoverOverride = 'hover:bg-inherit hover:border-inherit hover:text-inherit shadow-none !hover:text-[#ff7a00]';
+    const hoverOverride = '!hover:bg-[#fffaeb] !hover:border-[#ff7a00] !hover:text-[#ff7a00]';
     return (
       <Button
-        type={isActive ? 'primary' : 'default'}
+        type='default'
         icon={icon}
         onClick={() => setSelectedFormat(type)}
-        className={`flex-1 h-12 font-medium ${
-          isActive ? 'bg-[#fffaeb] border-[#ff7a00] text-[#ff7a00]' : ''
-        }`}
+        className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses} ${hoverOverride}`}
       >
         {label}
       </Button>
@@ -196,22 +202,37 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
 
         <div className='mb-4 border border-solid border-[#e5e7eb] rounded-lg p-4'>
           <p className='font-bold text-[#FE7743] mb-3'>Select column to export</p>
-          <Checkbox.Group
-            value={selectedColumns}
-            onChange={(checked) => setSelectedColumns(checked as string[])}
+
+          <ConfigProvider
+            theme={{
+              token: {
+                colorPrimary: '#FE7743',
+              },
+            }}
           >
-            <div className='grid grid-cols-3 gap-2'>
-              {allColumns.map((col) => (
-                <Checkbox key={col} value={col}>
-                  {col}
-                </Checkbox>
-              ))}
-            </div>
-          </Checkbox.Group>
+            <Checkbox.Group
+              value={selectedColumns}
+              onChange={(checked) => setSelectedColumns(checked as string[])}
+            >
+              <div className='grid grid-cols-3 gap-2'>
+                {allColumns.map((col) => (
+                  <Checkbox key={col} value={col}>
+                    {col}
+                  </Checkbox>
+                ))}
+              </div>
+            </Checkbox.Group>
+          </ConfigProvider>
         </div>
 
         <div className='flex justify-end gap-3'>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            type='default'
+            onClick={onClose}
+            className='!border-[#d1d5db] !hover:border-[#d1d5db] !text-[#4b5563]'
+          >
+            Cancel
+          </Button>
           <Button
             type='primary'
             onClick={handleExport}
