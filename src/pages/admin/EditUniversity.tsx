@@ -2,7 +2,6 @@ import { InboxOutlined, ArrowLeftOutlined, SaveOutlined } from '@ant-design/icon
 import {
   Form,
   Input,
-  Switch,
   Select,
   Button,
   Upload,
@@ -50,21 +49,7 @@ interface UniversityData {
   subjects?: string[];
   strength?: string;
 }
-const fieldNamesOptions = [
-  { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
-  { value: 'arts_design', label: 'Arts & Design' },
-  { value: 'business_management_law', label: 'Business, Management & Law' },
-  { value: 'education_training', label: 'Education & Training' },
-  { value: 'engineering_technology', label: 'Engineering & Technology' },
-  { value: 'health_medicine', label: 'Health & Medicine' },
-  { value: 'humanities_languages', label: 'Humanities & Languages' },
-  { value: 'ict', label: 'Information & Communication Technology (ICT)' },
-  { value: 'natural_sciences', label: 'Natural Sciences' },
-  { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
-  { value: 'services', label: 'Services' },
-  { value: 'transport_safety_security_military', label: 'Transport, Safety, Security & Military' },
-  { value: 'other', label: 'Other' },
-];
+
 const fieldSearchMapping: Record<string, string> = {
   agricultural_veterinary_sciences: 'agricultural',
   arts_design: 'art',

@@ -1,4 +1,4 @@
-import { Dropdown, Menu } from 'antd';
+import { Dropdown } from 'antd';
 import axios from 'axios';
 import { Filter, ChevronRight } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -15,9 +15,7 @@ import {
   BarChart,
   Bar,
   ResponsiveContainer,
-  LabelList,
   Area,
-  LabelProps,
 } from 'recharts';
 
 import AdminHeader from '../../components/AdminHeader';
@@ -25,43 +23,63 @@ import LayoutWrapper from '../../components/LayoutWrapper';
 import Sidebar from '../../components/Sidebar';
 import type { MenuProps } from 'antd';
 
-// Mock data - replace with your actual data source
-const dashboardData = {
-  totalUniversities: 600,
-  totalContactRequests: 156,
-  trafficData: [
-    { month: 'Jan', thisYear: 15000, lastYear: 12000 },
-    { month: 'Feb', thisYear: 8000, lastYear: 18000 },
-    { month: 'Mar', thisYear: 12000, lastYear: 16000 },
-    { month: 'Apr', thisYear: 25000, lastYear: 14000 },
-    { month: 'May', thisYear: 28000, lastYear: 20000 },
-    { month: 'Jun', thisYear: 22000, lastYear: 24000 },
-    { month: 'Jul', thisYear: 26000, lastYear: 22000 },
-  ],
-  requestData: [
-    { month: 'Jan', pending: 80, inProgress: 60, completed: 40, rejected: 20 },
-    { month: 'Feb', pending: 100, inProgress: 80, completed: 60, rejected: 30 },
-    { month: 'Mar', pending: 90, inProgress: 100, completed: 80, rejected: 25 },
-    { month: 'Apr', pending: 110, inProgress: 90, completed: 70, rejected: 35 },
-    { month: 'May', pending: 160, inProgress: 120, completed: 90, rejected: 40 },
-    { month: 'Jun', pending: 140, inProgress: 110, completed: 85, rejected: 30 },
-    { month: 'Jul', pending: 180, inProgress: 130, completed: 100, rejected: 45 },
-    { month: 'Aug', pending: 170, inProgress: 140, completed: 95, rejected: 38 },
-    { month: 'Sep', pending: 120, inProgress: 100, completed: 80, rejected: 42 },
-    { month: 'Oct', pending: 150, inProgress: 120, completed: 90, rejected: 35 },
-    { month: 'Nov', pending: 130, inProgress: 110, completed: 85, rejected: 40 },
-    { month: 'Dec', pending: 160, inProgress: 125, completed: 95, rejected: 45 },
-  ],
-};
-
-const renderDot = (props: LabelProps, color: string) => {
-  const { x, y } = props;
-  return <circle cx={Number(x) + 6} cy={Number(y) + 1} r={6} fill={color} />;
-};
-
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 const DashboardPage = () => {
+  const [contactRequestData, setContactRequestData] = useState<any[]>([]);
+
+  const fetchContactRequests = async () => {
+    try {
+      const now = new Date();
+      const year = now.getFullYear();
+
+      const months = Array.from({ length: now.getMonth() + 1 }, (_, i) => i + 1);
+
+      const monthlyData = await Promise.all(
+        months.map(async (month) => {
+          const res = await axios.get(`/dashboard/contact-status?month=${month}&year=${year}`);
+
+          const data = res.data || [];
+
+          // Initialiser chaque statut à 0
+          const statusCounts = {
+            pending: 0,
+            inProgress: 0,
+            completed: 0,
+            rejected: 0,
+          };
+
+          // Remplir selon les réponses de l’API
+          data.forEach((entry: any) => {
+            const key = entry.status.toLowerCase().replace(/\s+/g, '');
+            if (Object.prototype.hasOwnProperty.call(statusCounts, key)) {
+              statusCounts[key as keyof typeof statusCounts] = entry.count;
+            }
+          });
+
+          return {
+            month: new Date(2020, month - 1).toLocaleString('en-US', { month: 'short' }),
+            ...statusCounts,
+          };
+        }),
+      );
+
+      setContactRequestData(monthlyData);
+    } catch (err) {
+      console.error('Erreur chargement requêtes contact :', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchContactRequests();
+  }, []);
+
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  type TrafficView = 'thisYear' | 'lastYear' | 'both';
+  const [trafficView, setTrafficView] = useState<TrafficView>('both');
+  const [monthlyTrafficData, setMonthlyTrafficData] = useState<any[]>([]);
+
   const locationFilterItems: MenuProps['items'] = [{ key: 'all', label: 'All Regions' }];
   const filterMenuItems: MenuProps['items'] = [
     {
@@ -99,6 +117,57 @@ const DashboardPage = () => {
 
     fetchSummary();
   }, []);
+  const fetchMonthlyTrafficData = async (year: number) => {
+    try {
+      const now = new Date();
+      const isCurrentYear = year === now.getFullYear();
+      const currentMonth = isCurrentYear ? now.getMonth() + 1 : 12;
+
+      const monthLabels = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      const monthsToFetch = Array.from({ length: currentMonth }, (_, i) =>
+        (i + 1).toString().padStart(2, '0'),
+      );
+      const allMonths = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+
+      const thisYearData = await Promise.all(
+        monthsToFetch.map(async (month) => {
+          const res = await axios.get(`/dashboard/visit-filter?month=${month}&year=${year}`);
+          return Number(res.data) || 0;
+        }),
+      );
+
+      const lastYearData = await Promise.all(
+        allMonths.map(async (month) => {
+          const res = await axios.get(`/dashboard/visit-filter?month=${month}&year=${year - 1}`);
+          return Number(res.data) || 0;
+        }),
+      );
+
+      const traffic = monthLabels.map((label, i) => ({
+        month: label,
+        thisYear: i < thisYearData.length ? thisYearData[i] : null,
+        lastYear: lastYearData[i],
+      }));
+
+      setMonthlyTrafficData(traffic);
+      console.log('monthlyTrafficData', traffic);
+    } catch (err) {
+      console.error('Erreur chargement données trafic :', err);
+    }
+  };
 
   const [trafficData, setTrafficData] = useState<{ country: string; count: number }[]>([]);
   const [trafficLoading, setTrafficLoading] = useState(true);
@@ -139,6 +208,9 @@ const DashboardPage = () => {
 
     fetchTopSearch();
   }, []);
+  useEffect(() => {
+    fetchMonthlyTrafficData(selectedYear);
+  }, [selectedYear]);
 
   const totalTraffic = trafficData.reduce((sum, item) => sum + Number(item.count), 0);
 
@@ -147,7 +219,6 @@ const DashboardPage = () => {
     value: Number(((Number(item.count) / totalTraffic) * 100).toFixed(1)),
   }));
 
-  const [activeTab, setActiveTab] = React.useState('Manage University');
   if (loading) {
     return (
       <div className='flex items-center justify-center h-full'>
@@ -206,92 +277,129 @@ const DashboardPage = () => {
                     </span>
                     <span className='text-[#ccc] text-lg'>|</span>
                     <div className='flex items-center space-x-4'>
-                      <div className='flex items-center space-x-1'>
-                        <span className='w-2 h-2 rounded-full bg-blue-500'></span>
-                        <span className='text-sm'>This year</span>
-                      </div>
-                      <div className='flex items-center space-x-1'>
-                        <span className='w-2 h-2 rounded-full bg-[#cbd5e1]'></span>
-                        <span className='text-sm'>Last year</span>
-                      </div>
+                      {(trafficView === 'thisYear' || trafficView === 'both') && (
+                        <div className='flex items-center space-x-1'>
+                          <span className='w-2 h-2 rounded-full bg-blue-500'></span>
+                          <span className='text-sm'>This year</span>
+                        </div>
+                      )}
+                      {(trafficView === 'lastYear' || trafficView === 'both') && (
+                        <div className='flex items-center space-x-1'>
+                          <span className='w-2 h-2 rounded-full bg-[#cbd5e1]'></span>
+                          <span className='text-sm'>Last year</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <Dropdown menu={{ items: filterMenuItems }} trigger={['click']}>
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'thisYear',
+                          label: 'This year',
+                          onClick: () => setTrafficView('thisYear'),
+                        },
+                        {
+                          key: 'lastYear',
+                          label: 'Last year',
+                          onClick: () => setTrafficView('lastYear'),
+                        },
+                        { key: 'both', label: 'Both', onClick: () => setTrafficView('both') },
+                      ],
+                    }}
+                    trigger={['click']}
+                  >
                     <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
                       <Filter className='w-4 h-4' />
-                      <span>Filter</span>
+                      <span>
+                        {trafficView === 'thisYear'
+                          ? 'This year'
+                          : trafficView === 'lastYear'
+                          ? 'Last year'
+                          : 'Both'}
+                      </span>
                     </div>
                   </Dropdown>
                 </div>
 
                 <ResponsiveContainer width='100%' height={300}>
-                  <LineChart
-                    data={dashboardData.trafficData}
-                    margin={{ top: 60, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
-                        <stop offset='0%' stopColor='#ff7a00' stopOpacity={1} />
-                        <stop offset='100%' stopColor='#ff7a00' stopOpacity={0.2} />
-                      </linearGradient>
-                    </defs>
+                  <ResponsiveContainer width='100%' height={300}>
+                    <LineChart
+                      data={monthlyTrafficData}
+                      margin={{ top: 60, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
+                          <stop offset='0%' stopColor='#ff7a00' stopOpacity={1} />
+                          <stop offset='100%' stopColor='#ff7a00' stopOpacity={0.2} />
+                        </linearGradient>
+                      </defs>
 
-                    <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-                    <XAxis
-                      dataKey='month'
-                      tick={{ fill: '#F97316', fontSize: 12 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fill: '#F97316', fontSize: 12 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => `${v / 1000}K`}
-                    />
+                      <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
+                      <XAxis
+                        dataKey='month'
+                        tick={{ fill: '#F97316', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: '#F97316', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => `${v / 1000}K`}
+                      />
 
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (!active || !payload || !payload.length) return null;
-                        return (
-                          <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
-                            <p className='font-semibold mb-1'>{label}</p>
-                            <p className='text-orange-500'>
-                              thisYear : {payload[0]?.value?.toLocaleString?.()}
-                            </p>
-                            <p className='text-gray-400'>
-                              lastYear : {payload[1]?.value?.toLocaleString?.()}
-                            </p>
-                          </div>
-                        );
-                      }}
-                    />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (!active || !payload || !payload.length) return null;
+                          const thisYear =
+                            payload.find((p) => p.dataKey === 'thisYear')?.value ?? 0;
+                          const lastYear =
+                            payload.find((p) => p.dataKey === 'lastYear')?.value ?? 0;
 
-                    <Area
-                      type='monotone'
-                      dataKey='thisYear'
-                      stroke='none'
-                      fill='url(#colorTraffic)'
-                    />
+                          return (
+                            <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
+                              <p className='font-semibold mb-1'>{label}</p>
+                              <p className='text-orange-500'>
+                                thisYear: {thisYear.toLocaleString()}
+                              </p>
+                              <p className='text-gray-400'>lastYear: {lastYear.toLocaleString()}</p>
+                            </div>
+                          );
+                        }}
+                      />
 
-                    <Line
-                      type='monotone'
-                      dataKey='thisYear'
-                      stroke='#3b82f6'
-                      strokeWidth={2}
-                      dot={false}
-                    />
+                      {trafficView !== 'lastYear' && (
+                        <>
+                          <Area
+                            type='monotone'
+                            dataKey='thisYear'
+                            stroke='none'
+                            fill='url(#colorTraffic)'
+                          />
+                          <Line
+                            type='monotone'
+                            dataKey='thisYear'
+                            stroke='#3b82f6'
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </>
+                      )}
 
-                    <Line
-                      type='monotone'
-                      dataKey='lastYear'
-                      stroke='#cbd5e1'
-                      strokeWidth={1.5}
-                      strokeDasharray='3 3'
-                      dot={false}
-                    />
-                  </LineChart>
+                      {trafficView !== 'thisYear' && (
+                        <Line
+                          type='monotone'
+                          dataKey='lastYear'
+                          stroke='#cbd5e1'
+                          strokeWidth={2}
+                          strokeDasharray='6 3'
+                          dot={false}
+                        />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -313,7 +421,7 @@ const DashboardPage = () => {
                 </Dropdown>
               </div>
               <ResponsiveContainer width='100%' height={200}>
-                <BarChart data={dashboardData.requestData} barCategoryGap={10} barGap={4}>
+                <BarChart data={contactRequestData} barCategoryGap={10} barGap={4}>
                   <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
                   <XAxis dataKey='month' axisLine={false} tickLine={false} fontSize={12} />
                   <YAxis domain={[0, 200]} axisLine={false} tickLine={false} fontSize={12} />
