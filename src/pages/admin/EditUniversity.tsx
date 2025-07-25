@@ -9,6 +9,7 @@ import {
   message,
   Typography,
   InputNumber,
+  ConfigProvider,
   Spin,
 } from 'antd';
 import axios from 'axios';
@@ -38,7 +39,8 @@ interface UniversityData {
   email: string;
   website: string;
   description?: string;
-  fields: string[];
+  academicFields: string[];
+
   other?: string;
   logo?: File;
   logoUrl?: string;
@@ -48,6 +50,36 @@ interface UniversityData {
   subjects?: string[];
   strength?: string;
 }
+const fieldNamesOptions = [
+  { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
+  { value: 'arts_design', label: 'Arts & Design' },
+  { value: 'business_management_law', label: 'Business, Management & Law' },
+  { value: 'education_training', label: 'Education & Training' },
+  { value: 'engineering_technology', label: 'Engineering & Technology' },
+  { value: 'health_medicine', label: 'Health & Medicine' },
+  { value: 'humanities_languages', label: 'Humanities & Languages' },
+  { value: 'ict', label: 'Information & Communication Technology (ICT)' },
+  { value: 'natural_sciences', label: 'Natural Sciences' },
+  { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
+  { value: 'services', label: 'Services' },
+  { value: 'transport_safety_security_military', label: 'Transport, Safety, Security & Military' },
+  { value: 'other', label: 'Other' },
+];
+const fieldSearchMapping: Record<string, string> = {
+  agricultural_veterinary_sciences: 'agricultural',
+  arts_design: 'art',
+  business_management_law: 'business',
+  education_training: 'education',
+  engineering_technology: 'engineering',
+  health_medicine: 'health',
+  humanities_languages: 'humanities',
+  ict: 'information tech',
+  natural_sciences: 'natural',
+  social_behavioral_sciences: 'social',
+  services: 'services',
+  transport_safety_security_military: 'transport',
+  other: 'other',
+};
 
 // Mapping helpers
 const mapApiToFormData = (data: any): UniversityData => ({
@@ -64,10 +96,11 @@ const mapApiToFormData = (data: any): UniversityData => ({
   email: data.email || '',
   website: data.website || 'https://',
   description: data.description || '',
-  fields:
+  academicFields:
     typeof data.academicFieldsCommaSeparated === 'string'
       ? data.academicFieldsCommaSeparated.split(',').map((f: string) => f.trim())
       : [],
+
   other: data.other || data.strength || '',
   logoUrl: data.logoUrl || data.logo || '',
   year: data.year || undefined,
@@ -90,11 +123,9 @@ const mapToUpdateDto = (values: UniversityData) => ({
   email: values.email,
   website: values.website.startsWith('http') ? values.website : `https://${values.website}`,
   description: values.description,
-  academicFields: values.fields || [],
   strength: values.other,
   year: values.year,
   exchange: values.exchange ? 'Yes' : '-',
-  subjects: values.subjects || [],
 });
 
 const EditUniversity = () => {
@@ -109,15 +140,92 @@ const EditUniversity = () => {
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  const [fieldSubjectsMap, setFieldSubjectsMap] = useState<Record<string, string[]>>({});
+  const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
+
+  const handleAcademicFieldsChange = async (selectedFields: string[]) => {
+    const updatedMap = { ...fieldSubjectsMap };
+    const updatedLoading = { ...loadingSubjects };
+    const existingSubjects = form.getFieldValue('subjects') || [];
+
+    selectedFields.forEach((field) => {
+      if (!updatedMap[field]) {
+        updatedLoading[field] = true;
+      }
+    });
+
+    setLoadingSubjects(updatedLoading);
+
+    await Promise.all(
+      selectedFields.map(async (field) => {
+        if (updatedMap[field]) return;
+
+        try {
+          const res = await axios.get('/universities/subjects', {
+            params: { search: fieldSearchMapping[field] || field },
+          });
+
+          const apiSubjects = res.data?.data || [];
+          const apiNames = apiSubjects.map((s: any) => s.name || s.title || s.subject || s);
+
+          const merged = Array.from(new Set([...apiNames, ...existingSubjects]));
+          updatedMap[field] = merged;
+        } catch (err) {
+          message.error(`Failed to load subjects for ${field}`);
+          updatedMap[field] = [];
+        } finally {
+          updatedLoading[field] = false;
+        }
+      }),
+    );
+
+    setFieldSubjectsMap(updatedMap);
+    setLoadingSubjects(updatedLoading);
+  };
 
   // Load initial university data
   useEffect(() => {
     const fetchUniversity = async () => {
       try {
-        setPageLoading(true);
         const { data } = await axios.get(`/admin/universities/${id}`);
+
         const formData = mapApiToFormData(data);
         form.setFieldsValue(formData);
+
+        const selectedFields = formData.academicFields || [];
+        const subjectList = formData.subjects || [];
+
+        const updatedSubjects: Record<string, string[]> = {};
+        const updatedMap: Record<string, string[]> = {};
+        const updatedLoading: Record<string, boolean> = {};
+
+        await Promise.all(
+          selectedFields.map(async (field) => {
+            try {
+              const res = await axios.get('/universities/subjects', {
+                params: { search: fieldSearchMapping[field] || field },
+              });
+
+              const apiSubjects = res.data?.data || [];
+              const apiNames = apiSubjects.map((s: any) => s.name || s.title || s.subject || s);
+
+              updatedMap[field] = Array.from(new Set(apiNames));
+              updatedSubjects[`subjects_${field}`] = subjectList.filter((s) =>
+                updatedMap[field].includes(s),
+              );
+            } catch {
+              updatedMap[field] = [];
+              updatedSubjects[`subjects_${field}`] = [];
+            } finally {
+              updatedLoading[field] = false;
+            }
+          }),
+        );
+
+        setFieldSubjectsMap(updatedMap);
+        setLoadingSubjects(updatedLoading);
+        form.setFieldsValue(updatedSubjects);
+
         if (formData.logoUrl) setExistingLogoUrl(formData.logoUrl);
       } catch (err) {
         message.error('Failed to load university data');
@@ -159,6 +267,33 @@ const EditUniversity = () => {
     };
     fetchMeta();
   }, []);
+  const excelUploadProps = {
+    name: 'subjectsExcelFile',
+    multiple: false,
+    accept: '.xlsx,.xls,.csv',
+    beforeUpload: (file: File) => {
+      const isExcel =
+        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.type === 'application/vnd.ms-excel' ||
+        file.name.endsWith('.csv');
+
+      const isLt5M = file.size / 1024 / 1024 < 5;
+
+      if (!isExcel) {
+        message.error('Only Excel or CSV files are allowed!');
+        return false;
+      }
+      if (!isLt5M) {
+        message.error('File must be smaller than 5MB!');
+        return false;
+      }
+
+      return true; // Accept file
+    },
+    onRemove: () => {
+      form.setFieldsValue({ subjectsExcelFile: undefined });
+    },
+  };
 
   // Upload config
   const uploadProps = {
@@ -187,20 +322,27 @@ const EditUniversity = () => {
   };
 
   // Submit form
-  const onFinish = async (values: UniversityData) => {
+  const onFinish = async (values: UniversityData & Record<string, any>) => {
     setLoading(true);
+
     const dto = mapToUpdateDto(values);
+
     const formData = new FormData();
 
     Object.entries(dto).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(`${key}[]`, v ?? ''));
-      } else if (value !== undefined && value !== null) {
+      if (value !== undefined && value !== null) {
         formData.append(key, String(value));
       }
     });
 
-    if (logoFile) formData.append('logo', logoFile);
+    if (logoFile) {
+      formData.append('logo', logoFile);
+    }
+
+    const subjectsFile = form.getFieldValue('subjectsExcelFile');
+    if (subjectsFile && subjectsFile.length > 0) {
+      formData.append('subjectsExcel', subjectsFile[0].originFileObj);
+    }
 
     try {
       await axios.patch(`/admin/universities/${id}`, formData, {
@@ -216,18 +358,6 @@ const EditUniversity = () => {
     }
   };
 
-  // Reset form
-  const handleReset = async () => {
-    try {
-      const { data } = await axios.get(`/universities/${id}`);
-      form.setFieldsValue(mapApiToFormData(data));
-      setLogoFile(null);
-      message.info('Form reset');
-    } catch {
-      message.error('Reset failed');
-    }
-  };
-
   // Loading state
   if (pageLoading) {
     return (
@@ -238,233 +368,209 @@ const EditUniversity = () => {
   }
 
   return (
-    <div className='p-6 bg-gray-100 min-h-screen'>
-      <AdminHeader />
-      <LayoutWrapper>
-        <div className='max-w-7xl mx-auto'>
-          <div className='mb-6'>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/universities')}
-              className='mb-4'
-            >
-              Back
-            </Button>
-            <Title level={3}>{isEditable ? 'Edit University' : 'University Information'}</Title>
-          </div>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#ff7a00',
+          colorLink: '#ff7a00',
+          colorLinkHover: '#e96b00',
+        },
+      }}
+    >
+      <div className='p-6 bg-gray-100 min-h-screen'>
+        <AdminHeader />
+        <LayoutWrapper>
+          <div className='max-w-7xl mx-auto'>
+            <div className='mb-6'>
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate('/universities')}
+                className='mb-4'
+              >
+                Back
+              </Button>
+              <Title level={3}>{isEditable ? 'Edit University' : 'University Information'}</Title>
+            </div>
 
-          <div className='bg-white rounded-lg shadow p-6'>
-            <Form
-              form={form}
-              layout='vertical'
-              onFinish={onFinish}
-              initialValues={{ website: 'https://', fields: [] }}
-            >
-              <div className='flex flex-col md:grid md:grid-cols-3 gap-6'>
-                {/* Form Fields */}
-                <div className='md:col-span-2 order-2 md:order-1'>
-                  <Form.Item
-                    label='University Name'
-                    name='universityName'
-                    rules={[{ required: true }]}
-                  >
-                    <Input disabled={!isEditable} className='rounded-md' />
-                  </Form.Item>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='bg-white rounded-lg shadow p-6'>
+              <Form
+                form={form}
+                layout='vertical'
+                onFinish={onFinish}
+                initialValues={{ website: 'https://', fields: [] }}
+              >
+                <div className='flex flex-col md:grid md:grid-cols-3 gap-6'>
+                  {/* Form Fields */}
+                  <div className='md:col-span-2 order-2 md:order-1'>
                     <Form.Item
-                      label='Abbreviation'
-                      name='abbreviation'
+                      label='University Name'
+                      name='universityName'
                       rules={[{ required: true }]}
                     >
                       <Input disabled={!isEditable} className='rounded-md' />
                     </Form.Item>
-                    <Form.Item label='Country' name='country' rules={[{ required: true }]}>
-                      <Input disabled={!isEditable} className='rounded-md' />
-                    </Form.Item>
-                  </div>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                      <Form.Item
+                        label='Abbreviation'
+                        name='abbreviation'
+                        rules={[{ required: true }]}
+                      >
+                        <Input disabled={!isEditable} className='rounded-md' />
+                      </Form.Item>
+                      <Form.Item label='Country' name='country' rules={[{ required: true }]}>
+                        <Input disabled={!isEditable} className='rounded-md' />
+                      </Form.Item>
+                    </div>
 
-                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                    <Form.Item label='Location' name='location' rules={[{ required: true }]}>
-                      <Input disabled={!isEditable} className='rounded-md' />
-                    </Form.Item>
-                    <Form.Item label='Latitude' name='latitude'>
-                      <Input disabled={!isEditable} className='rounded-md' />
-                    </Form.Item>
-                    <Form.Item label='Longitude' name='longitude'>
-                      <Input disabled={!isEditable} className='rounded-md' />
-                    </Form.Item>
-                  </div>
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                      <Form.Item label='Location' name='location' rules={[{ required: true }]}>
+                        <Input disabled={!isEditable} className='rounded-md' />
+                      </Form.Item>
+                      <Form.Item label='Latitude' name='latitude'>
+                        <Input disabled={!isEditable} className='rounded-md' />
+                      </Form.Item>
+                      <Form.Item label='Longitude' name='longitude'>
+                        <Input disabled={!isEditable} className='rounded-md' />
+                      </Form.Item>
+                    </div>
 
-                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                    <Form.Item label='University Type' name='type' rules={[{ required: true }]}>
-                      <Select disabled={!isEditable} className='rounded-md'>
-                        {availableTypes.map((type) => (
-                          <Option key={type} value={type}>
-                            {type
-                              .split(' ')
-                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                              .join(' ')}
-                          </Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                    <Form.Item
-                      label='Student Population'
-                      name='numberOfStudents'
-                      rules={[{ required: true }]}
-                    >
-                      <InputNumber className='w-full rounded-md' disabled={!isEditable} />
-                    </Form.Item>
-                    <Form.Item label='Ranking' name='rank'>
-                      <InputNumber className='w-full rounded-md' disabled={!isEditable} />
-                    </Form.Item>
-                    <Form.Item label='Year Established' name='year'>
-                      <InputNumber
-                        className='w-full rounded-md'
-                        disabled={!isEditable}
-                        min={1000}
-                        max={new Date().getFullYear()}
-                      />
-                    </Form.Item>
-                  </div>
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                      <Form.Item label='University Type' name='type' rules={[{ required: true }]}>
+                        <Select disabled={!isEditable} className='rounded-md'>
+                          {availableTypes.map((type) => (
+                            <Option key={type} value={type}>
+                              {type
+                                .split(' ')
+                                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                                .join(' ')}
+                            </Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+                      <Form.Item
+                        label='Number of Students'
+                        name='numberOfStudents'
+                        rules={[{ required: true }]}
+                      >
+                        <InputNumber className='w-full rounded-md' disabled={!isEditable} />
+                      </Form.Item>
+                      <Form.Item label='Rank' name='rank'>
+                        <InputNumber className='w-full rounded-md' disabled={!isEditable} />
+                      </Form.Item>
+                    </div>
 
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <Form.Item
-                      label='Phone'
-                      name='phone'
-                      rules={[
-                        { required: true },
-                        { pattern: /^\+?[1-9]\d{1,14}$/, message: 'Invalid phone number' },
-                      ]}
-                    >
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                      <Form.Item
+                        label='Email'
+                        name='email'
+                        rules={[{ required: true }, { type: 'email' }]}
+                      >
+                        <Input disabled={!isEditable} className='rounded-md' />
+                      </Form.Item>
+
+                      <Form.Item
+                        label='Phone'
+                        name='phone'
+                        rules={[
+                          { required: true },
+                          { pattern: /^\+?[1-9]\d{1,14}$/, message: 'Invalid phone number' },
+                        ]}
+                      >
+                        <Input disabled={!isEditable} className='rounded-md' />
+                      </Form.Item>
+                    </div>
+
+                    <Form.Item label='Website' name='website' rules={[{ required: true }]}>
                       <Input disabled={!isEditable} className='rounded-md' />
                     </Form.Item>
-                    <Form.Item
-                      label='Email'
-                      name='email'
-                      rules={[{ required: true }, { type: 'email' }]}
-                    >
-                      <Input disabled={!isEditable} className='rounded-md' />
-                    </Form.Item>
-                  </div>
 
-                  <Form.Item label='Website' name='website' rules={[{ required: true }]}>
-                    <Input disabled={!isEditable} className='rounded-md' />
-                  </Form.Item>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <Form.Item label='University Strength' name='strength'>
-                      <Input disabled={!isEditable} className='rounded-md' />
-                    </Form.Item>
-                    <Form.Item label='Exchange Program' name='exchange' valuePropName='checked'>
-                      <Switch disabled={!isEditable} />
-                    </Form.Item>
-                  </div>
-                  <Form.Item label='Description' name='description'>
-                    <TextArea
-                      rows={4}
-                      maxLength={1000}
-                      showCount
-                      disabled={!isEditable}
-                      className='rounded-md'
-                    />
-                  </Form.Item>
-
-                  <Form.Item label='Academic Fields' name='fields'>
-                    <Select mode='multiple' disabled={!isEditable} className='w-full rounded-md'>
-                      {availableFields.map((field) => (
-                        <Option key={field} value={field}>
-                          {field}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-
-                  {form.getFieldValue('other') && form.getFieldValue('other') !== '-' && (
-                    <Form.Item label='Other Information' name='other'>
+                    <Form.Item label='Description' name='description'>
                       <TextArea
                         rows={4}
-                        maxLength={500}
+                        maxLength={1000}
                         showCount
                         disabled={!isEditable}
                         className='rounded-md'
                       />
                     </Form.Item>
-                  )}
-
-                  <Form.Item label='Subjects' name='subjects'>
-                    <Select
-                      mode='multiple'
-                      disabled={!isEditable}
-                      className='w-full rounded-md'
-                      placeholder='Select subjects'
+                    <Form.Item
+                      label='Subjects'
+                      name='subjectsExcelFile'
+                      valuePropName='fileList'
+                      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+                      rules={[{ required: true }]}
                     >
-                      {availableSubjects.map((subject) => (
-                        <Option key={subject} value={subject}>
-                          {subject}
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
+                      <Dragger {...excelUploadProps} disabled={!isEditable}>
+                        <p className='ant-upload-drag-icon'>
+                          <InboxOutlined />
+                        </p>
+                        <p>
+                          Drag your Excel file or <span className='text-[#ff7a00]'>browse</span>
+                        </p>
+                        <p className='text-xs'>Accepted formats: .xlsx, .xls — Max 5 MB</p>
+                      </Dragger>
+                    </Form.Item>
 
-                  {/* Buttons */}
-                  <div className='flex justify-end space-x-4 mt-6'>
-                    {!isEditable ? (
-                      <Button
-                        onClick={() => setIsEditable(true)}
-                        className='bg-[#ff7a00] text-white'
-                      >
-                        Edit
-                      </Button>
-                    ) : (
-                      <>
-                        <Button onClick={handleReset}>Cancel</Button>
+                    {/* Buttons */}
+                    <div className='flex justify-end space-x-4 mt-6'>
+                      {!isEditable ? (
                         <Button
-                          htmlType='submit'
-                          loading={loading}
-                          icon={<SaveOutlined />}
-                          className='bg-[#ff7a00] text-white'
+                          onClick={() => setIsEditable(true)}
+                          className='bg-[#ff7a00] text-white px-5 py-2 border border-[#ff7a00] rounded-[5px] font-medium shadow hover:bg-[#e46b00] transition'
                         >
-                          {loading ? 'Updating...' : 'Save Changes'}
+                          Edit
                         </Button>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          <Button onClick={() => navigate('/universities')}>Cancel</Button>
+                          <Button
+                            htmlType='submit'
+                            loading={loading}
+                            icon={<SaveOutlined />}
+                            className='bg-[#ff7a00] text-white'
+                          >
+                            {loading ? 'Updating...' : 'Save'}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Logo Upload */}
+                  <div className='flex flex-col items-center order-1 md:order-2'>
+                    <Form.Item name='logo'>
+                      <div className='relative w-32 h-32'>
+                        <Upload.Dragger
+                          {...uploadProps}
+                          showUploadList={false}
+                          disabled={!isEditable}
+                          className='absolute inset-0 z-10 opacity-0'
+                        >
+                          <div />
+                        </Upload.Dragger>
+
+                        <div className='relative w-full h-full group border border-gray-300 rounded-md overflow-hidden order-1 '>
+                          <img
+                            src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
+                            alt='University Logo'
+                            className='w-full h-full object-contain'
+                          />
+                          {isEditable && (
+                            <div className='absolute bottom-1 right-1 bg-[#ff7a00] rounded-full p-2 flex items-center justify-center'>
+                              <Pencil size={20} color='white' />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Form.Item>
                   </div>
                 </div>
-
-                {/* Logo Upload */}
-                <div className='flex flex-col items-center order-1 md:order-2'>
-                  <Form.Item name='logo'>
-                    <div className='relative w-32 h-32'>
-                      <Upload.Dragger
-                        {...uploadProps}
-                        showUploadList={false}
-                        disabled={!isEditable}
-                        className='absolute inset-0 z-10 opacity-0'
-                      >
-                        <div />
-                      </Upload.Dragger>
-
-                      <div className='relative w-full h-full group border border-gray-300 rounded-md overflow-hidden order-1 '>
-                        <img
-                          src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
-                          alt='University Logo'
-                          className='w-full h-full object-contain'
-                        />
-                        {isEditable && (
-                          <div className='absolute bottom-1 right-1 bg-[#ff7a00] rounded-full p-2 flex items-center justify-center'>
-                            <Pencil size={20} color='white' />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Form.Item>
-                </div>
-              </div>
-            </Form>
+              </Form>
+            </div>
           </div>
-        </div>
-      </LayoutWrapper>
-    </div>
+        </LayoutWrapper>
+      </div>
+    </ConfigProvider>
   );
 };
 
