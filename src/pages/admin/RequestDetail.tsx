@@ -446,15 +446,24 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
     message.info('Changes cancelled');
   };
 
-  const handleDownload = () => {
-    if (requestData?.subjectsExcelFilePath) {
-      // Create download link
-      const link = document.createElement('a');
-      link.href = `${API_BASE_URL.replace('/api', '')}/${requestData.subjectsExcelFilePath}`;
-      link.download = 'subjects.xlsx';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const handleDownload = async () => {
+    if (requestData?.id) {
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/admin/contact/download-excel/${requestData.id}`,
+          { responseType: 'blob' },
+        );
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'subjects.xlsx');
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        message.error('Failed to download file.');
+      }
     }
   };
 
