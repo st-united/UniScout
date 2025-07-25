@@ -538,29 +538,42 @@ const EditUniversity = () => {
 
                   {/* Logo Upload */}
                   <div className='flex flex-col items-center order-1 md:order-2'>
-                    <Form.Item name='logo'>
-                      <div className='relative w-32 h-32'>
+                    <Form.Item
+                      label='Logo'
+                      name='logo'
+                      valuePropName='fileList'
+                      getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+                    >
+                      <div className='flex flex-col items-center gap-3 justify-center'>
                         <Upload.Dragger
                           {...uploadProps}
                           showUploadList={false}
                           disabled={!isEditable}
-                          className='absolute inset-0 z-10 opacity-0'
+                          className='w-40 h-40 bg-white border border-dashed border-gray-300 rounded-xl shadow-sm flex items-center justify-center hover:shadow-md transition duration-300'
                         >
-                          <div />
-                        </Upload.Dragger>
-
-                        <div className='relative w-full h-full group border border-gray-300 rounded-md overflow-hidden order-1 '>
-                          <img
-                            src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
-                            alt='University Logo'
-                            className='w-full h-full object-contain'
-                          />
-                          {isEditable && (
-                            <div className='absolute bottom-1 right-1 bg-[#ff7a00] rounded-full p-2 flex items-center justify-center'>
-                              <Pencil size={20} color='white' />
+                          {logoFile || existingLogoUrl ? (
+                            <img
+                              src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
+                              alt='University Logo'
+                              className='w-full h-full object-contain '
+                            />
+                          ) : (
+                            <div className='text-center text-gray-400'>
+                              <InboxOutlined className='text-2xl mb-1' />
+                              <p className='text-sm'>Upload Logo</p>
+                              <p className='text-xs text-gray-300'>JPG, PNG – max 5MB</p>
                             </div>
                           )}
-                        </div>
+                        </Upload.Dragger>
+
+                        {isEditable && (
+                          <Button
+                            icon={<Pencil size={16} />}
+                            className='bg-[#ff7a00] text-white hover:bg-[#e46b00] px-4 rounded-md shadow'
+                          >
+                            Modify Logo
+                          </Button>
+                        )}
                       </div>
                     </Form.Item>
                   </div>
