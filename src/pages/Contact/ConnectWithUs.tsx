@@ -258,7 +258,7 @@ export default function ConnectWithUs() {
   const handleDownloadTemplate = async () => {
     try {
       const response = await fetch(
-        'https://api.uniscout.dev.stunited.vn/api/contact/template/Sample.xlsx',
+        'https://api.uniscout.dev.stunited.vn/api/contact/template/Subjects_Template.xlsx',
       );
       if (!response.ok) throw new Error('Network response was not ok');
       const blob = await response.blob();
