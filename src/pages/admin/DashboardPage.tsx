@@ -344,10 +344,11 @@ const DashboardPage = () => {
                         tickLine={false}
                       />
                       <YAxis
+                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
                         tick={{ fill: '#F97316', fontSize: 12 }}
                         axisLine={false}
                         tickLine={false}
-                        tickFormatter={(v) => `${v / 1000}K`}
+                        tickFormatter={(v) => `${v >= 1000 ? v / 1000 + 'K' : v}`}
                       />
 
                       <Tooltip
@@ -424,7 +425,13 @@ const DashboardPage = () => {
                 <BarChart data={contactRequestData} barCategoryGap={10} barGap={4}>
                   <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
                   <XAxis dataKey='month' axisLine={false} tickLine={false} fontSize={12} />
-                  <YAxis domain={[0, 200]} axisLine={false} tickLine={false} fontSize={12} />
+                  <YAxis
+                    domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={12}
+                  />
+
                   <Tooltip />
 
                   <Bar
