@@ -2,7 +2,6 @@ import { InboxOutlined, ArrowLeftOutlined, SaveOutlined } from '@ant-design/icon
 import {
   Form,
   Input,
-  Switch,
   Select,
   Button,
   Upload,
@@ -14,7 +13,7 @@ import {
 } from 'antd';
 import axios from 'axios';
 import { Pencil } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
 import AdminHeader from '../../components/AdminHeader';
@@ -39,32 +38,11 @@ interface UniversityData {
   email: string;
   website: string;
   description?: string;
-  academicFields: string[];
-
-  other?: string;
   logo?: File;
   logoUrl?: string;
   abbreviation?: string;
-  year?: number;
-  exchange?: boolean;
-  subjects?: string[];
-  strength?: string;
 }
-const fieldNamesOptions = [
-  { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
-  { value: 'arts_design', label: 'Arts & Design' },
-  { value: 'business_management_law', label: 'Business, Management & Law' },
-  { value: 'education_training', label: 'Education & Training' },
-  { value: 'engineering_technology', label: 'Engineering & Technology' },
-  { value: 'health_medicine', label: 'Health & Medicine' },
-  { value: 'humanities_languages', label: 'Humanities & Languages' },
-  { value: 'ict', label: 'Information & Communication Technology (ICT)' },
-  { value: 'natural_sciences', label: 'Natural Sciences' },
-  { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
-  { value: 'services', label: 'Services' },
-  { value: 'transport_safety_security_military', label: 'Transport, Safety, Security & Military' },
-  { value: 'other', label: 'Other' },
-];
+
 const fieldSearchMapping: Record<string, string> = {
   agricultural_veterinary_sciences: 'agricultural',
   arts_design: 'art',
@@ -96,17 +74,7 @@ const mapApiToFormData = (data: any): UniversityData => ({
   email: data.email || '',
   website: data.website || 'https://',
   description: data.description || '',
-  academicFields:
-    typeof data.academicFieldsCommaSeparated === 'string'
-      ? data.academicFieldsCommaSeparated.split(',').map((f: string) => f.trim())
-      : [],
-
-  other: data.other || data.strength || '',
   logoUrl: data.logoUrl || data.logo || '',
-  year: data.year || undefined,
-  exchange: data.exchange?.toLowerCase() === 'yes',
-  strength: data.strength || '',
-  subjects: data.subjectsList ? data.subjectsList.split(',').map((s: string) => s.trim()) : [],
 });
 
 const mapToUpdateDto = (values: UniversityData) => ({
@@ -123,9 +91,6 @@ const mapToUpdateDto = (values: UniversityData) => ({
   email: values.email,
   website: values.website.startsWith('http') ? values.website : `https://${values.website}`,
   description: values.description,
-  strength: values.other,
-  year: values.year,
-  exchange: values.exchange ? 'Yes' : '-',
 });
 
 const EditUniversity = () => {
@@ -137,51 +102,10 @@ const EditUniversity = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [existingLogoUrl, setExistingLogoUrl] = useState<string>('');
   const [isEditable, setIsEditable] = useState(false);
-  const [availableFields, setAvailableFields] = useState<string[]>([]);
+  const fileInputRef = useRef<any>(null);
+
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
-  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
-  const [fieldSubjectsMap, setFieldSubjectsMap] = useState<Record<string, string[]>>({});
-  const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
-
-  const handleAcademicFieldsChange = async (selectedFields: string[]) => {
-    const updatedMap = { ...fieldSubjectsMap };
-    const updatedLoading = { ...loadingSubjects };
-    const existingSubjects = form.getFieldValue('subjects') || [];
-
-    selectedFields.forEach((field) => {
-      if (!updatedMap[field]) {
-        updatedLoading[field] = true;
-      }
-    });
-
-    setLoadingSubjects(updatedLoading);
-
-    await Promise.all(
-      selectedFields.map(async (field) => {
-        if (updatedMap[field]) return;
-
-        try {
-          const res = await axios.get('/universities/subjects', {
-            params: { search: fieldSearchMapping[field] || field },
-          });
-
-          const apiSubjects = res.data?.data || [];
-          const apiNames = apiSubjects.map((s: any) => s.name || s.title || s.subject || s);
-
-          const merged = Array.from(new Set([...apiNames, ...existingSubjects]));
-          updatedMap[field] = merged;
-        } catch (err) {
-          message.error(`Failed to load subjects for ${field}`);
-          updatedMap[field] = [];
-        } finally {
-          updatedLoading[field] = false;
-        }
-      }),
-    );
-
-    setFieldSubjectsMap(updatedMap);
-    setLoadingSubjects(updatedLoading);
-  };
+  const initialFormDataRef = useRef<UniversityData | null>(null);
 
   // Load initial university data
   useEffect(() => {
@@ -191,39 +115,12 @@ const EditUniversity = () => {
 
         const formData = mapApiToFormData(data);
         form.setFieldsValue(formData);
-
-        const selectedFields = formData.academicFields || [];
-        const subjectList = formData.subjects || [];
+        initialFormDataRef.current = formData;
 
         const updatedSubjects: Record<string, string[]> = {};
         const updatedMap: Record<string, string[]> = {};
         const updatedLoading: Record<string, boolean> = {};
 
-        await Promise.all(
-          selectedFields.map(async (field) => {
-            try {
-              const res = await axios.get('/universities/subjects', {
-                params: { search: fieldSearchMapping[field] || field },
-              });
-
-              const apiSubjects = res.data?.data || [];
-              const apiNames = apiSubjects.map((s: any) => s.name || s.title || s.subject || s);
-
-              updatedMap[field] = Array.from(new Set(apiNames));
-              updatedSubjects[`subjects_${field}`] = subjectList.filter((s) =>
-                updatedMap[field].includes(s),
-              );
-            } catch {
-              updatedMap[field] = [];
-              updatedSubjects[`subjects_${field}`] = [];
-            } finally {
-              updatedLoading[field] = false;
-            }
-          }),
-        );
-
-        setFieldSubjectsMap(updatedMap);
-        setLoadingSubjects(updatedLoading);
         form.setFieldsValue(updatedSubjects);
 
         if (formData.logoUrl) setExistingLogoUrl(formData.logoUrl);
@@ -242,7 +139,6 @@ const EditUniversity = () => {
     const fetchSubjects = async () => {
       try {
         const res = await axios.get('/universities/subjects');
-        setAvailableSubjects(res.data?.data || []);
       } catch {
         message.error('Failed to load subjects');
       }
@@ -259,7 +155,7 @@ const EditUniversity = () => {
           axios.get('/universities/academic-fields'),
           axios.get('/universities/types'),
         ]);
-        setAvailableFields(fieldsRes.data?.data || []);
+
         setAvailableTypes(typesRes.data?.data || []);
       } catch {
         message.error('Failed to load metadata');
@@ -288,7 +184,7 @@ const EditUniversity = () => {
         return false;
       }
 
-      return true; // Accept file
+      return true;
     },
     onRemove: () => {
       form.setFieldsValue({ subjectsExcelFile: undefined });
@@ -485,20 +381,13 @@ const EditUniversity = () => {
                     </Form.Item>
 
                     <Form.Item label='Description' name='description'>
-                      <TextArea
-                        rows={4}
-                        maxLength={1000}
-                        showCount
-                        disabled={!isEditable}
-                        className='rounded-md'
-                      />
+                      <TextArea rows={4} showCount disabled={!isEditable} className='rounded-md' />
                     </Form.Item>
                     <Form.Item
                       label='Subjects'
                       name='subjectsExcelFile'
                       valuePropName='fileList'
                       getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
-                      rules={[{ required: true }]}
                     >
                       <Dragger {...excelUploadProps} disabled={!isEditable}>
                         <p className='ant-upload-drag-icon'>
@@ -522,7 +411,16 @@ const EditUniversity = () => {
                         </Button>
                       ) : (
                         <>
-                          <Button onClick={() => navigate('/universities')}>Cancel</Button>
+                          <Button
+                            onClick={() => {
+                              form.setFieldsValue(initialFormDataRef.current || {});
+                              setIsEditable(false);
+                              setLogoFile(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+
                           <Button
                             htmlType='submit'
                             loading={loading}
@@ -545,31 +443,50 @@ const EditUniversity = () => {
                       getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                     >
                       <div className='flex flex-col items-center gap-3 justify-center'>
-                        <Upload.Dragger
+                        <Upload
                           {...uploadProps}
                           showUploadList={false}
                           disabled={!isEditable}
                           className='w-40 h-40 bg-white border border-dashed border-gray-300 rounded-xl shadow-sm flex items-center justify-center hover:shadow-md transition duration-300'
+                          ref={fileInputRef}
                         >
-                          {logoFile || existingLogoUrl ? (
-                            <img
-                              src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
-                              alt='University Logo'
-                              className='w-full h-full object-contain '
-                            />
-                          ) : (
-                            <div className='text-center text-gray-400'>
-                              <InboxOutlined className='text-2xl mb-1' />
-                              <p className='text-sm'>Upload Logo</p>
-                              <p className='text-xs text-gray-300'>JPG, PNG – max 5MB</p>
-                            </div>
-                          )}
-                        </Upload.Dragger>
+                          <span
+                            role='button'
+                            tabIndex={0}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
+                            }}
+                          >
+                            {logoFile || existingLogoUrl ? (
+                              <img
+                                src={logoFile ? URL.createObjectURL(logoFile) : existingLogoUrl}
+                                alt='University Logo'
+                                className='w-full h-full object-contain'
+                              />
+                            ) : (
+                              <div className='text-center text-gray-400'>
+                                <InboxOutlined className='text-2xl mb-1' />
+                                <p className='text-sm'>Upload Logo</p>
+                                <p className='text-xs text-gray-300'>JPG, PNG – max 5MB</p>
+                              </div>
+                            )}
+                          </span>
+                        </Upload>
 
                         {isEditable && (
                           <Button
                             icon={<Pencil size={16} />}
                             className='bg-[#ff7a00] text-white hover:bg-[#e46b00] px-4 rounded-md shadow'
+                            onClick={() => {
+                              const input = document.querySelector(
+                                'input[type="file"]',
+                              ) as HTMLElement;
+                              input?.click();
+                            }}
                           >
                             Modify Logo
                           </Button>
