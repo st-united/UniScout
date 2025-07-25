@@ -184,7 +184,7 @@ const EditUniversity = () => {
         return false;
       }
 
-      return true; // Accept file
+      return true;
     },
     onRemove: () => {
       form.setFieldsValue({ subjectsExcelFile: undefined });
@@ -434,7 +434,6 @@ const EditUniversity = () => {
                     </div>
                   </div>
 
-                  {/* Logo Upload */}
                   {/* Logo Upload */}
                   <div className='flex flex-col items-center order-1 md:order-2'>
                     <Form.Item
