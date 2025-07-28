@@ -81,7 +81,7 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
         Description: 'description',
         Logo: 'logo',
         Type: 'type',
-        'Number of students': 'numberOfStudents',
+        'Number of students': 'studentPopulation',
       };
 
       const mappedColumns = selectedColumns.map((col) => columnMap[col]).filter(Boolean);
