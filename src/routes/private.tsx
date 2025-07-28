@@ -62,9 +62,14 @@ const routes = [
         path: 'manage',
         element: <ManageRequest />,
       },
+
       {
         path: 'account',
-        element: <ManageAccount />,
+        element: (
+          <ProtectedRoute requireSuperAdmin>
+            <ManageAccount />
+          </ProtectedRoute>
+        ),
       },
     ],
   },

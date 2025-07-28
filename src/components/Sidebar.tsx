@@ -2,13 +2,14 @@ import { message } from 'antd';
 import axios from 'axios';
 import { LayoutDashboard, GraduationCap, FileText, User, LogOut, Menu, X } from 'lucide-react';
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 import devplusLogo from '../assets/images/devplus.png';
 import { removeStorageData } from '@app/config/storage';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
 import { logout } from '@app/redux/features/auth/authSlice';
+import { RootState } from '@app/redux/store';
 
 interface SidebarProps {
   activeTab: string;
@@ -19,6 +20,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+
   const menuItems = [
     {
       id: 'dashboard',
@@ -38,12 +41,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       icon: FileText,
       path: '/manage',
     },
-    {
-      id: 'manage-account',
-      label: 'Manage Account',
-      icon: User,
-      path: '/account',
-    },
+    // 👇 Affiche "Manage Account" uniquement si user.role === 'superadmin'
+    ...(user?.role === 'super'
+      ? [
+          {
+            id: 'manage-account',
+            label: 'Manage Account',
+            icon: User,
+            path: '/account',
+          },
+        ]
+      : []),
     {
       id: 'logout',
       label: 'Logout',
