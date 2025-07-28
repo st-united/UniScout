@@ -1,5 +1,5 @@
 import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { Table, Select, Modal, Input, Button, message } from 'antd';
+import { Table, Select, Modal, Input, Button, message, ConfigProvider } from 'antd';
 import axios from 'axios';
 import {
   Users,
@@ -10,6 +10,8 @@ import {
   ChevronDown,
   Plus,
   ClipboardPaste,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
@@ -164,6 +166,13 @@ const ManageAccount: React.FC = () => {
       title: 'CREATE TIME',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      render: (date: string) => {
+        const d = new Date(date);
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+          d.getHours(),
+        )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      },
     },
     {
       title: (
@@ -372,31 +381,111 @@ const ManageAccount: React.FC = () => {
             }}
             jobRoles={jobRoles}
           />
-
-          <Table
-            columns={columns}
-            dataSource={accounts}
-            loading={loading}
-            rowKey='id'
-            pagination={{
-              current: currentPage,
-              pageSize: pageSize,
-              total: totalCount,
-              onChange: (page: number) => setCurrentPage(page),
-              position: ['bottomCenter'],
-            }}
-            scroll={{ x: '100%' }}
-            bordered={false}
-            className='px-5'
-            onRow={(record: Account) => ({
-              onClick: () => {
-                setSelectedUser(record);
-                setIsModalOpen(true);
-                setIsEditMode(false);
+          <ConfigProvider
+            theme={{
+              token: {
+                colorPrimary: '#FF842B',
               },
-              style: { cursor: 'pointer' },
-            })}
-          />
+            }}
+          >
+            <Table
+              columns={columns}
+              dataSource={accounts}
+              loading={loading}
+              rowKey='id'
+              pagination={{
+                current: currentPage,
+                pageSize: pageSize,
+                total: totalCount,
+                onChange: (page) => setCurrentPage(page),
+                showSizeChanger: false,
+                className: 'custom-pagination',
+                itemRender: (page, type, originalElement) => {
+                  const totalPages = Math.ceil(totalCount / pageSize);
+                  const baseStyle: React.CSSProperties = {
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'color 0.2s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  };
+
+                  if (type === 'prev') {
+                    const isDisabled = currentPage === 1;
+                    return (
+                      <span
+                        style={{
+                          ...baseStyle,
+                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        className='flex items-center justify-center'
+                      >
+                        <ChevronLeft className='w-5 h-5' /> Previous
+                      </span>
+                    );
+                  }
+
+                  if (type === 'next') {
+                    const isDisabled = currentPage >= totalPages;
+                    return (
+                      <span
+                        style={{
+                          ...baseStyle,
+                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        className='flex items-center justify-center'
+                      >
+                        Next <ChevronRight className='w-5 h-5' />
+                      </span>
+                    );
+                  }
+
+                  if (type === 'page') {
+                    const isCurrent = page === currentPage;
+                    return (
+                      <span
+                        style={{
+                          ...baseStyle,
+                          color: '#ff7a00',
+                          fontWeight: isCurrent ? 'bold' : 500,
+                        }}
+                      >
+                        {page}
+                      </span>
+                    );
+                  }
+
+                  if (type === 'jump-prev' || type === 'jump-next') {
+                    return <span style={{ color: '#999' }}>•••</span>;
+                  }
+
+                  return originalElement;
+                },
+                style: {
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '100%',
+                  marginTop: '24px',
+                  marginBottom: '16px',
+                },
+              }}
+              scroll={{ x: '100%' }}
+              bordered={false}
+              className='px-5'
+              onRow={(record: Account) => ({
+                onClick: () => {
+                  setSelectedUser(record);
+                  setIsModalOpen(true);
+                  setIsEditMode(false);
+                },
+                style: { cursor: 'pointer' },
+              })}
+            />
+          </ConfigProvider>
           <Modal
             open={isModalOpen}
             onCancel={() => setIsModalOpen(false)}
