@@ -370,6 +370,7 @@ const ManageAccount: React.FC = () => {
                 message.error(error.response?.data?.message || 'Failed to create account');
               }
             }}
+            jobRoles={jobRoles}
           />
 
           <Table
@@ -446,7 +447,7 @@ const ManageAccount: React.FC = () => {
               />
               <div style={{ display: 'flex', gap: 16 }}>
                 <div style={{ flex: 1 }}>
-                  <label htmlFor='edit-account-role'>Role</label>
+                  <label htmlFor='edit-account-role'>Department</label>
                   <Select
                     id='edit-account-role'
                     value={selectedUser?.role}
