@@ -364,9 +364,11 @@ const DashboardPage = () => {
                             <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
                               <p className='font-semibold mb-1'>{label}</p>
                               <p className='text-orange-500'>
-                                thisYear: {thisYear.toLocaleString()}
+                                This year: {thisYear.toLocaleString()}
                               </p>
-                              <p className='text-gray-400'>lastYear: {lastYear.toLocaleString()}</p>
+                              <p className='text-gray-400'>
+                                Last year: {lastYear.toLocaleString()}
+                              </p>
                             </div>
                           );
                         }}

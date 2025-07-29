@@ -199,6 +199,7 @@ const ManageAccount: React.FC = () => {
           >
             <Select
               value={status}
+              open={false}
               onChange={handleChange}
               bordered={false}
               dropdownStyle={{
@@ -212,27 +213,6 @@ const ManageAccount: React.FC = () => {
                 fontWeight: 600,
               }}
               getPopupContainer={(trigger: HTMLElement) => trigger.parentNode as HTMLElement}
-              onDropdownVisibleChange={(open: boolean) => {
-                if (open) {
-                  Modal.confirm({
-                    title: 'Warning',
-                    icon: <ExclamationCircleOutlined />,
-                    content: (
-                      <div style={{ fontSize: 16, marginBottom: 32 }}>
-                        This action will disable the admin&apos;s access. Do you want to continue?
-                      </div>
-                    ),
-                    okText: 'Yes',
-                    cancelText: 'No',
-                    onOk() {
-                      console.log('OK');
-                    },
-                    onCancel() {
-                      console.log('Cancel');
-                    },
-                  });
-                }
-              }}
             >
               {Object.entries(colorMap).map(([key, value]) => (
                 <Option key={key} value={key}>
