@@ -693,7 +693,7 @@ export default function ConnectWithUs() {
               file.
             </div>
             <div className='flex items-center gap-4 mb-4'>
-              <div className='flex items-center border border-gray-200 rounded-lg px-14 py-2 bg-white shadow-sm'>
+              <div className='flex items-center border border-gray-200 rounded-lg px-8 md:px-14 py-2 bg-white shadow-sm'>
                 <img
                   src='./src/assets/images/excel-logo.png'
                   alt='Excel'

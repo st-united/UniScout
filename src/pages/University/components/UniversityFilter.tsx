@@ -222,7 +222,7 @@ const UniversityFilter = ({
         className='lg:w-80 w-full lg:sticky lg:top-6 self-start'
         style={{ position: 'sticky', top: '90px', zIndex: 10 }}
       >
-        <div className='lg:hidden flex justify-between items-center mb-4'>
+        <div className='lg:hidden flex justify-between items-center'>
           <button
             className='flex items-center gap-2 text-orange-500 font-semibold bg-transparent border-none shadow-none p-0 hover:bg-transparent focus:bg-transparent'
             onClick={() => setIsMobileOpen((prev) => !prev)}
