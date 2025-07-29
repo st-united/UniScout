@@ -348,7 +348,8 @@ const DashboardPage = () => {
                         tick={{ fill: '#F97316', fontSize: 12 }}
                         axisLine={false}
                         tickLine={false}
-                        tickFormatter={(v) => `${v >= 1000 ? v / 1000 + 'K' : v}`}
+                        interval={0}
+                        tickFormatter={(v) => (Number.isInteger(v) ? v : '')}
                       />
 
                       <Tooltip
