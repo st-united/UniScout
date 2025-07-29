@@ -298,10 +298,10 @@ const ViewUniversity = () => {
         onCountryClick={handleMapCountryClick}
         onCountryCountClick={handleCountryCountClick}
       />
-      <h2 className='text-center text-4xl font-bold mt-6 mb-6'>DISCOVER UNIVERSITIES</h2>
+      <h2 className='text-center text-4xl font-bold mt-6 mb-3'>DISCOVER UNIVERSITIES</h2>
       <div className='flex justify-center mt-6'>
-        <div className='w-full max-w-screen-xl flex flex-col lg:flex-row gap-6'>
-          <div className='w-full lg:w-[320px] flex-none mb-6 lg:mb-0 pt-6'>
+        <div className='w-full max-w-screen-xl flex flex-col lg:flex-row'>
+          <div className='w-full lg:w-[320px] flex-none'>
             <UniversityFilter
               onFiltersUpdate={handleFiltersUpdate}
               initialFilters={activeFilters}
@@ -312,7 +312,7 @@ const ViewUniversity = () => {
           <div ref={cardsRef} className='flex-1 min-h-[700px] relative'>
             {/* Search, filter chips, and sort bar aligned with cards */}
             <div
-              className='flex flex-col bg-[#F5F5F5] pt-6 mb-4'
+              className='flex flex-col bg-[#F5F5F5] pt-4 mb-4'
               style={{ position: 'sticky', top: '63px', zIndex: 10 }}
             >
               <div className='flex flex-row items-center gap-4 w-full mb-2'>
