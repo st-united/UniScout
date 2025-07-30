@@ -1,4 +1,3 @@
-// ManageRequest.tsx
 import { ExportOutlined, EyeOutlined, CloseCircleFilled, SearchOutlined } from '@ant-design/icons';
 import {
   Table,
@@ -17,10 +16,8 @@ import {
   Input,
   Modal,
 } from 'antd';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
-// Removed: useNavigate as it's no longer used
-// import { useNavigate } from 'react-router-dom';
 
 import EditRequestModalContent from './EditRequest';
 import RequestDetailModalContent from './RequestDetail';
@@ -31,10 +28,8 @@ import type { ColumnsType } from 'antd/es/table';
 const { Option } = Select;
 const { Title } = Typography;
 
-// API Base URL
 const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
 
-// Interface for user request (updated to match API response)
 interface UserRequest {
   id: string;
   number?: number;
@@ -49,7 +44,6 @@ interface UserRequest {
   description?: string;
 }
 
-// API Response interface
 interface ApiResponse {
   data: UserRequest[];
   total: number;
@@ -57,7 +51,10 @@ interface ApiResponse {
   pageSize: number;
 }
 
-// Custom hook for debouncing input values - NO LONGER USED FOR SEARCH
+interface ErrorResponseData {
+  message?: string;
+}
+
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -77,14 +74,11 @@ const sortOptions = [
 type FilterKey = 'country' | 'requestType' | 'status' | 'search';
 
 const ManageRequest: React.FC = () => {
-  // State for request data
   const [requestData, setRequestData] = useState<UserRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
-  // Removed: const navigate = useNavigate(); as it's no longer used
 
-  // State for API data
   const [contactRequestTypes, setContactRequestTypes] = useState<string[]>([]);
   const [contactSubmissionStatuses, setContactSubmissionStatuses] = useState<string[]>([]);
   const [loadingRequestTypes, setLoadingRequestTypes] = useState(false);
@@ -103,16 +97,13 @@ const ManageRequest: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  // Mobile responsive states
   const [isMobile, setIsMobile] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
 
-  // Modal states
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(null);
 
-  // API Functions
   const fetchContactRequestTypes = async () => {
     setLoadingRequestTypes(true);
     try {
@@ -130,7 +121,7 @@ const ManageRequest: React.FC = () => {
     } catch (error) {
       console.error('Error fetching contact request types:', error);
       message.error('Failed to fetch request types');
-      setContactRequestTypes(['New University', 'Update Information', 'Remove University']);
+      setContactRequestTypes([]);
     } finally {
       setLoadingRequestTypes(false);
     }
@@ -153,13 +144,12 @@ const ManageRequest: React.FC = () => {
     } catch (error) {
       console.error('Error fetching contact submission statuses:', error);
       message.error('Failed to fetch submission statuses');
-      setContactSubmissionStatuses(['Pending', 'In Progress', 'Rejected', 'Completed']);
+      setContactSubmissionStatuses([]);
     } finally {
       setLoadingSubmissionStatuses(false);
     }
   };
 
-  // Check screen size
   useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -170,7 +160,6 @@ const ManageRequest: React.FC = () => {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // Load API data on component mount
   useEffect(() => {
     fetchContactRequestTypes();
     fetchContactSubmissionStatuses();
@@ -223,7 +212,7 @@ const ManageRequest: React.FC = () => {
         requestParams.search = filters.search[0].trim();
       }
 
-      const response = await axios.get(`${API_BASE_URL}/admin/contact`, {
+      const response = await axios.get<ApiResponse>(`${API_BASE_URL}/admin/contact`, {
         params: requestParams,
         headers: {
           accept: '*/*',
@@ -242,125 +231,47 @@ const ManageRequest: React.FC = () => {
         },
       });
 
-      if (response.data && response.data.data) {
+      if (response.data && Array.isArray(response.data.data)) {
         const apiData: ApiResponse = response.data;
-
+        setRequestData(apiData.data);
+        setTotalCount(apiData.total);
         if (apiData.data.length === 0) {
-          console.log('API returned empty data, using fallback mock data');
-          const mockData: UserRequest[] = [
-            {
-              id: '1',
-              requestType: 'New University',
-              country: 'Vietnam',
-              universityName: 'Mock University Vietnam',
-              abbreviation: 'MUV',
-              status: 'Pending',
-              submittedBy: 'John Doe',
-              submittedDate: '2025-07-01',
-              submittedAt: '2025-07-01T10:00:00Z',
-            },
-            {
-              id: '2',
-              requestType: 'Update Information',
-              country: 'Japan',
-              universityName: 'Mock University Japan',
-              abbreviation: 'MUJ',
-              status: 'Completed',
-              submittedBy: 'Jane Smith',
-              submittedDate: '2025-07-05',
-              submittedAt: '2025-07-05T12:00:00Z',
-            },
-            {
-              id: '3',
-              requestType: 'Remove University',
-              country: 'Korea',
-              universityName: 'Mock University Korea',
-              abbreviation: 'MUK',
-              status: 'In Progress',
-              submittedBy: 'Mike Johnson',
-              submittedDate: '2025-07-10',
-              submittedAt: '2025-07-10T14:30:00Z',
-            },
-            {
-              id: '4',
-              requestType: 'New University',
-              country: 'Australia',
-              universityName: 'Mock University Australia',
-              abbreviation: 'MUA',
-              status: 'Rejected',
-              submittedBy: 'Sarah Wilson',
-              submittedDate: '2025-07-12',
-              submittedAt: '2025-07-12T09:15:00Z',
-            },
-          ];
-
-          setRequestData(mockData);
-          setTotalCount(mockData.length);
-          message.info('No data found, showing sample data');
-        } else {
-          setRequestData(apiData.data);
-          setTotalCount(apiData.total);
+          message.info('No data found for the current filters.');
         }
       } else {
-        throw new Error('Invalid API response format');
+        throw new Error('Invalid API response format or missing data array');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch requests';
-      console.error('API Error:', err);
-      setError(errorMessage);
+      setRequestData([]);
+      setTotalCount(0);
 
-      const mockData: UserRequest[] = [
-        {
-          id: '1',
-          requestType: 'New University',
-          country: 'Vietnam',
-          universityName: 'Mock University Vietnam',
-          abbreviation: 'MUV',
-          status: 'Pending',
-          submittedBy: 'John Doe',
-          submittedDate: '2025-07-01',
-          submittedAt: '2025-07-01T10:00:00Z',
-        },
-        {
-          id: '2',
-          requestType: 'Update Information',
-          country: 'Japan',
-          universityName: 'Mock University Japan',
-          abbreviation: 'MUJ',
-          status: 'Completed',
-          submittedBy: 'Jane Smith',
-          submittedDate: '2025-07-05',
-          submittedAt: '2025-07-05T12:00:00Z',
-        },
-        {
-          id: '3',
-          requestType: 'Remove University',
-          country: 'Korea',
-          universityName: 'Mock University Korea',
-          abbreviation: 'MUK',
-          status: 'In Progress',
-          submittedBy: 'Mike Johnson',
-          submittedDate: '2025-07-10',
-          submittedAt: '2025-07-10T14:30:00Z',
-        },
-        {
-          id: '4',
-          requestType: 'New University',
-          country: 'Australia',
-          universityName: 'Mock University Australia',
-          abbreviation: 'MUA',
-          status: 'Rejected',
-          submittedBy: 'Sarah Wilson',
-          submittedDate: '2025-07-12',
-          submittedAt: '2025-07-12T09:15:00Z',
-        },
-      ];
-
-      setRequestData(mockData);
-      setTotalCount(mockData.length);
-      message.warning('Using mock data fallback - API connection failed');
-
-      setError(null);
+      if (axios.isAxiosError(err)) {
+        const axiosError = err as AxiosError<ErrorResponseData>;
+        if (axiosError.response) {
+          if (axiosError.response.status === 400 || axiosError.response.status === 404) {
+            message.info('No data found for the current filters.');
+            setError(null);
+          } else {
+            const errorMessage =
+              axiosError.response.data?.message || axiosError.message || 'Failed to fetch requests';
+            console.error('API Error:', axiosError);
+            setError(errorMessage);
+            message.error(`Failed to fetch requests: ${errorMessage}. Please try again.`);
+          }
+        } else {
+          const errorMessage = axiosError.message || 'Failed to connect to the server.';
+          console.error('Network Error:', axiosError);
+          setError(errorMessage);
+          message.error(
+            'Failed to fetch requests. Please check your network connection and try again.',
+          );
+        }
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+        console.error('General Error:', err);
+        setError(errorMessage);
+        message.error(`An unexpected error occurred: ${errorMessage}. Please try again.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -414,35 +325,35 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  // Handle opening different modals based on request type
+  // --- MODIFIED handleViewRequest function ---
   const handleViewRequest = (record: UserRequest) => {
     setSelectedRequest(record);
-    if (record.requestType === 'Update Information') {
+    // If the request type is 'Update Information' OR 'New University',
+    // open the EditRequestModalContent for status editing.
+    if (record.requestType === 'Update Information' || record.requestType === 'New University') {
       setIsEditModalVisible(true);
-    } else if (record.requestType === 'New University') {
-      setIsDetailModalVisible(true);
     } else {
-      // Default action if neither Update Information nor New University
+      // For any other request type (or if 'New University' shouldn't be editable by this modal),
+      // open the RequestDetailModalContent.
       setIsDetailModalVisible(true);
     }
   };
+  // --- END MODIFIED handleViewRequest function ---
 
-  // Handle row click to view request details
   const handleRowClick = (record: UserRequest) => {
     handleViewRequest(record);
   };
 
-  // Handlers to close modals
   const handleDetailModalClose = () => {
     setIsDetailModalVisible(false);
     setSelectedRequest(null);
-    fetchRequests(); // Refresh data after closing detail modal (optional)
+    fetchRequests();
   };
 
   const handleEditModalClose = () => {
     setIsEditModalVisible(false);
     setSelectedRequest(null);
-    fetchRequests(); // Refresh data after closing edit modal (important for status updates)
+    fetchRequests();
   };
 
   const getUniqueCountries = () => {
@@ -1017,8 +928,8 @@ const ManageRequest: React.FC = () => {
           </Space>
         </Drawer>
 
-        {/* Request Detail Modal */}
-        {selectedRequest && (
+        {/* Request Detail Modal - Remains for non-editable request types, if any */}
+        {selectedRequest && isDetailModalVisible && (
           <Modal
             title={
               <div
@@ -1032,8 +943,8 @@ const ManageRequest: React.FC = () => {
             footer={null}
             width={700}
             destroyOnClose={true}
-            centered={false} // <--- Set centered to false
-            style={{ top: 20 }} // <--- Position it 20px from the top
+            centered={false}
+            style={{ top: 20 }}
           >
             <RequestDetailModalContent
               requestId={selectedRequest.id}
@@ -1042,8 +953,8 @@ const ManageRequest: React.FC = () => {
           </Modal>
         )}
 
-        {/* Edit Request Modal */}
-        {selectedRequest && (
+        {/* Edit Request Modal - Now also used for 'New University' */}
+        {selectedRequest && isEditModalVisible && (
           <Modal
             title={
               <div
@@ -1057,8 +968,8 @@ const ManageRequest: React.FC = () => {
             footer={null}
             width={700}
             destroyOnClose={true}
-            centered={false} // <--- Set centered to false
-            style={{ top: 20 }} // <--- Position it 20px from the top
+            centered={false}
+            style={{ top: 20 }}
           >
             <EditRequestModalContent
               requestId={selectedRequest.id}
