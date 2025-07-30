@@ -163,7 +163,6 @@ const DashboardPage = () => {
       }));
 
       setMonthlyTrafficData(traffic);
-      console.log('monthlyTrafficData', traffic);
     } catch (err) {
       console.error('Erreur chargement données trafic :', err);
     }
@@ -200,7 +199,6 @@ const DashboardPage = () => {
       try {
         const res = await axios.get('/dashboard/top-searched');
         setTopSearch(res.data);
-        console.log('Top Search Data:', res.data);
       } catch (error) {
         console.error('Erreur chargement top search :', error);
       }
@@ -348,7 +346,8 @@ const DashboardPage = () => {
                         tick={{ fill: '#F97316', fontSize: 12 }}
                         axisLine={false}
                         tickLine={false}
-                        tickFormatter={(v) => `${v >= 1000 ? v / 1000 + 'K' : v}`}
+                        interval={0}
+                        tickFormatter={(v) => (Number.isInteger(v) ? v : '')}
                       />
 
                       <Tooltip
@@ -363,9 +362,11 @@ const DashboardPage = () => {
                             <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
                               <p className='font-semibold mb-1'>{label}</p>
                               <p className='text-orange-500'>
-                                thisYear: {thisYear.toLocaleString()}
+                                This year: {thisYear.toLocaleString()}
                               </p>
-                              <p className='text-gray-400'>lastYear: {lastYear.toLocaleString()}</p>
+                              <p className='text-gray-400'>
+                                Last year: {lastYear.toLocaleString()}
+                              </p>
                             </div>
                           );
                         }}

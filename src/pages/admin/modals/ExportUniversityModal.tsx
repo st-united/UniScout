@@ -134,7 +134,8 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
   const formatButton = (type: 'excel' | 'csv', icon: React.ReactNode, label: string) => {
     const isActive = selectedFormat === type;
 
-    const baseClasses = 'flex-1 h-12 font-medium rounded-lg border text-sm ';
+    const baseClasses =
+      'flex-1 h-12 font-medium rounded-lg border text-sm !items-center !justify-center ';
     const activeClasses = '!bg-[#fffaeb] !border-[#ff7a00] !text-[#ff7a00]';
     const inactiveClasses = 'bg-white !border-[#d1d5db] !hover:border-[#d1d5db] !text-[#4b5563]';
 
@@ -198,9 +199,17 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
 
         <div className='mb-4 border border-solid border-[#e5e7eb] rounded-lg p-4'>
           <p className='font-bold text-[#FE7743] mb-3'>Format</p>
-          <div className='flex gap-4'>
-            {formatButton('excel', <FileExcelOutlined />, 'Excel')}
-            {formatButton('csv', <FileTextOutlined />, 'CSV')}
+          <div className='flex gap-4 justify-center items-center'>
+            {formatButton(
+              'excel',
+              <img src='./src/assets/images/excel-logo.png' alt='Excel Logo' className='w-6 h-6' />,
+              'Excel',
+            )}
+            {formatButton(
+              'csv',
+              <img src='./src/assets/images/csv-logo.png' alt='CSV Logo' className='w-6 h-6' />,
+              'CSV',
+            )}
           </div>
         </div>
 
