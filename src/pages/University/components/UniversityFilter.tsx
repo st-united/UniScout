@@ -1,8 +1,8 @@
 import { DownOutlined } from '@ant-design/icons';
 import { Input, Tooltip, TreeSelect, ConfigProvider, Empty } from 'antd';
 import axios from 'axios';
-import { Filter, MapPin, ChevronDown, BookOpenText } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { Filter, MapPin, ChevronDown, BookOpenText, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export interface FilterOptions {
   search: string;
@@ -71,6 +71,51 @@ interface TreeNode {
 
 //const MAX_COUNT = 1000;
 
+// Add a utility function to highlight text progressively
+const highlightTextProgressively = (text: string, searchTerm: string) => {
+  if (!searchTerm || !text) return text;
+
+  const lowerText = text.toLowerCase();
+  const lowerSearchTerm = searchTerm.toLowerCase();
+
+  // Find all positions where the search term appears
+  const positions: number[] = [];
+  let pos = 0;
+  while ((pos = lowerText.indexOf(lowerSearchTerm, pos)) !== -1) {
+    positions.push(pos);
+    pos += 1;
+  }
+
+  if (positions.length === 0) return text;
+
+  // Create highlighted text
+  const result: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  positions.forEach((startPos, index) => {
+    // Add text before the match
+    if (startPos > lastIndex) {
+      result.push(text.slice(lastIndex, startPos));
+    }
+
+    // Add the highlighted match (only the exact search term length)
+    result.push(
+      <span key={index} className='text-orange-500 font-semibold'>
+        {text.slice(startPos, startPos + searchTerm.length)}
+      </span>,
+    );
+
+    lastIndex = startPos + searchTerm.length;
+  });
+
+  // Add remaining text after the last match
+  if (lastIndex < text.length) {
+    result.push(text.slice(lastIndex));
+  }
+
+  return result;
+};
+
 const UniversityFilter = ({
   onFiltersUpdate,
   initialFilters,
@@ -87,6 +132,7 @@ const UniversityFilter = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [isFieldDropdownOpen, setIsFieldDropdownOpen] = useState(false);
+  const [subjectsSearchTerm, setSubjectsSearchTerm] = useState('');
   const countryDropdownRef = useRef<HTMLDivElement>(null);
   const fieldDropdownRef = useRef<HTMLDivElement>(null);
   // Remove initialTreeData, will fetch subjects from API
@@ -209,6 +255,36 @@ const UniversityFilter = ({
       sortOrder: 'asc',
     }));
   };
+
+  // Create tree data with highlighted titles
+  const treeDataWithHighlighting = subjectOptions.map((subject) => ({
+    title: (
+      <span className='text-sm'>
+        {highlightTextProgressively(subject.title, subjectsSearchTerm)}
+      </span>
+    ),
+    value: subject.value,
+    key: subject.key,
+    isLeaf: true,
+    originalTitle: subject.title, // Store original title for filtering
+  }));
+
+  const filteredSubjects = subjectOptions.filter((subject) => {
+    if (!subjectsSearchTerm) return true;
+
+    const lowerTitle = subject.title.toLowerCase();
+    const lowerSearchTerm = subjectsSearchTerm.toLowerCase();
+
+    // Progressive search: check if the search term appears in sequence
+    let searchIndex = 0;
+    for (let i = 0; i < lowerTitle.length && searchIndex < lowerSearchTerm.length; i++) {
+      if (lowerTitle[i] === lowerSearchTerm[searchIndex]) {
+        searchIndex++;
+      }
+    }
+
+    return searchIndex === lowerSearchTerm.length;
+  });
 
   return (
     <ConfigProvider
@@ -385,28 +461,57 @@ const UniversityFilter = ({
 
           {/* Subjects Multi-select */}
           <div className='rounded-lg p-4 shadow-sm'>
-            <h3 className='text-base font-semibold mb-3'>Subjects</h3>
-            <TreeSelect
-              treeData={subjectOptions}
-              value={filters.field}
-              onChange={handleSubjectChange}
-              treeCheckable={true}
-              // maxTagCount={MAX_COUNT}
-              style={{ width: '100%' }}
-              //suffixIcon={
-              //<span>
-              //{filters.field.length} / {MAX_COUNT} <DownOutlined />
-              //</span>
-              //}
-              placeholder='Please select'
-              showCheckedStrategy={TreeSelect.SHOW_ALL}
-              notFoundContent={
-                <Empty
-                  description='No matching subjects found'
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
+            <style>{`
+              .subjects-search-input:hover,
+              .subjects-search-input:focus {
+                border-color: #f97316 !important;
+                box-shadow: none !important;
+                outline: none !important;
               }
-            />
+            `}</style>
+            <h3 className='text-base font-semibold mb-3'>Subjects</h3>
+            <div className='relative'>
+              <Search className='absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
+              <input
+                type='text'
+                placeholder='Search subjects...'
+                value={subjectsSearchTerm}
+                onChange={(e) => setSubjectsSearchTerm(e.target.value)}
+                className='subjects-search-input w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm'
+              />
+            </div>
+
+            {/* Search results */}
+            {subjectsSearchTerm && (
+              <div className='mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md'>
+                {filteredSubjects.length > 0 ? (
+                  filteredSubjects.map((subject) => (
+                    <label
+                      key={subject.key}
+                      className='flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0'
+                    >
+                      <input
+                        type='checkbox'
+                        value={subject.value}
+                        checked={filters.field.includes(subject.value)}
+                        onChange={(e) => {
+                          const newFields = e.target.checked
+                            ? [...filters.field, subject.value]
+                            : filters.field.filter((f) => f !== subject.value);
+                          handleFilterChange('field', newFields);
+                        }}
+                        className='accent-orange-500'
+                      />
+                      <span className='text-sm'>
+                        {highlightTextProgressively(subject.title, subjectsSearchTerm)}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <div className='px-3 py-2 text-sm text-gray-500'>No matching subjects found</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
