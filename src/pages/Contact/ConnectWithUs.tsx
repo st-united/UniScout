@@ -95,7 +95,7 @@ export default function ConnectWithUs() {
     location: '',
     website: '',
     type: '',
-    numberOfStudents: '',
+    studentPopulation: '',
     description: '',
     country: '',
     email: '',
@@ -195,7 +195,7 @@ export default function ConnectWithUs() {
       formData.append('country', apiCountry);
       formData.append('files', 'string'); // as in curl
       formData.append('universityNumber', newUniData.phone); // university phone again
-      formData.append('numberOfStudents', newUniData.numberOfStudents);
+      formData.append('studentPopulation', newUniData.studentPopulation);
       formData.append('universityName', newUniData.universityName);
       formData.append('type', newUniData.type.toLowerCase());
       formData.append('website', newUniData.website);
@@ -218,7 +218,7 @@ export default function ConnectWithUs() {
         location: '',
         website: '',
         type: '',
-        numberOfStudents: '',
+        studentPopulation: '',
         description: '',
         country: '',
         email: '',
@@ -649,8 +649,8 @@ export default function ConnectWithUs() {
               <input
                 id='new-numberOfStudents'
                 type='number'
-                name='numberOfStudents'
-                value={newUniData.numberOfStudents}
+                name='studentPopulation'
+                value={newUniData.studentPopulation}
                 onChange={handleNewUniChange}
                 onKeyDown={(e) => {
                   if (e.key === 'e' || e.key === 'E') {
