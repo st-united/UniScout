@@ -14,7 +14,7 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
     <Link to={`/universities/${university.id}`} className='block'>
       <div
         className='bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow flex flex-col justify-between'
-        style={{ height: '12rem' }}
+        style={{ height: '11rem' }}
       >
         <div className='flex items-start justify-between mb-4'>
           <div className='w-4/5'>
@@ -70,7 +70,7 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
           </div>
         </div>
 
-        <div className='mt-3 pt-3 border-t border-gray-100'>
+        <div className='mt-1 pt-1 border-t border-gray-100'>
           <div className='flex items-center justify-between text-sm text-gray-600'></div>
           <div className='mt-2'>
             <div className='flex flex-wrap gap-1'>

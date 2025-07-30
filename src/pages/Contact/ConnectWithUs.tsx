@@ -1,8 +1,13 @@
 import { VerticalAlignBottomOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import axios from 'axios';
-import { getNames } from 'country-list';
 import { Paperclip } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
+
+import {
+  NotificationTypeEnum,
+  openNotificationWithIcon,
+} from '@app/services/notification/notificationService';
+
 // Import the configured axios instance
 // Assuming SuccessNotification componet exists and takes `show`, `type`, `message` props
 // If you don't have this component, you'll need to define it or replace it with inline notification logic.
@@ -125,7 +130,22 @@ export default function ConnectWithUs() {
   const subjectsFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setCountries(getNames());
+    const fetchCountries = async () => {
+      try {
+        const response = await axios.get(
+          'https://api.uniscout.dev.stunited.vn/api/universities/countries',
+        );
+        if (response.data && response.data.data) {
+          setCountries(response.data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch countries:', error);
+        // Fallback to empty array if API fails
+        setCountries([]);
+      }
+    };
+
+    fetchCountries();
   }, []);
 
   // --- Notification ---
@@ -199,7 +219,7 @@ export default function ConnectWithUs() {
         console.log(pair[0] + ':', pair[1]);
       }
 
-      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', formData, {
+      await axios.post('/contact', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
@@ -257,11 +277,10 @@ export default function ConnectWithUs() {
 
   const handleDownloadTemplate = async () => {
     try {
-      const response = await fetch(
-        'https://api.uniscout.dev.stunited.vn/api/contact/template/Subjects_Template.xlsx',
-      );
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
+      const response = await axios.get('/contact/template/Subjects_Template.xlsx', {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -365,11 +384,12 @@ export default function ConnectWithUs() {
         console.log(pair[0] + ':', pair[1]);
       }
 
-      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', formData, {
+      await axios.post('/contact', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
-      showNotification('Information updated successfully.', 'success');
+      //showNotification('Information updated successfully.', 'success');
+      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'Information updated successfully.');
       setUpdateData({
         representativeName: '',
         universityName: '',
@@ -471,7 +491,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-universityName'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                University Name
+                University Name*
               </label>
               <input
                 id='new-universityName'
@@ -510,7 +530,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-country'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Country
+                Country*
               </label>
               <select
                 id='new-country'
@@ -539,7 +559,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-location'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Location
+                Location*
               </label>
               <input
                 id='new-location'
@@ -558,7 +578,7 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label htmlFor='new-email' className='block mb-2 text-sm font-medium text-orange-600'>
-                Email
+                Email*
               </label>
               <input
                 id='new-email'
@@ -577,7 +597,7 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label htmlFor='new-phone' className='block mb-2 text-sm font-medium text-orange-600'>
-                Phone
+                Phone*
               </label>
               <input
                 id='new-phone'
@@ -599,7 +619,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-website'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Website
+                Website*
               </label>
               <input
                 id='new-website'
@@ -616,7 +636,7 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label htmlFor='new-type' className='block mb-2 text-sm font-medium text-orange-600'>
-                Type
+                Type*
               </label>
               <select
                 id='new-type'
@@ -789,7 +809,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-representativeName'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Representative Name
+                Representative Name*
               </label>
               <input
                 id='update-representativeName'
@@ -811,7 +831,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-universityName'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                University Name
+                University Name*
               </label>
               <input
                 id='update-universityName'
@@ -833,7 +853,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-email'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Email
+                Email*
               </label>
               <input
                 id='update-email'
@@ -855,7 +875,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-phone'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Phone
+                Phone*
               </label>
               <input
                 id='update-phone'
@@ -877,7 +897,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-message'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Your message
+                Your message*
               </label>
               <div className='relative'>
                 <textarea
