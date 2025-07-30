@@ -117,8 +117,6 @@ export default function ConnectWithUs() {
 
   // --- Shared State ---
   const [countries, setCountries] = useState<string[]>([]);
-  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
-  const [notificationType, setNotificationType] = useState<'success' | 'error' | null>(null);
   const [submissionStatus, setSubmissionStatus] = useState<
     'idle' | 'success' | 'error' | 'submitting'
   >('idle');
@@ -147,16 +145,6 @@ export default function ConnectWithUs() {
 
     fetchCountries();
   }, []);
-
-  // --- Notification ---
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setTimeout(() => {
-      setNotificationMessage(null);
-      setNotificationType(null);
-    }, 5000);
-  };
 
   // --- Handlers for New University ---
   const handleNewUniChange = (
@@ -223,7 +211,7 @@ export default function ConnectWithUs() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
-      showNotification('University submitted successfully.', 'success');
+      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'University submitted successfully.');
       setNewUniData({
         universityName: '',
         abbreviation: '',
@@ -241,12 +229,12 @@ export default function ConnectWithUs() {
       setSubmissionStatus('error');
       if (err.response) {
         console.error('API error:', err.response.data);
-        showNotification(
+        openNotificationWithIcon(
+          NotificationTypeEnum.ERROR,
           `Submission failed: ${err.response.data.message || 'Unknown error'}`,
-          'error',
         );
       } else {
-        showNotification('Submission failed.', 'error');
+        openNotificationWithIcon(NotificationTypeEnum.ERROR, 'Submission failed.');
       }
     }
   };
@@ -290,7 +278,10 @@ export default function ConnectWithUs() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert('Failed to download template. Please try again later.');
+      openNotificationWithIcon(
+        NotificationTypeEnum.ERROR,
+        'Failed to download template. Please try again later.',
+      );
     }
   };
 
@@ -402,7 +393,7 @@ export default function ConnectWithUs() {
       if (fileInput) fileInput.value = '';
     } catch (err: any) {
       setSubmissionStatus('error');
-      showNotification('Submission failed.', 'error');
+      openNotificationWithIcon(NotificationTypeEnum.ERROR, 'Submission failed.');
     }
   };
 
@@ -429,18 +420,6 @@ export default function ConnectWithUs() {
   // --- UI ---
   return (
     <div className='bg-orange-50 rounded-lg p-8 w-full max-w-6xl mx-auto shadow-sm relative'>
-      {/* Notification */}
-      {notificationMessage && notificationType && (
-        <div
-          className={`absolute top-4 right-4 z-10 p-3 rounded-xl shadow-lg flex items-center space-x-3 ${
-            notificationType === 'success'
-              ? 'bg-green-100 border border-green-300 text-green-700'
-              : 'bg-red-100 border border-red-300 text-red-700'
-          }`}
-        >
-          <span className='text-base font-semibold'>{notificationMessage}</span>
-        </div>
-      )}
       <h1 className='mb-2 text-4xl font-bold text-center text-orange-600'>Connect with us</h1>
       <p className='mb-10 leading-relaxed text-center text-gray-500'>
         Your Gateway to University Insights and Support!
