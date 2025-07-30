@@ -163,7 +163,6 @@ const DashboardPage = () => {
       }));
 
       setMonthlyTrafficData(traffic);
-      console.log('monthlyTrafficData', traffic);
     } catch (err) {
       console.error('Erreur chargement données trafic :', err);
     }
@@ -200,7 +199,6 @@ const DashboardPage = () => {
       try {
         const res = await axios.get('/dashboard/top-searched');
         setTopSearch(res.data);
-        console.log('Top Search Data:', res.data);
       } catch (error) {
         console.error('Erreur chargement top search :', error);
       }

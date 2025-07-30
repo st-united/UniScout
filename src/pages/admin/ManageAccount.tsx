@@ -150,7 +150,7 @@ const ManageAccount: React.FC = () => {
     {
       title: (
         <div className='flex items-center gap-1'>
-          <span>ROLE</span>
+          <span>DEPARTMENT</span>
           <ChevronDown className='w-4 h-4 text-gray-400' />
         </div>
       ),
