@@ -16,6 +16,7 @@ import {
 import React, { useEffect, useState } from 'react';
 
 import CreateAccount from './modals/CreateAccount';
+import ExportAccountModal from './modals/ExportAccountModal';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
@@ -34,7 +35,7 @@ interface Account {
 const ManageAccount: React.FC = () => {
   const [createAccountModal, setCreateAccountModal] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const [stats, setStats] = useState<{
     total: number;
     Active: number;
@@ -293,7 +294,7 @@ const ManageAccount: React.FC = () => {
               <Plus width={'15px'} height={'15px'} /> Create
             </button>
             <button
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => setIsExportOpen(true)}
               className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
             >
               <ClipboardPaste width={'15px'} height={'15px'} /> Export
@@ -325,6 +326,7 @@ const ManageAccount: React.FC = () => {
           </div>
 
           <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
+
           <CreateAccount
             open={isCreateOpen}
             onCancel={() => setIsCreateOpen(false)}
@@ -360,6 +362,11 @@ const ManageAccount: React.FC = () => {
               }
             }}
             jobRoles={jobRoles}
+          />
+          <ExportAccountModal
+            open={isExportOpen}
+            onClose={() => setIsExportOpen(false)}
+            appliedFilters={{}}
           />
           <ConfigProvider
             theme={{
