@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     } catch (error) {
       console.error('Logout failed:', error);
       if (axios.isAxiosError(error) && error.response) {
-        message.error(error.response.data.message || 'Logout failed.² Please try again.');
+        message.error(error.response.data.message || 'Logout failed. Please try again.');
       } else {
         message.error('An unexpected error occurred during logout.');
       }
