@@ -224,24 +224,41 @@ const UniversityListPage: React.FC = () => {
     const scrollToTop = () => {
       // Multiple methods for maximum compatibility
       try {
-        // Method 1: scrollIntoView
+        // Method 1: scrollIntoView with top reference
         topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-        // Method 2: window.scrollTo
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Method 2: window.scrollTo to very top
+        window.scrollTo({ top: -200, behavior: 'smooth' });
 
-        // Method 3: document.documentElement
+        // Method 3: document.documentElement.scrollTop
         if (document.documentElement) {
           document.documentElement.scrollTop = 0;
         }
 
-        // Method 4: document.body
+        // Method 4: document.body.scrollTop
+        if (document.body) {
+          document.body.scrollTop = -200;
+        }
+
+        // Method 5: Force scroll to very top
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
+        }, 100);
+      } catch (error) {
+        // Fallback to instant scroll to very top
+        window.scrollTo(0, 0);
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
         if (document.body) {
           document.body.scrollTop = 0;
         }
-      } catch (error) {
-        // Fallback to instant scroll
-        window.scrollTo(0, 0);
       }
     };
 
@@ -580,6 +597,7 @@ const UniversityListPage: React.FC = () => {
     if (size) {
       setPageSize(size);
     }
+    window.scrollTo({ top: -700, behavior: 'smooth' });
   };
 
   // Table columns configuration
@@ -1154,14 +1172,32 @@ const UniversityListPage: React.FC = () => {
 
                     // Use multiple scroll methods with delay for consistency
                     setTimeout(() => {
-                      // Method 1: scrollIntoView
+                      // Method 1: scrollIntoView with top reference
                       topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-                      // Method 2: window.scrollTo as backup
+                      // Method 2: window.scrollTo to very top
                       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                      // Method 3: document.documentElement.scrollTop as final backup
-                      document.documentElement.scrollTop = 0;
+                      // Method 3: document.documentElement.scrollTop
+                      if (document.documentElement) {
+                        document.documentElement.scrollTop = 0;
+                      }
+
+                      // Method 4: document.body.scrollTop
+                      if (document.body) {
+                        document.body.scrollTop = 0;
+                      }
+
+                      // Method 5: Force scroll to very top
+                      setTimeout(() => {
+                        window.scrollTo(0, 0);
+                        if (document.documentElement) {
+                          document.documentElement.scrollTop = 0;
+                        }
+                        if (document.body) {
+                          document.body.scrollTop = 0;
+                        }
+                      }, 50);
                     }, 100);
                   };
 

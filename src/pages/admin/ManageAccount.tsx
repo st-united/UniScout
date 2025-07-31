@@ -182,24 +182,41 @@ const ManageAccount: React.FC = () => {
     const scrollToTop = () => {
       // Multiple methods for maximum compatibility
       try {
-        // Method 1: scrollIntoView
+        // Method 1: scrollIntoView with top reference
         topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-        // Method 2: window.scrollTo
+        // Method 2: window.scrollTo to very top
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Method 3: document.documentElement
+        // Method 3: document.documentElement.scrollTop
         if (document.documentElement) {
           document.documentElement.scrollTop = 0;
         }
 
-        // Method 4: document.body
+        // Method 4: document.body.scrollTop
         if (document.body) {
           document.body.scrollTop = 0;
         }
+
+        // Method 5: Force scroll to very top
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
+        }, 100);
       } catch (error) {
-        // Fallback to instant scroll
+        // Fallback to instant scroll to very top
         window.scrollTo(0, 0);
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
       }
     };
 
