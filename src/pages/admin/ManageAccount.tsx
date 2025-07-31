@@ -16,6 +16,7 @@ import {
 import React, { useEffect, useState, useRef } from 'react';
 
 import CreateAccount from './modals/CreateAccount';
+import ExportAccountModal from './modals/ExportAccountModal';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
@@ -519,6 +520,7 @@ const ManageAccount: React.FC = () => {
           >
             <Select
               value={status}
+              open={false}
               onChange={handleChange}
               bordered={false}
               dropdownStyle={{
@@ -532,27 +534,6 @@ const ManageAccount: React.FC = () => {
                 fontWeight: 600,
               }}
               getPopupContainer={(trigger: HTMLElement) => trigger.parentNode as HTMLElement}
-              onDropdownVisibleChange={(open: boolean) => {
-                if (open) {
-                  Modal.confirm({
-                    title: 'Warning',
-                    icon: <ExclamationCircleOutlined />,
-                    content: (
-                      <div style={{ fontSize: 16, marginBottom: 32 }}>
-                        This action will disable the admin&apos;s access. Do you want to continue?
-                      </div>
-                    ),
-                    okText: 'Yes',
-                    cancelText: 'No',
-                    onOk() {
-                      console.log('OK');
-                    },
-                    onCancel() {
-                      console.log('Cancel');
-                    },
-                  });
-                }
-              }}
             >
               {Object.entries(colorMap).map(([key, value]) => (
                 <Option key={key} value={key}>
@@ -817,6 +798,7 @@ const ManageAccount: React.FC = () => {
           </div>
 
           <h3 className='mb-4 text-lg font-semibold'>List of Accounts</h3>
+
           <CreateAccount
             open={isCreateOpen}
             onCancel={() => setIsCreateOpen(false)}
@@ -852,6 +834,11 @@ const ManageAccount: React.FC = () => {
               }
             }}
             jobRoles={jobRoles}
+          />
+          <ExportAccountModal
+            open={isExportOpen}
+            onClose={() => setIsExportOpen(false)}
+            appliedFilters={{}}
           />
           <ConfigProvider
             theme={{

@@ -1,4 +1,4 @@
-import { SaveOutlined, PictureOutlined } from '@ant-design/icons';
+import { SaveOutlined, PictureOutlined, InboxOutlined } from '@ant-design/icons';
 import {
   Form,
   Input,
@@ -23,17 +23,16 @@ import LayoutWrapper from '../../components/LayoutWrapper';
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title } = Typography;
+const { Dragger } = Upload; // Import Dragger
 
 const CreateUniversity = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [, setShowSubjectsField] = useState(false);
+  const [subjectsExcelFile, setSubjectsExcelFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
-  const [fieldSubjectsMap, setFieldSubjectsMap] = useState<Record<string, string[]>>({});
-  const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchCountries();
@@ -92,26 +91,6 @@ const CreateUniversity = () => {
     }
   };
 
-  // Updated academic fields to match API enum
-  const fieldNamesOptions = [
-    { value: 'agricultural', label: 'Agricultural & Veterinary Sciences' },
-    { value: 'art', label: 'Arts & Design' },
-    { value: 'business', label: 'Business, Management & Law' },
-    { value: 'education', label: 'Education & Training' },
-    { value: 'engineering', label: 'Engineering & Technology' },
-    { value: 'health', label: 'Health & Medicine' },
-    { value: 'humanities', label: 'Humanities & Languages' },
-    { value: 'information tech', label: 'Information & Communication Technology (ICT)' },
-    { value: 'natural', label: 'Natural Sciences' },
-    { value: 'social', label: 'Social & Behavioral Sciences' },
-    { value: 'services', label: 'Services' },
-    {
-      value: 'transport',
-      label: 'Transport, Safety, Security & Military',
-    },
-    { value: 'other', label: 'Other' },
-  ];
-
   const universityTypes = [
     { value: 'public', label: 'Public' },
     { value: 'private', label: 'Private' },
@@ -149,117 +128,72 @@ const CreateUniversity = () => {
     },
   };
 
-  // Handle academic fields selection change - FIXED VERSION
-  const handleAcademicFieldsChange = async (selectedFields: string[]) => {
-    setShowSubjectsField(selectedFields.length > 0);
+  // Props for Subjects Excel Upload
+  const subjectsExcelUploadProps = {
+    name: 'subjectsExcel',
+    multiple: false,
+    accept: '.xlsx,.xls', // Only accept Excel files
+    beforeUpload: (file: File) => {
+      const isExcel =
+        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.type === 'application/vnd.ms-excel';
+      const isLt5M = file.size / 1024 / 1024 < 5;
 
-    if (selectedFields.length === 0) {
-      setFieldSubjectsMap({});
-      setLoadingSubjects({});
-      return;
-    }
-
-    const updatedMap: Record<string, string[]> = { ...fieldSubjectsMap };
-    const updatedLoadingState: Record<string, boolean> = { ...loadingSubjects };
-
-    // Set loading state for new fields
-    selectedFields.forEach((field) => {
-      if (!updatedMap[field]) {
-        updatedLoadingState[field] = true;
+      if (!isExcel) {
+        message.error('You can only upload Excel files (.xlsx, .xls)!');
+        return false;
       }
-    });
-    setLoadingSubjects(updatedLoadingState);
+      if (!isLt5M) {
+        message.error('Excel file must be smaller than 5MB!');
+        return false;
+      }
 
-    // Fetch subjects for each field
-    await Promise.all(
-      selectedFields.map(async (field) => {
-        // Skip if we already have subjects for this field
-        if (updatedMap[field] && updatedMap[field].length > 0) {
-          return;
-        }
-
-        try {
-          console.log(`Fetching subjects for field: ${field}`);
-
-          const response = await axios.get('/universities/subjects', {
-            params: {
-              search: field, // ✅ correct
-            },
-          });
-
-          console.log(`Response for ${field}:`, response.data);
-
-          // Handle different response formats
-          let subjects: string[] = [];
-          if (response.data?.data) {
-            subjects = Array.isArray(response.data.data)
-              ? response.data.data.map((s: any) => s.name || s.title || s.subject || s)
-              : [];
-          } else if (Array.isArray(response.data)) {
-            subjects = response.data.map((s: any) => s.name || s.title || s.subject || s);
-          } else {
-            subjects = [];
-          }
-
-          updatedMap[field] = subjects;
-          console.log(`Subjects for ${field}:`, subjects);
-        } catch (err) {
-          console.error(`Failed to fetch subjects for ${field}:`, err);
-          updatedMap[field] = [];
-
-          // Show error message to user
-          message.error(`Failed to load subjects for ${field}`);
-        } finally {
-          updatedLoadingState[field] = false;
-        }
-      }),
-    );
-
-    setFieldSubjectsMap(updatedMap);
-    setLoadingSubjects(updatedLoadingState);
+      setSubjectsExcelFile(file);
+      message.success(`${file.name} selected successfully`);
+      return false; // Prevent automatic upload
+    },
+    onRemove: () => {
+      setSubjectsExcelFile(null);
+    },
   };
 
   const onFinish = async (values: any) => {
-    // Add logo validation at the start
-    if (!logoFile) {
-      message.error('Please upload a university logo');
-      return;
-    }
-
     setLoading(true);
     try {
-      const subjects: string[] = [];
-      for (const field of values.academicFields) {
-        const fieldSubjects = values[`subjects_${field}`];
-        if (Array.isArray(fieldSubjects)) {
-          subjects.push(...fieldSubjects);
-        }
+      const formData = new FormData();
+      formData.append('university', values.university);
+      formData.append('abbreviation', values.abbreviation || '');
+      formData.append('latitude', String(values.latitude));
+      formData.append('longitude', String(values.longitude));
+
+      // Rank field: Only append if it has a value other than 0 (which maps to null on backend)
+      if (values.rank !== null && values.rank !== undefined && values.rank !== 0) {
+        formData.append('rank', String(values.rank));
       }
 
-      const payload = {
-        university: values.university,
-        abbreviation: values.abbreviation || '',
-        latitude: Number(values.latitude),
-        longitude: Number(values.longitude),
-        rank: Number(values.rank) || 0,
-        logo: logoFile?.name || '', // Use logoFile instead of form value
-        type: values.type,
-        country: values.country,
-        location: values.location,
-        studentPopulation: Number(values.studentPopulation) || 0,
-        year: 0,
-        contact: values.contact,
-        email: values.email,
-        website: values.website,
-        strength: '',
-        description: values.description || '',
-        exchange: values.exchange ?? false,
-        subjectsExcelFilePath: '',
-      };
+      // Logo field: Only append if a file is selected
+      if (logoFile) {
+        formData.append('logo', logoFile);
+      }
 
-      const response = await axios.post('/admin/universities', payload, {
+      formData.append('type', values.type);
+      formData.append('country', values.country);
+      formData.append('location', values.location);
+      formData.append('studentPopulation', String(values.studentPopulation));
+      formData.append('year', String(2000)); // Hardcoded year to 2000
+      formData.append('contact', values.contact);
+      formData.append('email', values.email);
+      formData.append('website', values.website);
+      formData.append('strength', '');
+      formData.append('description', values.description || '');
+      formData.append('exchange', String(values.exchange ?? false));
+      if (subjectsExcelFile) {
+        formData.append('subjectsExcel', subjectsExcelFile); // Append the actual Excel file
+      }
+
+      const response = await axios.post('/admin/universities', formData, {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data', // Important for file uploads
         },
       });
 
@@ -267,11 +201,13 @@ const CreateUniversity = () => {
       form.resetFields();
       setLogoFile(null);
       setLogoPreviewUrl(null);
-      setFieldSubjectsMap({});
-      setLoadingSubjects({});
+      setSubjectsExcelFile(null); // Reset Excel file state
       console.log('University created:', response.data);
     } catch (error: any) {
-      // same error handling block
+      console.error('Failed to create university:', error);
+      const errorMessage =
+        error.response?.data?.message || 'Failed to create university. Please try again.';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -323,8 +259,9 @@ const CreateUniversity = () => {
                   onFinish={onFinish}
                   initialValues={{
                     website: 'https://',
-                    academicFields: [],
                     exchange: false,
+                    studentPopulation: 0,
+                    year: 2000,
                   }}
                   scrollToFirstError
                 >
@@ -386,9 +323,24 @@ const CreateUniversity = () => {
                         name='latitude'
                         rules={[
                           {
-                            pattern: /^-?([1-8]?[0-9]\.{1}\d{1,6}$|90\.{1}0{1,6}$)/,
-                            message: 'Please enter valid latitude',
                             required: true,
+                            message: 'Please enter latitude',
+                          },
+                          {
+                            validator: async (_, value) => {
+                              if (value === null || value === undefined || value === '') {
+                                return Promise.resolve();
+                              }
+                              // Allow integer or float, including 0
+                              if (!/^-?\d+(\.\d+)?$/.test(String(value))) {
+                                return Promise.reject('Please enter a valid number for latitude');
+                              }
+                              const numValue = parseFloat(value);
+                              if (numValue < -90 || numValue > 90) {
+                                return Promise.reject('Latitude must be between -90 and 90');
+                              }
+                              return Promise.resolve();
+                            },
                           },
                         ]}
                       >
@@ -401,9 +353,24 @@ const CreateUniversity = () => {
                         name='longitude'
                         rules={[
                           {
-                            pattern: /^-?([1]?[0-7][0-9]\.{1}\d{1,6}$|180\.{1}0{1,6}$)/,
-                            message: 'Please enter valid longitude',
                             required: true,
+                            message: 'Please enter longitude',
+                          },
+                          {
+                            validator: async (_, value) => {
+                              if (value === null || value === undefined || value === '') {
+                                return Promise.resolve();
+                              }
+                              // Allow integer or float, including 0
+                              if (!/^-?\d+(\.\d+)?$/.test(String(value))) {
+                                return Promise.reject('Please enter a valid number for longitude');
+                              }
+                              const numValue = parseFloat(value);
+                              if (numValue < -180 || numValue > 180) {
+                                return Promise.reject('Longitude must be between -180 and 180');
+                              }
+                              return Promise.resolve();
+                            },
                           },
                         ]}
                       >
@@ -437,13 +404,13 @@ const CreateUniversity = () => {
                           { required: true, message: 'Student population is required' },
                           {
                             type: 'integer',
-                            min: 1,
-                            message: 'Student population must be a positive integer',
+                            min: 0, // Changed min to 0
+                            message: 'Student population must be a non-negative integer',
                           },
                         ]}
                       >
                         <InputNumber
-                          min={1}
+                          min={0}
                           precision={0}
                           style={{ width: '100%' }}
                           placeholder='Enter your number of students'
@@ -459,24 +426,25 @@ const CreateUniversity = () => {
                         rules={[
                           {
                             type: 'number',
-                            min: 1,
-                            message: 'Ranking must be a positive number',
+                            min: 0, // Allow 0, which will be transformed to null on the backend
+                            message: 'Ranking must be a non-negative number',
                           },
                         ]}
                       >
                         <InputNumber
-                          min={1}
+                          min={0}
                           style={{ width: '100%' }}
-                          placeholder='Enter your rank'
+                          placeholder='Enter your rank (0 for unranked)'
                           size='large'
                         />
                       </Form.Item>
                     </Col>
                   </Row>
 
-                  {/*Contact */}
+                  {/* Contact, Email */}
                   <Row gutter={[12, 16]}>
-                    <Col xs={24} sm={12} md={12}>
+                    {/* Removed Year Founded */}
+                    <Col xs={24} sm={12} md={12} lg={12}>
                       <Form.Item
                         label='Email'
                         name='email'
@@ -493,7 +461,7 @@ const CreateUniversity = () => {
                         <Input placeholder='Enter your email' size='large' />
                       </Form.Item>
                     </Col>
-                    <Col xs={24} sm={12} md={12}>
+                    <Col xs={24} sm={12} md={12} lg={12}>
                       <Form.Item
                         label='Phone'
                         name='contact'
@@ -502,12 +470,11 @@ const CreateUniversity = () => {
                           {
                             validator: async (_, value) => {
                               if (value) {
-                                if (typeof value !== 'string' || !/^\d+$/.test(value)) {
-                                  throw new Error('Phone number must contain only digits');
-                                }
-
-                                if (value.length > 14) {
-                                  throw new Error('Phone number must not exceed 15 digits');
+                                // Regex updated to match backend: ^\d{1,3}\d{6,14}$
+                                if (!/^\d{1,3}\d{6,14}$/.test(value)) {
+                                  throw new Error(
+                                    'Phone number must contain no more than 15 digits and start with 1-3 digits country code',
+                                  );
                                 }
                               }
                             },
@@ -584,6 +551,8 @@ const CreateUniversity = () => {
                     </Col>
                   </Row>
 
+                  {/* Removed Strength (Optional) */}
+
                   {/* Description */}
                   <Row gutter={[12, 16]}>
                     <Col xs={24}>
@@ -598,73 +567,31 @@ const CreateUniversity = () => {
                     </Col>
                   </Row>
 
-                  {/* Broad Fields */}
+                  {/* Subjects Excel Upload */}
                   <Row gutter={[12, 16]}>
                     <Col xs={24}>
                       <Form.Item
-                        label='Broad Fields'
-                        name='academicFields'
-                        rules={[
-                          { required: true, message: 'Please select at least one broad field' },
-                        ]}
+                        label='Subjects'
+                        name='subjectsExcelUpload' // Use a different name as this isn't directly bound to the payload field
                       >
-                        <Select
-                          mode='multiple'
-                          placeholder='Select broad fields of university'
-                          style={{ width: '100%' }}
-                          size='large'
-                          maxTagCount='responsive'
-                          onChange={handleAcademicFieldsChange}
-                        >
-                          {fieldNamesOptions.map((field) => (
-                            <Option key={field.value} value={field.value}>
-                              {field.label}
-                            </Option>
-                          ))}
-                        </Select>
+                        <Dragger {...subjectsExcelUploadProps}>
+                          <p className='ant-upload-drag-icon'>
+                            <InboxOutlined style={{ color: 'orange' }} />
+                          </p>
+                          <p className='ant-upload-text' style={{ fontSize: '14px' }}>
+                            Drag your Excel file or browse
+                          </p>
+                          <p className='ant-upload-hint' style={{ fontSize: '14px' }}>
+                            Support for a single Excel file upload (.xlsx, .xls). This field is
+                            optional.
+                          </p>
+                          {subjectsExcelFile && (
+                            <p style={{ marginTop: 8, fontSize: '12px' }}>
+                              Selected file: <strong>{subjectsExcelFile.name}</strong>
+                            </p>
+                          )}
+                        </Dragger>
                       </Form.Item>
-                    </Col>
-                  </Row>
-
-                  {/* Subjects - IMPROVED VERSION */}
-                  <Row gutter={[12, 16]}>
-                    <Col xs={24}>
-                      {form.getFieldValue('academicFields')?.map((field: string) => (
-                        <Form.Item
-                          key={field}
-                          label={`Field of Study for ${
-                            fieldNamesOptions.find((f) => f.value === field)?.label || field
-                          }`}
-                          name={`subjects_${field}`}
-                          rules={[
-                            {
-                              required: true,
-                              message: `Please select at least one subject for ${field}`,
-                            },
-                          ]}
-                        >
-                          <Select
-                            mode='multiple'
-                            placeholder={
-                              loadingSubjects[field] ? 'Loading subjects...' : 'Select subjects'
-                            }
-                            options={fieldSubjectsMap[field]?.map((subject) => ({
-                              label: subject,
-                              value: subject,
-                            }))}
-                            disabled={loadingSubjects[field]}
-                            loading={loadingSubjects[field]}
-                            notFoundContent={
-                              loadingSubjects[field]
-                                ? 'Loading...'
-                                : !fieldSubjectsMap[field] || fieldSubjectsMap[field].length === 0
-                                ? 'No subjects available'
-                                : null
-                            }
-                            size='large'
-                          />
-                        </Form.Item>
-                      ))}
                     </Col>
                   </Row>
 
@@ -739,11 +666,7 @@ const CreateUniversity = () => {
                 >
                   Logo
                 </Title>
-                <Form.Item
-                  name='logo'
-                  rules={[{ required: true, message: 'Please upload a logo!' }]}
-                  style={{ marginBottom: '16px' }}
-                >
+                <Form.Item name='logo' style={{ marginBottom: '16px' }}>
                   <Upload {...uploadProps} showUploadList={false}>
                     <Avatar
                       shape='square'

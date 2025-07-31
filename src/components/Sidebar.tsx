@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const handleLogout = async () => {
     console.log('Logout clicked');
     try {
-      await axios.get('/api/auth/logout', {
+      await axios.get('/auth/logout', {
         headers: {
           Authorization: '',
         },
@@ -94,7 +94,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       removeStorageData(ACCESS_TOKEN);
       removeStorageData(REFRESH_TOKEN);
       dispatch(logout());
-      window.location.href = '/login';
     } finally {
       setIsOpen(false);
     }

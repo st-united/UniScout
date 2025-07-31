@@ -50,6 +50,12 @@ const ViewUniversity = () => {
   const total = universitiesData?.totalCount || 0;
 
   useEffect(() => {
+    axios.get('/dashboard/track-access').catch(() => {
+      // intentionally ignoring tracking errors
+    });
+  }, []);
+
+  useEffect(() => {
     const fetchAllFilterOptions = async () => {
       try {
         const res = await axios.get('/universities/academic-fields');

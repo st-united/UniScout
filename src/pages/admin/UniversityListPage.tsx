@@ -133,7 +133,36 @@ const UniversityListPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(12);
 
   const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
-    setFilters({ ...filters, [field]: values });
+    let newValues = values;
+
+    // Handle "Select All" logic for each field
+    if (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields') {
+      const allOptions =
+        field === 'country'
+          ? getUniqueCountries()
+          : field === 'type'
+          ? getUniqueTypes()
+          : field === 'size'
+          ? getUniqueSizes()
+          : getUniqueFields(); // academicFields
+
+      if (values.includes('all')) {
+        // If 'all' is selected and it's the only value, select all options
+        if (values.length === 1) {
+          newValues = allOptions;
+        } else {
+          // If 'all' is selected along with other values, it means "deselect all" was clicked
+          // So, remove 'all' from the selection and keep only specific choices
+          newValues = values.filter((val) => val !== 'all');
+        }
+      } else {
+        // If 'all' is not selected but all other options are, and then one is deselected,
+        // ensure 'all' is no longer conceptually selected (though it wouldn't be in `values`)
+        // This is more for the checkbox rendering, not the actual values.
+      }
+    }
+
+    setFilters({ ...filters, [field]: newValues });
     setCurrentPage(1);
   };
 
@@ -425,7 +454,6 @@ const UniversityListPage: React.FC = () => {
       value: 'transport_safety_security_military',
       label: 'Transport, Safety, Security & Military',
     },
-    { value: 'other', label: 'Other' },
   ];
 
   // Helper function to get label for academic field value
@@ -634,7 +662,12 @@ const UniversityListPage: React.FC = () => {
             fieldNamesOptions.findIndex((opt) => opt.value === a) -
             fieldNamesOptions.findIndex((opt) => opt.value === b),
         );
-        const displayText = sortedFields.map((field) => getFieldNameLabel(field)).join(', ');
+
+        const maxDisplayFields = 1; // Set the maximum number of fields to display
+        const displayedFields = sortedFields.slice(0, maxDisplayFields);
+        const remainingFieldsCount = sortedFields.length - displayedFields.length;
+
+        const displayText = displayedFields.map((field) => getFieldNameLabel(field)).join(', ');
 
         return (
           <div
@@ -644,9 +677,12 @@ const UniversityListPage: React.FC = () => {
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}
-            title={displayText} // Show full text on hover
+            title={
+              fields.map((field) => getFieldNameLabel(field)).join(', ') // Show all on hover
+            }
           >
             {displayText}
+            {remainingFieldsCount > 0 && ` ... +${remainingFieldsCount}`}
           </div>
         );
       },
@@ -777,6 +813,19 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Country */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.country.length === getUniqueCountries().length &&
+                  getUniqueCountries().length > 0 &&
+                  filters.country.includes('all')) ||
+                filters.country.length === getUniqueCountries().length
+              } // Check if all options are selected
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueCountries().map((country) => (
             <Option key={country} value={country} label={country}>
               <Checkbox checked={filters.country.includes(country)}>{country}</Checkbox>
@@ -802,9 +851,24 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Type */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.type.length === getUniqueTypes().length &&
+                  getUniqueTypes().length > 0 &&
+                  filters.type.includes('all')) ||
+                filters.type.length === getUniqueTypes().length
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueTypes().map((type) => (
-            <Option key={type} value={type}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+            <Option key={type} value={type} label={type.charAt(0).toUpperCase() + type.slice(1)}>
+              <Checkbox checked={filters.type.includes(type)}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Checkbox>
             </Option>
           ))}
         </Select>
@@ -827,9 +891,24 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Size */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.size.length === getUniqueSizes().length &&
+                  getUniqueSizes().length > 0 &&
+                  filters.size.includes('all')) ||
+                filters.size.length === getUniqueSizes().length
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueSizes().map((size) => (
-            <Option key={size} value={size}>
-              {size.charAt(0).toUpperCase() + size.slice(1)}
+            <Option key={size} value={size} label={size.charAt(0).toUpperCase() + size.slice(1)}>
+              <Checkbox checked={filters.size.includes(size)}>
+                {size.charAt(0).toUpperCase() + size.slice(1)}
+              </Checkbox>
             </Option>
           ))}
         </Select>
@@ -852,9 +931,24 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Broad Field */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.academicFields.length === getUniqueFields().length &&
+                  getUniqueFields().length > 0 &&
+                  filters.academicFields.includes('all')) ||
+                filters.academicFields.length === getUniqueFields().length
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueFields().map((field) => (
             <Option key={field} value={field} label={getFieldNameLabel(field)}>
-              {getFieldNameLabel(field)}
+              <Checkbox checked={filters.academicFields.includes(field)}>
+                {getFieldNameLabel(field)}
+              </Checkbox>
             </Option>
           ))}
         </Select>

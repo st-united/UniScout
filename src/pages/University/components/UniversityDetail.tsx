@@ -10,6 +10,7 @@ import { University as UniversityBase } from '@app/interface/university.interfac
 interface University extends UniversityBase {
   academicFieldsCommaSeparated?: string;
   subjectsList?: string;
+  abbreviation?: string;
 }
 
 interface FieldConfig {
@@ -193,12 +194,12 @@ const BroadFieldPopup: React.FC<{
             <p className='text-sm text-gray-100 italic'>
               Information about the fields of study related to{' '}
               <span className='font-semibold text-gray-300'>&apos;{field.name}&apos;</span>
-              <br /> is shown below
+              &nbsp;is shown below
             </p>
             <div className='w-72 h-0.5 bg-orange-500 mx-auto mt-3 mb-2'></div>
           </div>
         </div>
-        <div className='pt-4 px-6 pb-6 overflow-y-auto flex-1'>
+        <div className='pt-4 px-6 pb-6 flex-1 overflow-hidden'>
           {loading && <div className='text-center py-8 text-gray-500'>Loading subjects...</div>}
           {error && <div className='text-center py-8 text-red-500'>{error}</div>}
           {!loading && !error && (
@@ -206,7 +207,7 @@ const BroadFieldPopup: React.FC<{
               <div className='border-b border-gray-200 pb-1 mb-1'>
                 <div className='grid grid-cols-4 gap-4 text-sm font-medium text-gray-700'>
                   <div className=' flex item-center justify-center'>Number</div>
-                  <div className='col-span-3'>Field of Study</div>
+                  <div className='col-span-3'>Subjects</div>
                 </div>
               </div>
               <div className='max-h-80 overflow-y-auto'>
@@ -239,6 +240,10 @@ const UniversityDetail: React.FC = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [fieldsWithSubjects, setFieldsWithSubjects] = useState<string[]>([]);
   const { id } = useParams<{ id: string }>();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   useEffect(() => {
     axios.get(`/universities/${id}`).then((res) => setUniversity(res.data));
@@ -333,6 +338,7 @@ const UniversityDetail: React.FC = () => {
               <div className='flex-1'>
                 <h1 className='text-4xl font-bold text-blue-900 mb-2'>
                   About {university.university}
+                  {university.abbreviation && ` (${university.abbreviation})`}
                 </h1>
                 <div className='text-base flex items-center gap-2 text-orange-500 mb-3'>
                   <MapPin className='w-4 h-4' />
@@ -366,7 +372,7 @@ const UniversityDetail: React.FC = () => {
         <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
           {/* RANKING */}
           <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center gap-y-2 min-h-[120px]'>
-            <div className='flex items-center justify-center gap-2 -mt-[22px]'>
+            <div className='flex items-center justify-center gap-2 mt-0 md:-mt-[22px]'>
               <Star className='w-5 h-5 text-white' />
               <span className='text-[20px] font-medium text-white'>Ranking</span>
             </div>
@@ -385,7 +391,7 @@ const UniversityDetail: React.FC = () => {
 
           {/* TYPE */}
           <div className='bg-orange-400 rounded-lg p-6 text-center flex flex-col justify-center gap-y-2 min-h-[120px]'>
-            <div className='flex items-center justify-center gap-2 -mt-[32px]'>
+            <div className='flex items-center justify-center gap-2 mt-0 md:-mt-[32px]'>
               <Building2 className='w-5 h-5 text-white' />
               <span className='text-[20px] font-medium text-white'>Type</span>
             </div>
