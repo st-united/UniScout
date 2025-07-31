@@ -1,5 +1,5 @@
-import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { Table, Select, Modal, Input, Button, message, ConfigProvider } from 'antd';
+import { ExclamationCircleOutlined, SearchOutlined, CloseCircleFilled } from '@ant-design/icons';
+import { Table, Select, Modal, Input, Button, message, ConfigProvider, Checkbox, Tag } from 'antd';
 import axios from 'axios';
 import {
   Users,
@@ -58,6 +58,25 @@ const ManageAccount: React.FC = () => {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [jobRoles, setJobRoles] = useState<string[]>([]);
 
+  // Search functionality
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter states
+  const [filters, setFilters] = useState<{
+    role: string[];
+    status: string[];
+  }>({
+    role: [],
+    status: [],
+  });
+
+  // Dropdown states
+  const [roleDropdownVisible, setRoleDropdownVisible] = useState(false);
+  const [statusDropdownVisible, setStatusDropdownVisible] = useState(false);
+  const [roleDropdownRef, setRoleDropdownRef] = useState<HTMLDivElement | null>(null);
+  const [statusDropdownRef, setStatusDropdownRef] = useState<HTMLDivElement | null>(null);
+
   const colorMap: Record<Account['status'], { text: string; bg: string }> = {
     Active: { text: '#00B69B', bg: 'rgba(0, 182, 155, 0.3)' },
     Deactivated: { text: '#6226EF', bg: 'rgba(98, 38, 239, 0.2)' },
@@ -100,7 +119,21 @@ const ManageAccount: React.FC = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const res = await axios.get('/users');
+        const params: any = {};
+
+        if (searchQuery.trim()) {
+          params.search = searchQuery.trim();
+        }
+
+        if (filters.role.length > 0) {
+          params.role = filters.role;
+        }
+
+        if (filters.status.length > 0) {
+          params.status = filters.status;
+        }
+
+        const res = await axios.get('/users', { params });
 
         const users = res.data.data;
         const total = res.data.meta?.totalItems ?? users.length;
@@ -138,7 +171,75 @@ const ManageAccount: React.FC = () => {
 
     fetchStats();
     fetchUsers();
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, searchQuery, filters]);
+
+  // Click outside handler to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      // Check if click is inside role dropdown or its trigger
+      const roleTrigger = document.querySelector('[data-role-trigger]');
+      const roleDropdown = document.querySelector('[data-role-dropdown]');
+      const isRoleClick = roleTrigger?.contains(target) || roleDropdown?.contains(target);
+
+      // Check if click is inside status dropdown or its trigger
+      const statusTrigger = document.querySelector('[data-status-trigger]');
+      const statusDropdown = document.querySelector('[data-status-dropdown]');
+      const isStatusClick = statusTrigger?.contains(target) || statusDropdown?.contains(target);
+
+      if (!isRoleClick) {
+        setRoleDropdownVisible(false);
+      }
+      if (!isStatusClick) {
+        setStatusDropdownVisible(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Search handlers
+  const handleSearchSubmit = () => {
+    setSearchQuery(searchInput);
+    setCurrentPage(1);
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
+
+  const clearSearchInput = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  // Filter handlers
+  const handleFilterChange = (field: 'role' | 'status', values: string[]) => {
+    setFilters((prev) => ({ ...prev, [field]: values }));
+    setCurrentPage(1);
+  };
+
+  const resetFilters = () => {
+    setFilters({ role: [], status: [] });
+    setSearchInput('');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  const removeFilter = (field: 'role' | 'status', value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: prev[field].filter((v) => v !== value),
+    }));
+    setCurrentPage(1);
+  };
 
   const columns: ColumnsType<Account> = [
     {
@@ -149,13 +250,105 @@ const ManageAccount: React.FC = () => {
     },
     {
       title: (
-        <div className='flex items-center gap-1'>
+        <div className='flex items-center gap-1 relative'>
           <span>ROLE</span>
-          <ChevronDown className='w-4 h-4 text-gray-400' />
+          <div
+            ref={setRoleDropdownRef}
+            data-role-trigger
+            role='button'
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              setRoleDropdownVisible(!roleDropdownVisible);
+              setStatusDropdownVisible(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setRoleDropdownVisible(!roleDropdownVisible);
+                setStatusDropdownVisible(false);
+              }
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <ChevronDown className='w-4 h-4 text-gray-400' />
+          </div>
+          {roleDropdownVisible && (
+            <div
+              data-role-dropdown
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 1000,
+                backgroundColor: 'white',
+                border: '1px solid #e8e8e8',
+                borderRadius: '8px',
+                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08)',
+                minWidth: '220px',
+                maxWidth: '280px',
+                padding: '12px',
+                animation: 'dropdownFadeIn 0.2s ease-out',
+              }}
+            >
+              <div
+                style={{
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  marginBottom: '8px',
+                }}
+              >
+                {jobRoles.map((role) => (
+                  <div
+                    key={role}
+                    role='button'
+                    tabIndex={0}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      transition: 'background-color 0.15s ease',
+                      marginBottom: '2px',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newRoles = filters.role.includes(role)
+                        ? filters.role.filter((r) => r !== role)
+                        : [...filters.role, role];
+                      setFilters((prev) => ({ ...prev, role: newRoles }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const newRoles = filters.role.includes(role)
+                          ? filters.role.filter((r) => r !== role)
+                          : [...filters.role, role];
+                        setFilters((prev) => ({ ...prev, role: newRoles }));
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Checkbox checked={filters.role.includes(role)} style={{ marginRight: 0 }} />
+                    <span style={{ fontSize: '14px', color: '#333' }}>{role}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ),
       dataIndex: 'role',
       key: 'role',
+      render: (text: string) => text,
     },
     {
       title: 'EMAIL',
@@ -176,9 +369,103 @@ const ManageAccount: React.FC = () => {
     },
     {
       title: (
-        <div className='flex items-center gap-1'>
+        <div className='flex items-center gap-1 relative'>
           <span>STATUS</span>
-          <ChevronDown className='w-4 h-4 text-gray-400' />
+          <div
+            ref={setStatusDropdownRef}
+            data-status-trigger
+            role='button'
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              setStatusDropdownVisible(!statusDropdownVisible);
+              setRoleDropdownVisible(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setStatusDropdownVisible(!statusDropdownVisible);
+                setRoleDropdownVisible(false);
+              }
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <ChevronDown className='w-4 h-4 text-gray-400' />
+          </div>
+          {statusDropdownVisible && (
+            <div
+              data-status-dropdown
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 1000,
+                backgroundColor: 'white',
+                border: '1px solid #e8e8e8',
+                borderRadius: '8px',
+                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08)',
+                minWidth: '150px',
+                maxWidth: '180px',
+                padding: '12px',
+                animation: 'dropdownFadeIn 0.2s ease-out',
+              }}
+            >
+              <div
+                style={{
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  marginBottom: '8px',
+                }}
+              >
+                {Object.keys(colorMap).map((status) => (
+                  <div
+                    key={status}
+                    role='button'
+                    tabIndex={0}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      transition: 'background-color 0.15s ease',
+                      marginBottom: '2px',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newStatuses = filters.status.includes(status)
+                        ? filters.status.filter((s) => s !== status)
+                        : [...filters.status, status];
+                      setFilters((prev) => ({ ...prev, status: newStatuses }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const newStatuses = filters.status.includes(status)
+                          ? filters.status.filter((s) => s !== status)
+                          : [...filters.status, status];
+                        setFilters((prev) => ({ ...prev, status: newStatuses }));
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Checkbox
+                      checked={filters.status.includes(status)}
+                      style={{ marginRight: 0 }}
+                    />
+                    <span style={{ fontSize: '14px', color: '#333' }}>{status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ),
       dataIndex: 'status',
@@ -302,23 +589,175 @@ const ManageAccount: React.FC = () => {
 
   return (
     <div style={{ backgroundColor: '#fffff', minHeight: '100vh' }}>
+      <style>
+        {`
+          @keyframes dropdownFadeIn {
+            from {
+              opacity: 0;
+              transform: translateX(-50%) translateY(-8px);
+            }
+            to {
+              opacity: 1;
+              transform: translateX(-50%) translateY(0);
+            }
+          }
+        `}
+      </style>
       <AdminHeader />
       <LayoutWrapper>
         <div className='flex flex-1 flex-col lg:pl-8 py-6 overflow-x-hidden w-auto '>
-          <div className='flex justify-end mb-4 flex-row gap-2'>
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className='flex bg-[#FF7A00] text-white px-5 py-3 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
-            >
-              <Plus width={'15px'} height={'15px'} /> Create
-            </button>
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
-            >
-              <ClipboardPaste width={'15px'} height={'15px'} /> Export
-            </button>
+          <div className='flex flex-col md:flex-row justify-between mb-4 gap-4'>
+            {/* Search Bar */}
+            <div style={{ width: '100%', maxWidth: 600 }}>
+              <div style={{ display: 'flex', height: 40 }}>
+                <Input
+                  placeholder='Search accounts...'
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
+                  bordered={false}
+                  style={{
+                    flex: 1,
+                    fontSize: '14px',
+                    padding: '0 12px',
+                    border: '1px solid #d9d9d9',
+                    borderRight: 'none',
+                    borderRadius: '8px 0 0 8px',
+                    height: '100%',
+                    lineHeight: 'normal',
+                    backgroundColor: '#fff',
+                  }}
+                />
+                {searchInput && (
+                  <Button
+                    type='text'
+                    icon={<CloseCircleFilled style={{ fontSize: '12px', color: '#999' }} />}
+                    onClick={clearSearchInput}
+                    style={{
+                      border: '1px solid #d9d9d9',
+                      borderLeft: 'none',
+                      borderRadius: 0,
+                      width: 40,
+                      height: '100%',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      padding: 0,
+                      backgroundColor: '#fff',
+                    }}
+                  />
+                )}
+                <Button
+                  type='primary'
+                  onClick={handleSearchSubmit}
+                  style={{
+                    backgroundColor: '#ff7a00',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: searchInput ? '0 8px 8px 0' : '0 8px 8px 0',
+                    width: 40,
+                    height: '100%',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: 0,
+                  }}
+                  icon={<SearchOutlined style={{ fontSize: '16px' }} />}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className='flex gap-2'>
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className='flex bg-[#FF7A00] text-white px-5 py-3 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+              >
+                <Plus width={'15px'} height={'15px'} /> Create
+              </button>
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+              >
+                <ClipboardPaste width={'15px'} height={'15px'} /> Export
+              </button>
+            </div>
           </div>
+
+          {/* Active Filters Display */}
+          {(filters.role.length > 0 || filters.status.length > 0 || searchQuery) && (
+            <div className='mb-4'>
+              <div className='flex items-center gap-2 flex-wrap'>
+                {filters.role.map((role) => (
+                  <Tag
+                    key={`role-${role}`}
+                    closable
+                    onClose={() => removeFilter('role', role)}
+                    style={{
+                      backgroundColor: '#f7dac8',
+                      borderColor: '#FF7012',
+                      color: '#FF6600',
+                      fontSize: '14px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    Role: {role}
+                  </Tag>
+                ))}
+                {filters.status.map((status) => (
+                  <Tag
+                    key={`status-${status}`}
+                    closable
+                    onClose={() => removeFilter('status', status)}
+                    style={{
+                      backgroundColor: '#f7dac8',
+                      borderColor: '#FF7012',
+                      color: '#FF6600',
+                      fontSize: '14px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    Status: {status}
+                  </Tag>
+                ))}
+                {searchQuery && (
+                  <Tag
+                    closable
+                    onClose={() => {
+                      setSearchInput('');
+                      setSearchQuery('');
+                    }}
+                    style={{
+                      backgroundColor: '#f7dac8',
+                      borderColor: '#FF7012',
+                      color: '#FF6600',
+                      fontSize: '14px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    Search: {searchQuery}
+                  </Tag>
+                )}
+                <button
+                  onClick={resetFilters}
+                  style={{
+                    color: '#ff7a00',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px 8px',
+                    outline: 'none',
+                  }}
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            </div>
+          )}
 
           <h3 className='my-5 text-lg font-semibold'>Overview</h3>
 
@@ -510,6 +949,11 @@ const ManageAccount: React.FC = () => {
               <Input
                 id='edit-account-name'
                 value={selectedUser?.name}
+                onChange={(e) => {
+                  if (selectedUser) {
+                    setSelectedUser({ ...selectedUser, name: e.target.value });
+                  }
+                }}
                 disabled={!isEditMode}
                 style={{
                   marginTop: 4,
@@ -524,6 +968,11 @@ const ManageAccount: React.FC = () => {
               <Input
                 id='edit-account-email'
                 value={selectedUser?.email}
+                onChange={(e) => {
+                  if (selectedUser) {
+                    setSelectedUser({ ...selectedUser, email: e.target.value });
+                  }
+                }}
                 disabled={!isEditMode}
                 style={{
                   marginTop: 4,

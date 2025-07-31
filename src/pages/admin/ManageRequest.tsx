@@ -23,6 +23,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
 
 import EditRequestModalContent from './EditRequest';
+import ExportRequestModal from './modals/ExportRequestModal';
 import RequestDetailModalContent from './RequestDetail';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
@@ -47,6 +48,18 @@ interface UserRequest {
   submittedDate: string;
   submittedAt: string;
   description?: string;
+  // Additional fields from API response
+  representativeName?: string;
+  representativeEmail?: string;
+  representativeNumber?: string;
+  message?: string;
+  type?: string;
+  universityEmail?: string;
+  universityNumber?: string;
+  website?: string;
+  subjectsExcelFilePath?: string;
+  numberOfStudents?: number;
+  rejectionReason?: string;
 }
 
 // API Response interface
@@ -55,6 +68,7 @@ interface ApiResponse {
   total: number;
   page: number;
   pageSize: number;
+  totalPages: number;
 }
 
 // Custom hook for debouncing input values - NO LONGER USED FOR SEARCH
@@ -110,6 +124,7 @@ const ManageRequest: React.FC = () => {
   // Modal states
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(null);
 
   // API Functions
@@ -404,14 +419,8 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      message.success('Requests exported successfully');
-    } catch (error) {
-      message.error('Export failed');
-      console.error('Export error:', error);
-    }
+  const handleExport = () => {
+    setIsExportModalOpen(true);
   };
 
   // Handle opening different modals based on request type
@@ -1067,6 +1076,15 @@ const ManageRequest: React.FC = () => {
             />
           </Modal>
         )}
+
+        {/* Export Request Modal */}
+        <ExportRequestModal
+          open={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          appliedFilters={filters}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+        />
       </LayoutWrapper>
     </div>
   );
