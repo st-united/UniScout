@@ -199,7 +199,7 @@ export default function ConnectWithUs() {
         console.log(pair[0] + ':', pair[1]);
       }
 
-      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', formData, {
+      await axios.post('/contact', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
@@ -365,7 +365,7 @@ export default function ConnectWithUs() {
         console.log(pair[0] + ':', pair[1]);
       }
 
-      await axios.post('https://api.uniscout.dev.stunited.vn/api/contact', formData, {
+      await axios.post('/contact', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
