@@ -9,8 +9,8 @@
     "test": "vitest watch",
     "test:no-watch": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,scss,md,json,html}\" ",
-    "lint": "eslint ./src --ext .jsx,.js,.ts,.tsx,.scss,.html --quiet --fix --ignore-path ./.gitignore",
+    "format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,scss,md,json}\" ",
+    "lint": "eslint ./src --ext .jsx,.js,.ts,.tsx,.scss --quiet --fix --ignore-path ./.gitignore",
     "lint:staged": "lint-staged",
     "type-check": "tsc",
     "prepare": "husky install"
@@ -84,7 +84,7 @@
     "vitest": "^0.24.3"
   },
   "lint-staged": {
-    "*.{jsx,js,ts,tsx,scss,html}": [
+    "*.{jsx,js,ts,tsx,scss}": [
       "npm run lint",
       "npm run format",
       "git add ."
