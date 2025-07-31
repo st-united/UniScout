@@ -1,4 +1,5 @@
 import { BookOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Skeleton } from 'antd';
 import axios from 'axios';
 import { ArrowLeft, MapPin, Users, Building2, Star, Contact } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -300,7 +301,13 @@ const UniversityDetail: React.FC = () => {
     }
   }, [university]);
 
-  if (!university) return <div className='p-8 text-center'>Loading...</div>;
+  if (!university) {
+    return (
+      <div className='p-8'>
+        <Skeleton active avatar paragraph={{ rows: 2 }} />
+      </div>
+    );
+  }
 
   const academicFields =
     university.academicFieldsCommaSeparated?.split(',').map((f) => f.trim()) || [];

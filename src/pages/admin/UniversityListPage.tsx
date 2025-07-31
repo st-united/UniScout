@@ -26,7 +26,7 @@ import {
   Input,
 } from 'antd';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ExportUniversityModal from './modals/ExportUniversityModal';
@@ -107,6 +107,7 @@ type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'se
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
 
   // State for university data
   const [universityData, setUniversityData] = useState<UniversityApiResponse>();
@@ -218,6 +219,54 @@ const UniversityListPage: React.FC = () => {
     fetchUniversities();
   }, [debouncedFilters, sortBy, currentPage, pageSize, fetchUniversities]);
 
+  // Scroll to top when page changes - more robust approach
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Multiple methods for maximum compatibility
+      try {
+        // Method 1: scrollIntoView with top reference
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Method 2: window.scrollTo to very top
+        window.scrollTo({ top: -200, behavior: 'smooth' });
+
+        // Method 3: document.documentElement.scrollTop
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+
+        // Method 4: document.body.scrollTop
+        if (document.body) {
+          document.body.scrollTop = -200;
+        }
+
+        // Method 5: Force scroll to very top
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
+        }, 100);
+      } catch (error) {
+        // Fallback to instant scroll to very top
+        window.scrollTo(0, 0);
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
+
   // Hide delete buttons
   const [showBatchActions, setShowBatchActions] = useState(false);
 
@@ -243,11 +292,6 @@ const UniversityListPage: React.FC = () => {
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
-
-  // Fetch universities on component mount
-  useEffect(() => {
-    fetchUniversities();
-  }, [currentPage, pageSize, fetchUniversities]);
 
   // Handle search from search input
   const handleSearchSubmit = () => {
@@ -278,7 +322,6 @@ const UniversityListPage: React.FC = () => {
 
   const handleNotificationClick = (notification: NotificationItem) => {
     // Navigate to join request management page or show details
-    console.log('Notification clicked:', notification);
     message.info(`Viewing join request: ${notification.description}`);
     // Example: navigate('/admin/join-requests/' + notification.id);
   };
@@ -331,8 +374,6 @@ const UniversityListPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
-        console.log('Deleting university ID:', universityToDelete.id);
-
         await axios.delete(`/admin/universities/${universityToDelete.id}`, {
           data: { confirm_deletion: true },
           headers: {
@@ -342,12 +383,7 @@ const UniversityListPage: React.FC = () => {
 
         setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
         message.success('University deleted successfully');
-        console.log(
-          `AUDIT: Deleted university ${universityToDelete.university} (ID: ${universityToDelete.id})`,
-        );
       } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
-        console.log('Deleting multiple universities:', selectedRowKeys);
-
         await axios.delete('/universities/admin/bulk', {
           data: {
             ids: selectedRowKeys,
@@ -365,10 +401,6 @@ const UniversityListPage: React.FC = () => {
         setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
         setSelectedRowKeys([]);
         message.success(`${selectedRowKeys.length} universities deleted successfully`);
-        console.log(
-          `AUDIT: Deleted ${universitiesToDelete.length} universities:`,
-          universitiesToDelete.map((u) => u.university),
-        );
       }
     } catch (error) {
       const errorMessage = axios.isAxiosError(error)
@@ -565,8 +597,7 @@ const UniversityListPage: React.FC = () => {
     if (size) {
       setPageSize(size);
     }
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: -700, behavior: 'smooth' });
   };
 
   // Table columns configuration
@@ -709,7 +740,7 @@ const UniversityListPage: React.FC = () => {
       setSelectedRowKeys(newSelectedRowKeys);
     },
     onSelectAll: (selected: boolean, selectedRows: University[], changeRows: University[]) => {
-      console.log(selected, selectedRows, changeRows);
+      // Handle select all functionality
     },
   };
 
@@ -997,7 +1028,7 @@ const UniversityListPage: React.FC = () => {
 
       {/* Main Content */}
       <LayoutWrapper>
-        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+        <div ref={topRef} style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
             <div style={{ marginBottom: 16 }}>
               <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
@@ -1136,14 +1167,57 @@ const UniversityListPage: React.FC = () => {
                     gap: '4px',
                   };
 
+                  const handlePageClick = (newPage: number) => {
+                    setCurrentPage(newPage);
+
+                    // Use multiple scroll methods with delay for consistency
+                    setTimeout(() => {
+                      // Method 1: scrollIntoView with top reference
+                      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                      // Method 2: window.scrollTo to very top
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                      // Method 3: document.documentElement.scrollTop
+                      if (document.documentElement) {
+                        document.documentElement.scrollTop = 0;
+                      }
+
+                      // Method 4: document.body.scrollTop
+                      if (document.body) {
+                        document.body.scrollTop = 0;
+                      }
+
+                      // Method 5: Force scroll to very top
+                      setTimeout(() => {
+                        window.scrollTo(0, 0);
+                        if (document.documentElement) {
+                          document.documentElement.scrollTop = 0;
+                        }
+                        if (document.body) {
+                          document.body.scrollTop = 0;
+                        }
+                      }, 50);
+                    }, 100);
+                  };
+
                   if (type === 'prev') {
                     const isDisabled = currentPage === 1;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isDisabled ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: isDisabled ? '#d9d9d9' : '#ff7a00',
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        onClick={() => !isDisabled && handlePageClick(currentPage - 1)}
+                        onKeyDown={(e) => {
+                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(currentPage - 1);
+                          }
                         }}
                       >
                         &lt; Previous
@@ -1155,10 +1229,19 @@ const UniversityListPage: React.FC = () => {
                     const isDisabled = currentPage >= totalPages;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isDisabled ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: isDisabled ? '#d9d9d9' : '#ff7a00',
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        onClick={() => !isDisabled && handlePageClick(currentPage + 1)}
+                        onKeyDown={(e) => {
+                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(currentPage + 1);
+                          }
                         }}
                       >
                         Next &gt;
@@ -1170,10 +1253,19 @@ const UniversityListPage: React.FC = () => {
                     const isCurrent = page === currentPage;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isCurrent ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: '#ff7a00',
                           fontWeight: isCurrent ? 'bold' : 500,
+                        }}
+                        onClick={() => !isCurrent && handlePageClick(page)}
+                        onKeyDown={(e) => {
+                          if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(page);
+                          }
                         }}
                       >
                         {page}

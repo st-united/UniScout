@@ -95,7 +95,7 @@ export default function ConnectWithUs() {
     location: '',
     website: '',
     type: '',
-    numberOfStudents: '',
+    studentPopulation: '',
     description: '',
     country: '',
     email: '',
@@ -181,10 +181,10 @@ export default function ConnectWithUs() {
     setSubmissionStatus('submitting');
     try {
       const formData = new FormData();
-      formData.append('representativeNumber', newUniData.phone); // university phone
+      formData.append('representativeNumber', ''); // not collected for new university
       formData.append('representativeName', ''); // not collected, send empty
       formData.append('requestType', 'New University');
-      formData.append('universityEmail', newUniData.email);
+      formData.append('universityEmail', newUniData.email); // university email
       formData.append('abbreviation', newUniData.abbreviation);
       if (newUniData.subjectsFile) {
         formData.append('subjectsExcel', newUniData.subjectsFile);
@@ -194,13 +194,13 @@ export default function ConnectWithUs() {
       const apiCountry = newUniData.country === 'Viet Nam' ? 'Vietnam' : newUniData.country;
       formData.append('country', apiCountry);
       formData.append('files', 'string'); // as in curl
-      formData.append('universityNumber', newUniData.phone); // university phone again
-      formData.append('numberOfStudents', newUniData.numberOfStudents);
+      formData.append('universityNumber', newUniData.phone); // university phone
+      formData.append('numberOfStudents', newUniData.studentPopulation);
       formData.append('universityName', newUniData.universityName);
       formData.append('type', newUniData.type.toLowerCase());
       formData.append('website', newUniData.website);
       formData.append('description', newUniData.description);
-      formData.append('representativeEmail', newUniData.email);
+      formData.append('representativeEmail', ''); // not collected for new university
 
       // Debug: Log all FormData entries before sending
       for (const pair of formData.entries()) {
@@ -218,7 +218,7 @@ export default function ConnectWithUs() {
         location: '',
         website: '',
         type: '',
-        numberOfStudents: '',
+        studentPopulation: '',
         description: '',
         country: '',
         email: '',
@@ -352,23 +352,23 @@ export default function ConnectWithUs() {
     setSubmissionStatus('submitting');
     try {
       const formData = new FormData();
-      formData.append('representativeNumber', updateData.phone || '');
+      formData.append('representativeNumber', updateData.phone || ''); // representative phone
       formData.append('message', updateData.message || '');
       formData.append('representativeName', updateData.representativeName || '');
       formData.append('requestType', 'Update Information');
-      formData.append('universityEmail', '');
+      formData.append('universityEmail', ''); // not collected for update
       formData.append('abbreviation', '');
       formData.append('subjectsExcel', '');
       formData.append('location', '');
       formData.append('country', '');
       formData.append('files', '');
-      formData.append('universityNumber', '');
+      formData.append('universityNumber', ''); // not collected for update
       formData.append('numberOfStudents', '');
       formData.append('universityName', updateData.universityName || '');
       formData.append('type', '');
       formData.append('website', '');
       formData.append('description', '');
-      formData.append('representativeEmail', updateData.email || '');
+      formData.append('representativeEmail', updateData.email || ''); // representative email
 
       // Debug: Log all FormData entries before sending
       for (const pair of formData.entries()) {
@@ -649,8 +649,8 @@ export default function ConnectWithUs() {
               <input
                 id='new-numberOfStudents'
                 type='number'
-                name='numberOfStudents'
-                value={newUniData.numberOfStudents}
+                name='studentPopulation'
+                value={newUniData.studentPopulation}
                 onChange={handleNewUniChange}
                 onKeyDown={(e) => {
                   if (e.key === 'e' || e.key === 'E') {
