@@ -263,7 +263,6 @@ const ManageRequest: React.FC = () => {
         const apiData: ApiResponse = response.data;
 
         if (apiData.data.length === 0) {
-          console.log('API returned empty data, using fallback mock data');
           const mockData: UserRequest[] = [
             {
               id: '1',
@@ -408,7 +407,6 @@ const ManageRequest: React.FC = () => {
           document.body.scrollTop = 0;
         }
       } catch (error) {
-        console.log('Scroll error:', error);
         // Fallback to instant scroll
         window.scrollTo(0, 0);
       }

@@ -240,7 +240,6 @@ const UniversityListPage: React.FC = () => {
           document.body.scrollTop = 0;
         }
       } catch (error) {
-        console.log('Scroll error:', error);
         // Fallback to instant scroll
         window.scrollTo(0, 0);
       }
@@ -306,7 +305,6 @@ const UniversityListPage: React.FC = () => {
 
   const handleNotificationClick = (notification: NotificationItem) => {
     // Navigate to join request management page or show details
-    console.log('Notification clicked:', notification);
     message.info(`Viewing join request: ${notification.description}`);
     // Example: navigate('/admin/join-requests/' + notification.id);
   };
@@ -359,8 +357,6 @@ const UniversityListPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
-        console.log('Deleting university ID:', universityToDelete.id);
-
         await axios.delete(`/admin/universities/${universityToDelete.id}`, {
           data: { confirm_deletion: true },
           headers: {
@@ -370,12 +366,7 @@ const UniversityListPage: React.FC = () => {
 
         setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
         message.success('University deleted successfully');
-        console.log(
-          `AUDIT: Deleted university ${universityToDelete.university} (ID: ${universityToDelete.id})`,
-        );
       } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
-        console.log('Deleting multiple universities:', selectedRowKeys);
-
         await axios.delete('/universities/admin/bulk', {
           data: {
             ids: selectedRowKeys,
@@ -393,10 +384,6 @@ const UniversityListPage: React.FC = () => {
         setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
         setSelectedRowKeys([]);
         message.success(`${selectedRowKeys.length} universities deleted successfully`);
-        console.log(
-          `AUDIT: Deleted ${universitiesToDelete.length} universities:`,
-          universitiesToDelete.map((u) => u.university),
-        );
       }
     } catch (error) {
       const errorMessage = axios.isAxiosError(error)
@@ -589,7 +576,6 @@ const UniversityListPage: React.FC = () => {
 
   // Handle pagination change with scroll to top
   const handlePaginationChange = (page: number, size?: number) => {
-    console.log('Pagination changed to page:', page);
     setCurrentPage(page);
     if (size) {
       setPageSize(size);
@@ -736,7 +722,7 @@ const UniversityListPage: React.FC = () => {
       setSelectedRowKeys(newSelectedRowKeys);
     },
     onSelectAll: (selected: boolean, selectedRows: University[], changeRows: University[]) => {
-      console.log(selected, selectedRows, changeRows);
+      // Handle select all functionality
     },
   };
 

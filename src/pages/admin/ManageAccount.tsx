@@ -198,7 +198,6 @@ const ManageAccount: React.FC = () => {
           document.body.scrollTop = 0;
         }
       } catch (error) {
-        console.log('Scroll error:', error);
         // Fallback to instant scroll
         window.scrollTo(0, 0);
       }
@@ -1093,7 +1092,6 @@ const ManageAccount: React.FC = () => {
                         statusMap[selectedUser.status as keyof typeof statusMap] ||
                         selectedUser.status,
                     };
-                    console.log('PATCH payload:', payload);
                     try {
                       await axios.patch(
                         `https://api.uniscout.dev.stunited.vn/api/users/${selectedUser.key}`,
