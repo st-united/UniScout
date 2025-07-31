@@ -13,7 +13,7 @@ import {
   ChevronRight,
   ChevronLeft,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import CreateAccount from './modals/CreateAccount';
 import AdminHeader from '../../components/AdminHeader';
@@ -34,6 +34,7 @@ interface Account {
 const ManageAccount: React.FC = () => {
   const [createAccountModal, setCreateAccountModal] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
 
   const [stats, setStats] = useState<{
     total: number;
@@ -172,6 +173,38 @@ const ManageAccount: React.FC = () => {
     fetchStats();
     fetchUsers();
   }, [currentPage, pageSize, searchQuery, filters]);
+
+  // Scroll to top when page changes - more robust approach
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Multiple methods for maximum compatibility
+      try {
+        // Method 1: scrollIntoView
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Method 2: window.scrollTo
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Method 3: document.documentElement
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+
+        // Method 4: document.body
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+      } catch (error) {
+        console.log('Scroll error:', error);
+        // Fallback to instant scroll
+        window.scrollTo(0, 0);
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
 
   // Click outside handler to close dropdowns
   useEffect(() => {
@@ -605,7 +638,7 @@ const ManageAccount: React.FC = () => {
       </style>
       <AdminHeader />
       <LayoutWrapper>
-        <div className='flex flex-1 flex-col lg:pl-8 py-6 overflow-x-hidden w-auto '>
+        <div ref={topRef} className='flex flex-1 flex-col lg:pl-8 py-6 overflow-x-hidden w-auto '>
           <div className='flex flex-col md:flex-row justify-between mb-4 gap-4'>
             {/* Search Bar */}
             <div style={{ width: '100%', maxWidth: 600 }}>

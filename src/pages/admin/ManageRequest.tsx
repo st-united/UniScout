@@ -18,7 +18,7 @@ import {
   Modal,
 } from 'antd';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 // Removed: useNavigate as it's no longer used
 // import { useNavigate } from 'react-router-dom';
 
@@ -96,6 +96,7 @@ const ManageRequest: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const topRef = useRef<HTMLDivElement>(null);
   // Removed: const navigate = useNavigate(); as it's no longer used
 
   // State for API data
@@ -384,6 +385,38 @@ const ManageRequest: React.FC = () => {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  // Scroll to top when page changes - more robust approach
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Multiple methods for maximum compatibility
+      try {
+        // Method 1: scrollIntoView
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Method 2: window.scrollTo
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Method 3: document.documentElement
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+
+        // Method 4: document.body
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+      } catch (error) {
+        console.log('Scroll error:', error);
+        // Fallback to instant scroll
+        window.scrollTo(0, 0);
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
 
   const handleSearch = () => {
     setFilters((prevFilters) => ({ ...prevFilters, search: [currentSearchInput] }));
@@ -753,7 +786,7 @@ const ManageRequest: React.FC = () => {
     <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
       <AdminHeader />
       <LayoutWrapper>
-        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+        <div ref={topRef} style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
             <Row
               justify='space-between'

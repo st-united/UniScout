@@ -26,7 +26,7 @@ import {
   Input,
 } from 'antd';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ExportUniversityModal from './modals/ExportUniversityModal';
@@ -107,6 +107,7 @@ type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'se
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
 
   // State for university data
   const [universityData, setUniversityData] = useState<UniversityApiResponse>();
@@ -189,6 +190,38 @@ const UniversityListPage: React.FC = () => {
     fetchUniversities();
   }, [debouncedFilters, sortBy, currentPage, pageSize, fetchUniversities]);
 
+  // Scroll to top when page changes - more robust approach
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Multiple methods for maximum compatibility
+      try {
+        // Method 1: scrollIntoView
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Method 2: window.scrollTo
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Method 3: document.documentElement
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+
+        // Method 4: document.body
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+      } catch (error) {
+        console.log('Scroll error:', error);
+        // Fallback to instant scroll
+        window.scrollTo(0, 0);
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
+
   // Hide delete buttons
   const [showBatchActions, setShowBatchActions] = useState(false);
 
@@ -214,11 +247,6 @@ const UniversityListPage: React.FC = () => {
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
-
-  // Fetch universities on component mount
-  useEffect(() => {
-    fetchUniversities();
-  }, [currentPage, pageSize, fetchUniversities]);
 
   // Handle search from search input
   const handleSearchSubmit = () => {
@@ -533,12 +561,11 @@ const UniversityListPage: React.FC = () => {
 
   // Handle pagination change with scroll to top
   const handlePaginationChange = (page: number, size?: number) => {
+    console.log('Pagination changed to page:', page);
     setCurrentPage(page);
     if (size) {
       setPageSize(size);
     }
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Table columns configuration
@@ -903,7 +930,7 @@ const UniversityListPage: React.FC = () => {
 
       {/* Main Content */}
       <LayoutWrapper>
-        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+        <div ref={topRef} style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
             <div style={{ marginBottom: 16 }}>
               <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
@@ -1042,14 +1069,39 @@ const UniversityListPage: React.FC = () => {
                     gap: '4px',
                   };
 
+                  const handlePageClick = (newPage: number) => {
+                    setCurrentPage(newPage);
+
+                    // Use multiple scroll methods with delay for consistency
+                    setTimeout(() => {
+                      // Method 1: scrollIntoView
+                      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                      // Method 2: window.scrollTo as backup
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                      // Method 3: document.documentElement.scrollTop as final backup
+                      document.documentElement.scrollTop = 0;
+                    }, 100);
+                  };
+
                   if (type === 'prev') {
                     const isDisabled = currentPage === 1;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isDisabled ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: isDisabled ? '#d9d9d9' : '#ff7a00',
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        onClick={() => !isDisabled && handlePageClick(currentPage - 1)}
+                        onKeyDown={(e) => {
+                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(currentPage - 1);
+                          }
                         }}
                       >
                         &lt; Previous
@@ -1061,10 +1113,19 @@ const UniversityListPage: React.FC = () => {
                     const isDisabled = currentPage >= totalPages;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isDisabled ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: isDisabled ? '#d9d9d9' : '#ff7a00',
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        onClick={() => !isDisabled && handlePageClick(currentPage + 1)}
+                        onKeyDown={(e) => {
+                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(currentPage + 1);
+                          }
                         }}
                       >
                         Next &gt;
@@ -1076,10 +1137,19 @@ const UniversityListPage: React.FC = () => {
                     const isCurrent = page === currentPage;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isCurrent ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: '#ff7a00',
                           fontWeight: isCurrent ? 'bold' : 500,
+                        }}
+                        onClick={() => !isCurrent && handlePageClick(page)}
+                        onKeyDown={(e) => {
+                          if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(page);
+                          }
                         }}
                       >
                         {page}
