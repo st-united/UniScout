@@ -51,10 +51,12 @@ const ManageAccount: React.FC = () => {
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Account | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const [showStatusWarning, setShowStatusWarning] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -689,7 +691,7 @@ const ManageAccount: React.FC = () => {
                 <Plus width={'15px'} height={'15px'} /> Create
               </button>
               <button
-                onClick={() => setIsCreateOpen(true)}
+                onClick={() => setIsExportOpen(true)}
                 className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
               >
                 <ClipboardPaste width={'15px'} height={'15px'} /> Export
