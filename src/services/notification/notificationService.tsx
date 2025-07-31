@@ -36,7 +36,7 @@ export const openNotificationWithIcon = (type: NotificationTypeEnum, description
     message: description,
     className: `notification-${type}`,
     closeIcon: <></>,
-    placement: 'bottom',
+    placement: 'topRight',
     icon: icon,
   });
 };

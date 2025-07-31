@@ -1,8 +1,13 @@
 import { VerticalAlignBottomOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import axios from 'axios';
-import { getNames } from 'country-list';
 import { Paperclip } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
+
+import {
+  NotificationTypeEnum,
+  openNotificationWithIcon,
+} from '@app/services/notification/notificationService';
+
 // Import the configured axios instance
 // Assuming SuccessNotification componet exists and takes `show`, `type`, `message` props
 // If you don't have this component, you'll need to define it or replace it with inline notification logic.
@@ -112,8 +117,6 @@ export default function ConnectWithUs() {
 
   // --- Shared State ---
   const [countries, setCountries] = useState<string[]>([]);
-  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
-  const [notificationType, setNotificationType] = useState<'success' | 'error' | null>(null);
   const [submissionStatus, setSubmissionStatus] = useState<
     'idle' | 'success' | 'error' | 'submitting'
   >('idle');
@@ -125,18 +128,23 @@ export default function ConnectWithUs() {
   const subjectsFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setCountries(getNames());
-  }, []);
+    const fetchCountries = async () => {
+      try {
+        const response = await axios.get(
+          'https://api.uniscout.dev.stunited.vn/api/universities/countries',
+        );
+        if (response.data && response.data.data) {
+          setCountries(response.data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch countries:', error);
+        // Fallback to empty array if API fails
+        setCountries([]);
+      }
+    };
 
-  // --- Notification ---
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setTimeout(() => {
-      setNotificationMessage(null);
-      setNotificationType(null);
-    }, 5000);
-  };
+    fetchCountries();
+  }, []);
 
   // --- Handlers for New University ---
   const handleNewUniChange = (
@@ -203,7 +211,7 @@ export default function ConnectWithUs() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
-      showNotification('University submitted successfully.', 'success');
+      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'University submitted successfully.');
       setNewUniData({
         universityName: '',
         abbreviation: '',
@@ -221,12 +229,12 @@ export default function ConnectWithUs() {
       setSubmissionStatus('error');
       if (err.response) {
         console.error('API error:', err.response.data);
-        showNotification(
+        openNotificationWithIcon(
+          NotificationTypeEnum.ERROR,
           `Submission failed: ${err.response.data.message || 'Unknown error'}`,
-          'error',
         );
       } else {
-        showNotification('Submission failed.', 'error');
+        openNotificationWithIcon(NotificationTypeEnum.ERROR, 'Submission failed.');
       }
     }
   };
@@ -257,11 +265,10 @@ export default function ConnectWithUs() {
 
   const handleDownloadTemplate = async () => {
     try {
-      const response = await fetch(
-        'https://api.uniscout.dev.stunited.vn/api/contact/template/Subjects_Template.xlsx',
-      );
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
+      const response = await axios.get('/contact/template/Subjects_Template.xlsx', {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -271,7 +278,10 @@ export default function ConnectWithUs() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert('Failed to download template. Please try again later.');
+      openNotificationWithIcon(
+        NotificationTypeEnum.ERROR,
+        'Failed to download template. Please try again later.',
+      );
     }
   };
 
@@ -369,7 +379,8 @@ export default function ConnectWithUs() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSubmissionStatus('success');
-      showNotification('Information updated successfully.', 'success');
+      //showNotification('Information updated successfully.', 'success');
+      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'Information updated successfully.');
       setUpdateData({
         representativeName: '',
         universityName: '',
@@ -382,7 +393,7 @@ export default function ConnectWithUs() {
       if (fileInput) fileInput.value = '';
     } catch (err: any) {
       setSubmissionStatus('error');
-      showNotification('Submission failed.', 'error');
+      openNotificationWithIcon(NotificationTypeEnum.ERROR, 'Submission failed.');
     }
   };
 
@@ -409,18 +420,6 @@ export default function ConnectWithUs() {
   // --- UI ---
   return (
     <div className='bg-orange-50 rounded-lg p-8 w-full max-w-6xl mx-auto shadow-sm relative'>
-      {/* Notification */}
-      {notificationMessage && notificationType && (
-        <div
-          className={`absolute top-4 right-4 z-10 p-3 rounded-xl shadow-lg flex items-center space-x-3 ${
-            notificationType === 'success'
-              ? 'bg-green-100 border border-green-300 text-green-700'
-              : 'bg-red-100 border border-red-300 text-red-700'
-          }`}
-        >
-          <span className='text-base font-semibold'>{notificationMessage}</span>
-        </div>
-      )}
       <h1 className='mb-2 text-4xl font-bold text-center text-orange-600'>Connect with us</h1>
       <p className='mb-10 leading-relaxed text-center text-gray-500'>
         Your Gateway to University Insights and Support!
@@ -471,7 +470,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-universityName'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                University Name
+                University Name*
               </label>
               <input
                 id='new-universityName'
@@ -510,7 +509,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-country'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Country
+                Country*
               </label>
               <select
                 id='new-country'
@@ -539,7 +538,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-location'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Location
+                Location*
               </label>
               <input
                 id='new-location'
@@ -558,7 +557,7 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label htmlFor='new-email' className='block mb-2 text-sm font-medium text-orange-600'>
-                Email
+                Email*
               </label>
               <input
                 id='new-email'
@@ -577,7 +576,7 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label htmlFor='new-phone' className='block mb-2 text-sm font-medium text-orange-600'>
-                Phone
+                Phone*
               </label>
               <input
                 id='new-phone'
@@ -599,7 +598,7 @@ export default function ConnectWithUs() {
                 htmlFor='new-website'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Website
+                Website*
               </label>
               <input
                 id='new-website'
@@ -616,7 +615,7 @@ export default function ConnectWithUs() {
             </div>
             <div>
               <label htmlFor='new-type' className='block mb-2 text-sm font-medium text-orange-600'>
-                Type
+                Type*
               </label>
               <select
                 id='new-type'
@@ -693,7 +692,7 @@ export default function ConnectWithUs() {
               file.
             </div>
             <div className='flex items-center gap-4 mb-4'>
-              <div className='flex items-center border border-gray-200 rounded-lg px-14 py-2 bg-white shadow-sm'>
+              <div className='flex items-center border border-gray-200 rounded-lg px-8 md:px-14 py-2 bg-white shadow-sm'>
                 <img
                   src='./src/assets/images/excel-logo.png'
                   alt='Excel'
@@ -789,7 +788,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-representativeName'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Representative Name
+                Representative Name*
               </label>
               <input
                 id='update-representativeName'
@@ -811,7 +810,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-universityName'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                University Name
+                University Name*
               </label>
               <input
                 id='update-universityName'
@@ -833,7 +832,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-email'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Email
+                Email*
               </label>
               <input
                 id='update-email'
@@ -855,7 +854,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-phone'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Phone
+                Phone*
               </label>
               <input
                 id='update-phone'
@@ -877,7 +876,7 @@ export default function ConnectWithUs() {
                 htmlFor='update-message'
                 className='block mb-2 text-sm font-medium text-orange-600'
               >
-                Your message
+                Your message*
               </label>
               <div className='relative'>
                 <textarea

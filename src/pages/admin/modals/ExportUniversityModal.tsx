@@ -131,23 +131,24 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
     }
   };
 
-  const formatButton = (type: 'excel' | 'csv', icon: React.ReactNode, label: string) => {
+  const formatButton = (type: 'excel' | 'csv', iconSrc: string, label: string) => {
     const isActive = selectedFormat === type;
-
-    const baseClasses = 'flex-1 h-12 font-medium rounded-lg border text-sm ';
+    const baseClasses =
+      'flex-1 h-12 font-medium rounded-lg border text-sm flex items-center justify-center gap-2 px-4';
     const activeClasses = '!bg-[#fffaeb] !border-[#ff7a00] !text-[#ff7a00]';
     const inactiveClasses = 'bg-white !border-[#d1d5db] !hover:border-[#d1d5db] !text-[#4b5563]';
-
-    //const hoverOverride = 'hover:bg-inherit hover:border-inherit hover:text-inherit shadow-none !hover:text-[#ff7a00]';
     const hoverOverride = '!hover:bg-[#fffaeb] !hover:border-[#ff7a00] !hover:text-[#ff7a00]';
+
     return (
       <Button
         type='default'
-        icon={icon}
         onClick={() => setSelectedFormat(type)}
         className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses} ${hoverOverride}`}
       >
-        {label}
+        <div className='flex items-center justify-center gap-2'>
+          <img src={iconSrc} alt={`${label} Logo`} className='w-6 h-6' />
+          <span>{label}</span>
+        </div>
       </Button>
     );
   };
@@ -198,9 +199,9 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
 
         <div className='mb-4 border border-solid border-[#e5e7eb] rounded-lg p-4'>
           <p className='font-bold text-[#FE7743] mb-3'>Format</p>
-          <div className='flex gap-4'>
-            {formatButton('excel', <FileExcelOutlined />, 'Excel')}
-            {formatButton('csv', <FileTextOutlined />, 'CSV')}
+          <div className='flex gap-4 justify-center items-center'>
+            {formatButton('excel', './src/assets/images/excel-logo.png', 'Excel')}
+            {formatButton('csv', './src/assets/images/csv-logo.png', 'CSV')}
           </div>
         </div>
 
