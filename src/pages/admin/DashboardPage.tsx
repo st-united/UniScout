@@ -521,7 +521,7 @@ const DashboardPage = () => {
                   >
                     <defs>
                       <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
-                        <stop offset='0%' stopColor='#FF6600' stopOpacity={0.15} />
+                        <stop offset='0%' stopColor='#FF6600' stopOpacity={0.1} />
                         <stop offset='100%' stopColor='#FF6600' stopOpacity={0} />
                       </linearGradient>
                     </defs>
@@ -566,25 +566,26 @@ const DashboardPage = () => {
                       domain={[
                         0,
                         (dataMax: number) => {
-                          if (dataMax === 0) return 10;
+                          if (!dataMax || isNaN(dataMax)) return 10;
                           const exponent = Math.floor(Math.log10(dataMax));
                           const step = Math.pow(10, exponent);
                           return Math.ceil(dataMax / step) * step;
                         },
                       ]}
                       ticks={(() => {
+                        if (!monthlyTrafficData || monthlyTrafficData.length === 0) return [0, 10];
+
                         const maxVal = Math.max(
                           ...monthlyTrafficData.map((d) =>
                             Math.max(d.thisYear ?? 0, d.lastYear ?? 0),
                           ),
                         );
 
-                        if (maxVal === 0) return [0, 10];
+                        if (!maxVal || isNaN(maxVal)) return [0, 10];
 
                         const exponent = Math.floor(Math.log10(maxVal));
-                        const step = Math.pow(10, exponent); // 10, 100, 1000, etc.
+                        const step = Math.pow(10, exponent);
                         const upper = Math.ceil(maxVal / step) * step;
-
                         const tickCount = 5;
                         const interval = Math.ceil(upper / tickCount / step) * step;
 
@@ -764,34 +765,38 @@ const DashboardPage = () => {
                     domain={[
                       0,
                       (dataMax: number) => {
+                        if (!dataMax || isNaN(dataMax)) return 10;
                         const tickCount = 5;
-
                         const rawStep = dataMax / (tickCount - 1);
                         const exponent = Math.floor(Math.log10(rawStep));
                         const base = Math.pow(10, exponent);
                         const niceSteps = [1, 2, 5, 10];
-
-                        const step = niceSteps.find((s) => s * base >= rawStep)! * base;
+                        const step = (niceSteps.find((s) => s * base >= rawStep) ?? 1) * base;
                         return step * (tickCount - 1);
                       },
                     ]}
                     ticks={(() => {
-                      const tickCount = 5;
+                      if (!contactRequestData || contactRequestData.length === 0) return [0, 10];
 
+                      const tickCount = 5;
                       const maxValue = Math.max(
                         ...contactRequestData.map(
                           (d) =>
-                            (d.pending || 0) +
-                            (d.inProgress || 0) +
-                            (d.completed || 0) +
-                            (d.rejected || 0),
+                            (d.pending ?? 0) +
+                            (d.inProgress ?? 0) +
+                            (d.completed ?? 0) +
+                            (d.rejected ?? 0),
                         ),
                       );
+
+                      if (!maxValue || isNaN(maxValue)) return [0, 10];
+
                       const rawStep = maxValue / (tickCount - 1);
                       const exponent = Math.floor(Math.log10(rawStep));
                       const base = Math.pow(10, exponent);
                       const niceSteps = [1, 2, 5, 10];
-                      const step = niceSteps.find((s) => s * base >= rawStep)! * base;
+                      const step = (niceSteps.find((s) => s * base >= rawStep) ?? 1) * base;
+
                       return Array.from({ length: tickCount }, (_, i) => i * step);
                     })()}
                     tickFormatter={(value) => `${value}`}
