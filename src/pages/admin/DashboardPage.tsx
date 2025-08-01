@@ -70,18 +70,13 @@ const DashboardPage = () => {
       const monthlyData = await Promise.all(
         months.map(async (month) => {
           const res = await axios.get(`/dashboard/contact-status?month=${month}&year=${year}`);
-
           const data = res.data || [];
-
-          // Initialiser chaque statut à 0
           const statusCounts = {
             pending: 0,
             inProgress: 0,
             completed: 0,
             rejected: 0,
           };
-
-          // Remplir selon les réponses de l’API
           data.forEach((entry: any) => {
             const key = entry.status.toLowerCase().replace(/\s+/g, '');
             if (Object.prototype.hasOwnProperty.call(statusCounts, key)) {
@@ -537,8 +532,6 @@ const DashboardPage = () => {
                           entry.thisYear != null &&
                           entry.lastYear != null &&
                           entry.thisYear > entry.lastYear;
-
-                        // Si c’est la fin d’un bloc au-dessus, on continue jusqu’à la fin du mois
                         const prev = monthlyTrafficData[index - 1];
                         const wasAbove =
                           prev &&
@@ -570,9 +563,34 @@ const DashboardPage = () => {
                       tickLine={false}
                     />
                     <YAxis
-                      domain={[0, 30000]}
-                      ticks={[0, 10000, 20000, 30000]}
-                      tickFormatter={(value) => `${value / 1000}K`}
+                      domain={[
+                        0,
+                        (dataMax: number) => {
+                          if (dataMax === 0) return 10;
+                          const exponent = Math.floor(Math.log10(dataMax));
+                          const step = Math.pow(10, exponent);
+                          return Math.ceil(dataMax / step) * step;
+                        },
+                      ]}
+                      ticks={(() => {
+                        const maxVal = Math.max(
+                          ...monthlyTrafficData.map((d) =>
+                            Math.max(d.thisYear ?? 0, d.lastYear ?? 0),
+                          ),
+                        );
+
+                        if (maxVal === 0) return [0, 10];
+
+                        const exponent = Math.floor(Math.log10(maxVal));
+                        const step = Math.pow(10, exponent); // 10, 100, 1000, etc.
+                        const upper = Math.ceil(maxVal / step) * step;
+
+                        const tickCount = 5;
+                        const interval = Math.ceil(upper / tickCount / step) * step;
+
+                        return Array.from({ length: tickCount + 1 }, (_, i) => i * interval);
+                      })()}
+                      tickFormatter={(value) => (value >= 1000 ? `${value / 1000}K` : `${value}`)}
                       tick={{ fill: '#F97316', fontSize: 12 }}
                       axisLine={false}
                       tickLine={false}
@@ -594,10 +612,9 @@ const DashboardPage = () => {
                       }}
                     />
 
-                    {/* Zone sous la courbe "This Year" */}
                     {trafficView !== 'lastYear' && (
                       <>
-                        {/* Zone pleine sous la courbe "This Year" */}
+                        {/* Show the area only if this year's data is above last year's */}
                         <Area
                           type='monotone'
                           dataKey='thisYear'
@@ -608,7 +625,7 @@ const DashboardPage = () => {
                           clipPath='url(#trafficClip)'
                         />
 
-                        {/* Ligne "This Year" */}
+                        {/* Show the area base only if this year's data is above last year's */}
                         <Line
                           type='monotone'
                           dataKey='thisYear'
@@ -744,8 +761,42 @@ const DashboardPage = () => {
                   <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
                   <XAxis dataKey='month' axisLine={false} tickLine={false} fontSize={12} />
                   <YAxis
-                    domain={[0, 200]}
-                    ticks={[0, 40, 80, 120, 160, 200]}
+                    domain={[
+                      0,
+                      (dataMax: number) => {
+                        const tickCount = 5;
+
+                        const rawStep = dataMax / (tickCount - 1);
+                        const exponent = Math.floor(Math.log10(rawStep));
+                        const base = Math.pow(10, exponent);
+                        const niceSteps = [1, 2, 5, 10];
+
+                        const step = niceSteps.find((s) => s * base >= rawStep)! * base;
+                        return step * (tickCount - 1);
+                      },
+                    ]}
+                    ticks={(() => {
+                      const tickCount = 5;
+
+                      const maxValue = Math.max(
+                        ...contactRequestData.map(
+                          (d) =>
+                            (d.pending || 0) +
+                            (d.inProgress || 0) +
+                            (d.completed || 0) +
+                            (d.rejected || 0),
+                        ),
+                      );
+
+                      const rawStep = maxValue / (tickCount - 1);
+                      const exponent = Math.floor(Math.log10(rawStep));
+                      const base = Math.pow(10, exponent);
+                      const niceSteps = [1, 2, 5, 10];
+
+                      const step = niceSteps.find((s) => s * base >= rawStep)! * base;
+
+                      return Array.from({ length: tickCount }, (_, i) => i * step);
+                    })()}
                     tickFormatter={(value) => `${value}`}
                     tick={{ fontSize: 12 }}
                     axisLine={false}
