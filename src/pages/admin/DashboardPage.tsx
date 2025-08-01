@@ -787,14 +787,11 @@ const DashboardPage = () => {
                             (d.rejected || 0),
                         ),
                       );
-
                       const rawStep = maxValue / (tickCount - 1);
                       const exponent = Math.floor(Math.log10(rawStep));
                       const base = Math.pow(10, exponent);
                       const niceSteps = [1, 2, 5, 10];
-
                       const step = niceSteps.find((s) => s * base >= rawStep)! * base;
-
                       return Array.from({ length: tickCount }, (_, i) => i * step);
                     })()}
                     tickFormatter={(value) => `${value}`}
