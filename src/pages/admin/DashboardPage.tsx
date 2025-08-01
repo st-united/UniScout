@@ -1,5 +1,7 @@
-import { Dropdown } from 'antd';
+import { DatePicker, Space, Dropdown, Button, ConfigProvider, Select, Popover } from 'antd';
 import axios from 'axios';
+import dayjs from 'dayjs';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { Filter, ChevronRight } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import {
@@ -12,10 +14,12 @@ import {
   PieChart,
   Pie,
   Cell,
+  Sector,
   BarChart,
   Bar,
   ResponsiveContainer,
   Area,
+  ComposedChart,
 } from 'recharts';
 
 import AdminHeader from '../../components/AdminHeader';
@@ -23,11 +27,39 @@ import LayoutWrapper from '../../components/LayoutWrapper';
 import Sidebar from '../../components/Sidebar';
 import type { MenuProps } from 'antd';
 
+dayjs.extend(isSameOrBefore);
+interface ActiveShapeProps {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  innerRadius: number;
+  outerRadius: number;
+  startAngle: number;
+  endAngle: number;
+  fill: string;
+  name: string;
+  count: number;
+}
+
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 const DashboardPage = () => {
-  const [contactRequestData, setContactRequestData] = useState<any[]>([]);
+  const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredData, setHoveredData] = useState<{ name: string; count: number } | null>(null);
 
+  const handleMouseMove = (e: React.MouseEvent, data: { name: string; count: number }) => {
+    const bounds = e.currentTarget.getBoundingClientRect();
+    setPopoverPosition({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
+    setHoveredData(data);
+  };
+
+  const handleMouseLeave = () => {
+    setPopoverPosition(null);
+    setHoveredData(null);
+    setActiveIndex(null);
+  };
+  const [contactRequestData, setContactRequestData] = useState<any[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const fetchContactRequests = async () => {
     try {
       const now = new Date();
@@ -78,23 +110,14 @@ const DashboardPage = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   type TrafficView = 'thisYear' | 'lastYear' | 'both';
   const [trafficView, setTrafficView] = useState<TrafficView>('both');
-  const [monthlyTrafficData, setMonthlyTrafficData] = useState<any[]>([]);
+  const [customStartDate, setCustomStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [customEndDate, setCustomEndDate] = useState<dayjs.Dayjs | null>(null);
+  const [contactStartDate, setContactStartDate] = useState<dayjs.Dayjs | null>(null);
+  const [contactEndDate, setContactEndDate] = useState<dayjs.Dayjs | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const locationFilterItems: MenuProps['items'] = [{ key: 'all', label: 'All Regions' }];
-  const filterMenuItems: MenuProps['items'] = [
-    {
-      key: '1',
-      label: 'Last 7 days',
-    },
-    {
-      key: '2',
-      label: 'Last 30 days',
-    },
-    {
-      key: '3',
-      label: 'This Year',
-    },
-  ];
+  const [monthlyTrafficData, setMonthlyTrafficData] = useState<any[]>([]);
+  const isCustomDateApplied = customStartDate && customEndDate;
 
   const [summary, setSummary] = useState<{ universityCount: number; contactCount: number } | null>(
     null,
@@ -117,11 +140,10 @@ const DashboardPage = () => {
 
     fetchSummary();
   }, []);
-  const fetchMonthlyTrafficData = async (year: number) => {
+  const fetchMonthlyTrafficData = async (yearToLoad: number, mode: TrafficView) => {
     try {
       const now = new Date();
-      const isCurrentYear = year === now.getFullYear();
-      const currentMonth = isCurrentYear ? now.getMonth() + 1 : 12;
+      const currentMonth = yearToLoad === now.getFullYear() ? now.getMonth() + 1 : 12;
 
       const monthLabels = [
         'Jan',
@@ -137,34 +159,137 @@ const DashboardPage = () => {
         'Nov',
         'Dec',
       ];
-      const monthsToFetch = Array.from({ length: currentMonth }, (_, i) =>
+      const months = Array.from({ length: currentMonth }, (_, i) =>
         (i + 1).toString().padStart(2, '0'),
       );
-      const allMonths = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
 
-      const thisYearData = await Promise.all(
-        monthsToFetch.map(async (month) => {
-          const res = await axios.get(`/dashboard/visit-filter?month=${month}&year=${year}`);
-          return Number(res.data) || 0;
-        }),
-      );
+      let thisYearData: number[] = [];
+      let lastYearData: number[] = [];
 
-      const lastYearData = await Promise.all(
-        allMonths.map(async (month) => {
-          const res = await axios.get(`/dashboard/visit-filter?month=${month}&year=${year - 1}`);
-          return Number(res.data) || 0;
-        }),
-      );
+      if (mode === 'thisYear' || mode === 'both') {
+        thisYearData = await Promise.all(
+          months.map(async (month) => {
+            const res = await axios.get(
+              `/dashboard/visit-filter?month=${month}&year=${yearToLoad}`,
+            );
+            return Number(res.data) || 0;
+          }),
+        );
+      }
 
-      const traffic = monthLabels.map((label, i) => ({
-        month: label,
-        thisYear: i < thisYearData.length ? thisYearData[i] : null,
-        lastYear: lastYearData[i],
-      }));
+      if (mode === 'lastYear' || mode === 'both') {
+        lastYearData = await Promise.all(
+          Array.from({ length: 12 }, (_, i) => {
+            const paddedMonth = (i + 1).toString().padStart(2, '0');
+            return axios
+              .get(`/dashboard/visit-filter?month=${paddedMonth}&year=${yearToLoad - 1}`)
+              .then((res) => Number(res.data) || 0);
+          }),
+        );
+      }
+
+      const traffic = monthLabels.map((label, i) => {
+        const thisVal = thisYearData[i] ?? null;
+        const lastVal = lastYearData[i] ?? null;
+
+        return {
+          month: label,
+          thisYear: thisVal,
+          lastYear: lastVal,
+          areaBase: thisVal !== null && lastVal !== null && thisVal > lastVal ? lastVal : 0,
+        };
+      });
 
       setMonthlyTrafficData(traffic);
     } catch (err) {
       console.error('Erreur chargement données trafic :', err);
+    }
+  };
+
+  const fetchMonthlyTrafficDataByDateRange = async (start: string, end: string) => {
+    const startDate = dayjs(start);
+    const endDate = dayjs(end);
+    const monthsInRange = [];
+
+    let current = startDate.startOf('month');
+    while (current.isSameOrBefore(endDate, 'month')) {
+      monthsInRange.push({ year: current.year(), month: current.month() + 1 });
+      current = current.add(1, 'month');
+    }
+
+    try {
+      const data = await Promise.all(
+        monthsInRange.map(async ({ year, month }) => {
+          const [thisYearRes, lastYearRes] = await Promise.all([
+            axios.get(`/dashboard/visit-filter?month=${month}&year=${year}`),
+            axios.get(`/dashboard/visit-filter?month=${month}&year=${year - 1}`),
+          ]);
+
+          const thisVal = Number(thisYearRes.data) || 0;
+          const lastVal = Number(lastYearRes.data) || 0;
+
+          return {
+            month: dayjs(`${year}-${month}-01`).format('MMM'),
+            thisYear: thisVal,
+            lastYear: lastVal,
+            areaBase: thisVal > lastVal ? lastVal : null,
+          };
+        }),
+      );
+
+      setMonthlyTrafficData(data);
+    } catch (error) {
+      console.error('Erreur chargement trafic personnalisé :', error);
+    }
+  };
+
+  const fetchFilteredContactRequests = async () => {
+    if (!contactStartDate || !contactEndDate) return;
+
+    const monthsInRange = [];
+    let current = contactStartDate.startOf('month');
+    const end = contactEndDate.endOf('month');
+
+    while (current.isSameOrBefore(end, 'month')) {
+      monthsInRange.push({ month: current.month() + 1, year: current.year() });
+      current = current.add(1, 'month');
+    }
+
+    try {
+      const monthlyData = await Promise.all(
+        monthsInRange.map(async ({ month, year }) => {
+          const params = new URLSearchParams();
+          params.append('month', month.toString());
+          params.append('year', year.toString());
+          if (statusFilter) params.append('status', statusFilter);
+
+          const res = await axios.get(`/dashboard/contact-status?${params.toString()}`);
+          const data = res.data || [];
+
+          const statusCounts = {
+            pending: 0,
+            inProgress: 0,
+            completed: 0,
+            rejected: 0,
+          };
+
+          data.forEach((entry: any) => {
+            const key = entry.status.toLowerCase().replace(/\s+/g, '');
+            if (key in statusCounts) {
+              statusCounts[key as keyof typeof statusCounts] = entry.count || 0;
+            }
+          });
+
+          return {
+            month: dayjs(`${year}-${month}-01`).format('MMM'),
+            ...statusCounts,
+          };
+        }),
+      );
+
+      setContactRequestData(monthlyData);
+    } catch (err) {
+      console.error('Erreur filtrage contact status :', err);
     }
   };
 
@@ -207,14 +332,15 @@ const DashboardPage = () => {
     fetchTopSearch();
   }, []);
   useEffect(() => {
-    fetchMonthlyTrafficData(selectedYear);
-  }, [selectedYear]);
+    fetchMonthlyTrafficData(selectedYear, trafficView);
+  }, [selectedYear, trafficView]);
 
   const totalTraffic = trafficData.reduce((sum, item) => sum + Number(item.count), 0);
 
   const trafficByLocation = trafficData.map((item) => ({
     name: item.country,
     value: Number(((Number(item.count) / totalTraffic) * 100).toFixed(1)),
+    count: item.count,
   }));
 
   if (loading) {
@@ -266,7 +392,7 @@ const DashboardPage = () => {
           <div className='grid grid-cols-1 gap-6 flex-1'>
             {/* Website Traffic - full width */}
             <div className='col-span-1 xl:col-span-3 bg-white p-0 rounded-xl shadow-sm border overflow-hidden mb-8 flex-1'>
-              <div className=' relative py-10 bg-[#f9fafb] rounded-3xl'>
+              <div className=' relative py-10 bg-[#F9F9FA] rounded-3xl'>
                 {/* Title + Legend inside the chart */}
                 <div className='flex flex-col md:flex-row items-start md:items-center justify-between gap-4 px-4'>
                   <div className='flex items-center space-x-4 text-sm font-medium text-gray-700 gap-8 px-4'>
@@ -277,131 +403,234 @@ const DashboardPage = () => {
                     <div className='flex items-center space-x-4'>
                       {(trafficView === 'thisYear' || trafficView === 'both') && (
                         <div className='flex items-center space-x-1'>
-                          <span className='w-2 h-2 rounded-full bg-blue-500'></span>
+                          <span className='w-2 h-2 rounded-full bg-[#2F3F99]'></span>
                           <span className='text-sm'>This year</span>
                         </div>
                       )}
                       {(trafficView === 'lastYear' || trafficView === 'both') && (
                         <div className='flex items-center space-x-1'>
-                          <span className='w-2 h-2 rounded-full bg-[#cbd5e1]'></span>
+                          <span className='w-2 h-2 rounded-full bg-[#AEC7ED]'></span>
                           <span className='text-sm'>Last year</span>
                         </div>
                       )}
                     </div>
                   </div>
-
-                  <Dropdown
-                    menu={{
-                      items: [
-                        {
-                          key: 'thisYear',
-                          label: 'This year',
-                          onClick: () => setTrafficView('thisYear'),
-                        },
-                        {
-                          key: 'lastYear',
-                          label: 'Last year',
-                          onClick: () => setTrafficView('lastYear'),
-                        },
-                        { key: 'both', label: 'Both', onClick: () => setTrafficView('both') },
-                      ],
+                  <ConfigProvider
+                    theme={{
+                      token: {
+                        colorPrimary: '#FE7743',
+                      },
                     }}
-                    trigger={['click']}
                   >
-                    <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
-                      <Filter className='w-4 h-4' />
-                      <span>
-                        {trafficView === 'thisYear'
-                          ? 'This year'
-                          : trafficView === 'lastYear'
-                          ? 'Last year'
-                          : 'Both'}
-                      </span>
-                    </div>
-                  </Dropdown>
+                    <Dropdown
+                      dropdownRender={() => (
+                        <div className='p-4 w-72 space-y-4 bg-white shadow-lg rounded-lg'>
+                          {/* Quick options */}
+                          <div className='w-full space-y-2'>
+                            <div className='text-sm font-semibold text-gray-600'>
+                              Quick Traffic View
+                            </div>
+                            <Select
+                              value={trafficView}
+                              onChange={(value) => {
+                                setTrafficView(value as TrafficView);
+
+                                if (value === 'thisYear') {
+                                  fetchMonthlyTrafficData(currentYear, 'thisYear');
+                                } else if (value === 'lastYear') {
+                                  fetchMonthlyTrafficData(currentYear, 'lastYear');
+                                } else {
+                                  fetchMonthlyTrafficData(currentYear, 'both');
+                                }
+                              }}
+                              className='w-full'
+                              options={[
+                                { label: 'This year', value: 'thisYear' },
+                                { label: 'Last year', value: 'lastYear' },
+                                { label: 'All', value: 'both' },
+                              ]}
+                            />
+                          </div>
+
+                          <hr className=' border-solid border-[#FE7743] ' />
+
+                          {/* Custom Date Filter */}
+                          <div className='space-y-2'>
+                            <div className='flex justify-between items-center'>
+                              <div className='text-sm font-semibold text-gray-600'>
+                                Custom Date Range
+                              </div>
+                              {isCustomDateApplied && (
+                                <Button
+                                  type='text'
+                                  onClick={() => {
+                                    setCustomStartDate(null);
+                                    setCustomEndDate(null);
+                                    fetchMonthlyTrafficData(currentYear, trafficView);
+                                  }}
+                                  className='text-xs text-orange-500 hover:underline'
+                                >
+                                  Reset
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className='grid grid-cols-1 gap-2'>
+                              <DatePicker
+                                placeholder='Start date'
+                                value={customStartDate}
+                                onChange={(date) => setCustomStartDate(date)}
+                                className='w-full'
+                              />
+                              <DatePicker
+                                placeholder='End date'
+                                value={customEndDate}
+                                onChange={(date) => setCustomEndDate(date)}
+                                className='w-full'
+                              />
+                              <Button
+                                type='primary'
+                                block
+                                className='mt-2'
+                                onClick={() => {
+                                  if (customStartDate && customEndDate) {
+                                    const start = customStartDate.format('YYYY-MM-DD');
+                                    const end = customEndDate.format('YYYY-MM-DD');
+                                    fetchMonthlyTrafficDataByDateRange(start, end);
+                                    setTrafficView('both');
+                                  }
+                                }}
+                              >
+                                Apply
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      overlayStyle={{ minWidth: '300px', zIndex: 1000 }}
+                      placement='bottomRight'
+                      trigger={['click']}
+                    >
+                      <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
+                        <Filter className='w-4 h-4' />
+                        <span>Filter</span>
+                      </div>
+                    </Dropdown>
+                  </ConfigProvider>
                 </div>
 
                 <ResponsiveContainer width='100%' height={300}>
-                  <ResponsiveContainer width='100%' height={300}>
-                    <LineChart
-                      data={monthlyTrafficData}
-                      margin={{ top: 60, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
-                          <stop offset='0%' stopColor='#ff7a00' stopOpacity={1} />
-                          <stop offset='100%' stopColor='#ff7a00' stopOpacity={0.2} />
-                        </linearGradient>
-                      </defs>
+                  <ComposedChart
+                    data={monthlyTrafficData}
+                    margin={{ top: 60, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id='colorTraffic' x1='0' y1='0' x2='0' y2='1'>
+                        <stop offset='0%' stopColor='#FF6600' stopOpacity={0.15} />
+                        <stop offset='100%' stopColor='#FF6600' stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
 
-                      <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-                      <XAxis
-                        dataKey='month'
-                        tick={{ fill: '#F97316', fontSize: 12 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
-                        tick={{ fill: '#F97316', fontSize: 12 }}
-                        axisLine={false}
-                        tickLine={false}
-                        interval={0}
-                        tickFormatter={(v) => (Number.isInteger(v) ? v : '')}
-                      />
+                    <clipPath id='trafficClip'>
+                      {monthlyTrafficData.map((entry, index) => {
+                        const isAbove =
+                          entry.thisYear != null &&
+                          entry.lastYear != null &&
+                          entry.thisYear > entry.lastYear;
 
-                      <Tooltip
-                        content={({ active, payload, label }) => {
-                          if (!active || !payload || !payload.length) return null;
-                          const thisYear =
-                            payload.find((p) => p.dataKey === 'thisYear')?.value ?? 0;
-                          const lastYear =
-                            payload.find((p) => p.dataKey === 'lastYear')?.value ?? 0;
+                        // Si c’est la fin d’un bloc au-dessus, on continue jusqu’à la fin du mois
+                        const prev = monthlyTrafficData[index - 1];
+                        const wasAbove =
+                          prev &&
+                          prev.thisYear != null &&
+                          prev.lastYear != null &&
+                          prev.thisYear > prev.lastYear;
 
+                        if (isAbove || wasAbove) {
+                          const barWidth = 100 / monthlyTrafficData.length;
                           return (
-                            <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
-                              <p className='font-semibold mb-1'>{label}</p>
-                              <p className='text-orange-500'>
-                                This year: {thisYear.toLocaleString()}
-                              </p>
-                              <p className='text-gray-400'>
-                                Last year: {lastYear.toLocaleString()}
-                              </p>
-                            </div>
+                            <rect
+                              key={index}
+                              x={`${index * barWidth}%`}
+                              y='0'
+                              width={`${barWidth}%`}
+                              height='100%'
+                            />
                           );
-                        }}
-                      />
+                        }
+                        return null;
+                      })}
+                    </clipPath>
 
-                      {trafficView !== 'lastYear' && (
-                        <>
-                          <Area
-                            type='monotone'
-                            dataKey='thisYear'
-                            stroke='none'
-                            fill='url(#colorTraffic)'
-                          />
-                          <Line
-                            type='monotone'
-                            dataKey='thisYear'
-                            stroke='#3b82f6'
-                            strokeWidth={2}
-                            dot={false}
-                          />
-                        </>
-                      )}
+                    <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
+                    <XAxis
+                      dataKey='month'
+                      tick={{ fill: '#F97316', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, 30000]}
+                      ticks={[0, 10000, 20000, 30000]}
+                      tickFormatter={(value) => `${value / 1000}K`}
+                      tick={{ fill: '#F97316', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
 
-                      {trafficView !== 'thisYear' && (
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || !payload.length) return null;
+                        const thisYear = payload.find((p) => p.dataKey === 'thisYear')?.value ?? 0;
+                        const lastYear = payload.find((p) => p.dataKey === 'lastYear')?.value ?? 0;
+
+                        return (
+                          <div className='bg-white border border-gray-200 shadow-md rounded px-4 py-2 text-sm'>
+                            <p className='font-semibold mb-1'>{label}</p>
+                            <p className='text-[#2F3F99]'>This year: {thisYear.toLocaleString()}</p>
+                            <p className='text-[#AEC7ED]'>Last year: {lastYear.toLocaleString()}</p>
+                          </div>
+                        );
+                      }}
+                    />
+
+                    {/* Zone sous la courbe "This Year" */}
+                    {trafficView !== 'lastYear' && (
+                      <>
+                        {/* Zone pleine sous la courbe "This Year" */}
+                        <Area
+                          type='monotone'
+                          dataKey='thisYear'
+                          stroke='none'
+                          fill='url(#colorTraffic)'
+                          fillOpacity={1}
+                          isAnimationActive={true}
+                          clipPath='url(#trafficClip)'
+                        />
+
+                        {/* Ligne "This Year" */}
                         <Line
                           type='monotone'
-                          dataKey='lastYear'
-                          stroke='#cbd5e1'
+                          dataKey='thisYear'
+                          stroke='#2F3F99'
                           strokeWidth={2}
-                          strokeDasharray='6 3'
                           dot={false}
+                          isAnimationActive={true}
                         />
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
+                      </>
+                    )}
+
+                    {trafficView !== 'thisYear' && (
+                      <Line
+                        type='monotone'
+                        dataKey='lastYear'
+                        stroke='#AEC7ED'
+                        strokeWidth={1.5}
+                        strokeDasharray='6 3'
+                        dot={false}
+                      />
+                    )}
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -410,27 +639,117 @@ const DashboardPage = () => {
 
           <div className='flex flex-col md:flex-row gap-6 w-auto justify-between mb-8 flex-1'>
             {/* Track number of contact requests */}
-            <div className='bg-[#f9fafb] p-6 rounded-3xl shadow-sm border w-auto md:w-1/2 gap-6'>
+            <div className='bg-[#F9F9FA] p-6 rounded-3xl shadow-sm border w-auto md:w-1/2 gap-6 '>
               <div className='flex justify-between items-center mb-4'>
                 <h3 className='text-base font-semibold text-gray-800'>
                   Track number of contact requests
                 </h3>
-                <Dropdown menu={{ items: filterMenuItems }} trigger={['click']}>
-                  <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
-                    <Filter className='w-4 h-4' />
-                    <span>Filter</span>
-                  </div>
-                </Dropdown>
+                <ConfigProvider
+                  theme={{
+                    token: {
+                      colorPrimary: '#FE7743',
+                    },
+                  }}
+                >
+                  <Dropdown
+                    dropdownRender={() => (
+                      <div className='p-4 w-72 space-y-4 bg-white shadow-lg rounded-lg'>
+                        {/* Status Filter */}
+                        <div className='space-y-1'>
+                          <div className='flex justify-between items-center text-sm font-semibold text-gray-600'>
+                            <span>Filter by status</span>
+                            {statusFilter && (
+                              <Button
+                                type='text'
+                                onClick={() => {
+                                  setStatusFilter(null);
+                                  fetchContactRequests();
+                                }}
+                                className='text-xs text-orange-500 hover:underline'
+                              >
+                                Reset
+                              </Button>
+                            )}
+                          </div>
+
+                          <Select
+                            value={statusFilter}
+                            className='w-full'
+                            onChange={(val) => {
+                              setStatusFilter(val);
+                              if (contactStartDate && contactEndDate) {
+                                fetchFilteredContactRequests();
+                              }
+                            }}
+                            allowClear
+                            placeholder='Select status'
+                            options={[
+                              { label: 'Pending', value: 'Pending' },
+                              { label: 'In Progress', value: 'In Progress' },
+                              { label: 'Completed', value: 'Completed' },
+                              { label: 'Rejected', value: 'Rejected' },
+                            ]}
+                          />
+                        </div>
+
+                        {/* Date Filter */}
+                        <div className='space-y-1'>
+                          <div className='flex justify-between items-center text-sm font-semibold text-gray-600'>
+                            <span>Filter by date</span>
+                            {(contactStartDate || contactEndDate) && (
+                              <Button
+                                type='text'
+                                onClick={() => {
+                                  setContactStartDate(null);
+                                  setContactEndDate(null);
+                                  fetchContactRequests();
+                                }}
+                                className='text-xs text-orange-500 hover:underline'
+                              >
+                                Reset
+                              </Button>
+                            )}
+                          </div>
+
+                          <DatePicker
+                            placeholder='Start date'
+                            value={contactStartDate}
+                            onChange={(d) => setContactStartDate(d)}
+                            className='w-full'
+                          />
+                          <DatePicker
+                            placeholder='End date'
+                            value={contactEndDate}
+                            onChange={(d) => setContactEndDate(d)}
+                            className='w-full'
+                          />
+                          <Button type='primary' block onClick={fetchFilteredContactRequests}>
+                            Apply
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    trigger={['click']}
+                  >
+                    <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer px-4'>
+                      <Filter className='w-4 h-4' />
+                      <span>Filter</span>
+                    </div>
+                  </Dropdown>
+                </ConfigProvider>
               </div>
+
               <ResponsiveContainer width='100%' height={200}>
                 <BarChart data={contactRequestData} barCategoryGap={10} barGap={4}>
                   <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
                   <XAxis dataKey='month' axisLine={false} tickLine={false} fontSize={12} />
                   <YAxis
-                    domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2)]}
+                    domain={[0, 200]}
+                    ticks={[0, 40, 80, 120, 160, 200]}
+                    tickFormatter={(value) => `${value}`}
+                    tick={{ fontSize: 12 }}
                     axisLine={false}
                     tickLine={false}
-                    fontSize={12}
                   />
 
                   <Tooltip />
@@ -477,21 +796,21 @@ const DashboardPage = () => {
             </div>
 
             {/* Traffic by Location */}
-            <div className='bg-[#f9fafb] p-6 rounded-3xl border w-auto md:w-1/2'>
+            <div className='bg-[#F9F9FA] p-6 rounded-3xl border w-auto md:w-1/2'>
               <div className='flex justify-between items-center mb-4 lg:px-5'>
                 <h3 className='text-base font-semibold text-gray-800'>Traffic by Location</h3>
-                <Dropdown menu={{ items: locationFilterItems }} trigger={['click']}>
-                  <div className='flex items-center space-x-1 text-gray-500 text-sm cursor-pointer'>
-                    <Filter className='w-4 h-4' />
-                    <span>Filter</span>
-                  </div>
-                </Dropdown>
               </div>
               {trafficLoading ? (
                 <p className='text-gray-500'>loading...</p>
               ) : (
                 <div className='flex flex-col lg:flex-row items-center lg:items-start justify-around gap-6 '>
-                  <div className='w-48 h-48'>
+                  <div
+                    className='w-48 h-48 relative'
+                    onMouseLeave={() => {
+                      setActiveIndex(null);
+                      setHoveredData(null);
+                    }}
+                  >
                     <ResponsiveContainer width='100%' height='100%'>
                       <PieChart>
                         <Pie
@@ -502,14 +821,91 @@ const DashboardPage = () => {
                           outerRadius={90}
                           paddingAngle={2}
                           dataKey='value'
+                          activeIndex={activeIndex ?? -1}
+                          activeShape={(props: any) => {
+                            const {
+                              cx,
+                              cy,
+                              midAngle,
+                              innerRadius,
+                              outerRadius,
+                              startAngle,
+                              endAngle,
+                              fill,
+                              name,
+                              count,
+                            } = props;
+
+                            const RADIAN = Math.PI / 180;
+                            const radius = innerRadius + (outerRadius - innerRadius) / 2;
+                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+                            return (
+                              <>
+                                <Sector
+                                  cx={cx}
+                                  cy={cy}
+                                  innerRadius={innerRadius}
+                                  outerRadius={outerRadius + 6}
+                                  startAngle={startAngle}
+                                  endAngle={endAngle}
+                                  fill={fill}
+                                />
+                                <foreignObject
+                                  x={x - 60}
+                                  y={y}
+                                  width={120}
+                                  height={50}
+                                  style={{ overflow: 'visible' }}
+                                  pointerEvents='none'
+                                >
+                                  <Popover
+                                    open={activeIndex !== null}
+                                    content={
+                                      hoveredData && (
+                                        <div className='text-sm'>
+                                          <p className='font-medium'>{hoveredData.name}</p>
+                                          <p>{hoveredData.count} universities</p>
+                                        </div>
+                                      )
+                                    }
+                                    placement='top'
+                                    trigger='click'
+                                    onOpenChange={(open) => {
+                                      if (!open) {
+                                        setActiveIndex(null);
+                                        setHoveredData(null);
+                                      }
+                                    }}
+                                  >
+                                    <div style={{ width: '100%', height: '100%' }} />
+                                  </Popover>
+                                </foreignObject>
+                              </>
+                            );
+                          }}
                         >
                           {trafficByLocation.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                              cursor='pointer'
+                              onMouseEnter={() => {
+                                setActiveIndex(index);
+                                setHoveredData(entry);
+                              }}
+                              onMouseLeave={() => {
+                                setActiveIndex(null);
+                                setHoveredData(null);
+                              }}
+                            />
                           ))}
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
+
                   <div className='w-full lg:w-auto flex flex-col space-y-3'>
                     {trafficByLocation.map((item, index) => (
                       <div key={item.name} className='flex justify-between items-center space-x-24'>
@@ -530,7 +926,7 @@ const DashboardPage = () => {
           </div>
 
           {/* Top Search University  */}
-          <div className='flex flex-col bg-[#f9fafb] rounded-3xl p-6 shadow-sm border w-auto md:w-1/3'>
+          <div className='flex flex-col bg-[#F9F9FA] rounded-3xl p-6 shadow-sm border w-auto md:w-1/3'>
             <h3 className='text-base font-semibold text-gray-800 mb-6'>Top Search University</h3>
 
             <div className='flex flex-col gap-3'>
