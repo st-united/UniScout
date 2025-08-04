@@ -7,7 +7,7 @@ import rehypeRaw from 'rehype-raw';
 import type { Components } from 'react-markdown';
 
 import styles from './chatbot.module.css';
-const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
+const API_BASE_URL = import.meta.env.VITE_BASE_URL_API;
 
 type Message = {
   from: 'user' | 'bot';
