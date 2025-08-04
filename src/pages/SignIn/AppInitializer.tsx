@@ -1,4 +1,4 @@
-import { Spin } from 'antd';
+/* import { Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
@@ -58,3 +58,4 @@ const AppInitializer = () => {
 };
 
 export default AppInitializer;
+ */

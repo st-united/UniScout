@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 import devplusLogo from '../assets/images/devplus.png';
-import { removeStorageData } from '@app/config/storage';
+import { getStorageStringData, removeStorageData } from '@app/config/storage';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
 import { logout } from '@app/redux/features/auth/authSlice';
 import { RootState } from '@app/redux/store';
@@ -20,7 +20,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  // const { user } = useSelector((state: RootState) => state.auth);
+  const user = getStorageStringData('name');
+  const role = getStorageStringData('role');
 
   const menuItems = [
     {
@@ -41,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       icon: FileText,
       path: '/manage',
     },
-    ...(user?.role === 'super'
+    ...(role === 'super'
       ? [
           {
             id: 'manage-account',
@@ -68,17 +70,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const handleLogout = async () => {
     try {
       await axios.get('/auth/logout');
-      removeStorageData(ACCESS_TOKEN);
-      removeStorageData(REFRESH_TOKEN);
+
       dispatch(logout());
       message.success('Logged out successfully!');
       window.location.href = '/login';
     } catch (error) {
       message.error('Logout failed. Please try again.');
-      removeStorageData(ACCESS_TOKEN);
-      removeStorageData(REFRESH_TOKEN);
       dispatch(logout());
     } finally {
+      removeStorageData(ACCESS_TOKEN);
+      removeStorageData(REFRESH_TOKEN);
+      removeStorageData('name');
+      removeStorageData('role');
       setIsOpen(false);
     }
   };
@@ -169,20 +172,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         {/* Footer */}
         <div className='px-6 py-2 mb-8 border-t border-gray-200 justify-start gap-3 flex items-center cursor-pointer hover:bg-gray rounded-full'>
           <div className='w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center'>
-            {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt='User Avatar'
-                className='w-full h-full rounded-full object-cover'
-              />
-            ) : (
-              <User className='w-6 h-6 text-[#bbb] bg-[#eee] p-2 rounded-full' />
-            )}
+            <User className='w-6 h-6 text-[#bbb] bg-[#eee] p-2 rounded-full' />
           </div>
           <div className='w-3/4 relative text-xs'>
-            <span className='text-sm font-semibold truncate text-[#333] '>
-              {user?.name || 'User'}
-            </span>
+            <span className='text-sm font-semibold truncate text-[#333] '>{user || 'User'}</span>
           </div>
         </div>
       </div>

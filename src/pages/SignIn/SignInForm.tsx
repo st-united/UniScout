@@ -58,12 +58,12 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
       });
 
       const { accessToken, refreshToken, name, role } = response.data.data;
-
       if (accessToken && refreshToken) {
         setStorageStringData('accessToken', accessToken);
         setStorageStringData('refreshToken', refreshToken);
+        setStorageStringData('name', name);
+        setStorageStringData('role', role);
         const [authRes, profileRes] = await Promise.all([getMeApi(), getUserProfileApi()]);
-
         const mergedUser = {
           ...authRes.data.data,
           ...profileRes.data.data,

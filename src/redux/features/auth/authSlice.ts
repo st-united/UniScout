@@ -12,7 +12,6 @@ interface AuthState {
 
 const checkAuth = (): boolean => {
   const token = getStorageStringData(ACCESS_TOKEN);
-  console.log('checkAuth called. Token found:', Boolean(token));
   return Boolean(token);
 };
 
