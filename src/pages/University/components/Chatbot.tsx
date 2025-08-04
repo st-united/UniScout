@@ -7,10 +7,12 @@ import rehypeRaw from 'rehype-raw';
 import type { Components } from 'react-markdown';
 
 import styles from './chatbot.module.css';
+const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
 
 type Message = {
   from: 'user' | 'bot';
-  text: string;
+  text?: string;
+  suggestions?: string[];
   time: string;
 };
 
@@ -21,6 +23,20 @@ const formatTime = (date: Date) =>
     minute: '2-digit',
     hour12: true,
   });
+
+const formatTextForMarkdown = (text: string): string => {
+  const devPlusSocialRegex = /(linkedin|facebook|tiktok):\s*(https?:\/\/\S+)/gi;
+  const formattedText = text.replace(devPlusSocialRegex, (match, platform, url) => {
+    return `[${platform}](${url})`;
+  });
+
+  const genericUrlRegex = /(\s|^)((https?:\/\/\S+)|(www\.\S+))/g;
+  const finalFormattedText = formattedText.replace(genericUrlRegex, (match, p1, p2) => {
+    return `${p1}[${p2}](${p2})`;
+  });
+
+  return finalFormattedText;
+};
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,12 +56,17 @@ const Chatbot = () => {
         setSessionId(`user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
       }
 
-      const initialGreetingMessage: Message = {
+      const initialCombinedMessage: Message = {
         from: 'bot',
         text: 'Hello, I’m DevBot! 👋 I’m your personal assistant. How can I help you?',
+        suggestions: [
+          'How do I search for universities by location or type?',
+          'How can I contact with DevPlus?',
+          'What are the top-ranked universities in US?',
+        ],
         time: formatTime(new Date()),
       };
-      setMessages([initialGreetingMessage]);
+      setMessages([initialCombinedMessage]);
     }
   }, [isOpen, messages.length, sessionId]);
 
@@ -66,7 +87,7 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      const response = await axios.post('http://localhost:6002/api/chatbot/message', payload);
+      const response = await axios.post('${API_BASE_URL}/chatbot/message', payload);
 
       const botReplyText = response.data.reply;
       const returnedSessionId = response.data.sessionId || response.data.userId;
@@ -75,9 +96,11 @@ const Chatbot = () => {
         setSessionId(returnedSessionId);
       }
 
+      const formattedBotReplyText = formatTextForMarkdown(botReplyText);
+
       const botReply: Message = {
         from: 'bot',
-        text: botReplyText,
+        text: formattedBotReplyText,
         time: formatTime(new Date()),
       };
 
@@ -95,10 +118,14 @@ const Chatbot = () => {
     }
   };
 
+  const handleSuggestionClick = (suggestion: string) => {
+    sendMessage(suggestion);
+  };
+
   const handleResetChat = async () => {
     if (sessionId) {
       try {
-        await axios.post('http://localhost:6002/api/chatbot/reset', { userId: sessionId });
+        await axios.post('${API_BASE_URL}/chatbot/reset', { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
@@ -111,23 +138,21 @@ const Chatbot = () => {
     setSessionId(null);
   };
 
-  // Custom Markdown Renderer for Links
   const renderers: Components = {
     a: ({ href, children, ...props }) => {
-      // Check if the link is for PDF, Excel, or CSV download
       const isDownloadLink =
         href &&
         (href.startsWith('/api/chatbot/download-pdf/') ||
-          href.startsWith('/api/chatbot/download-excel/') || // <--- Added Excel check
-          href.startsWith('/api/chatbot/download-csv/')); // <--- Added CSV check
+          href.startsWith('/api/chatbot/download-excel/') ||
+          href.startsWith('/api/chatbot/download-csv/'));
 
       if (isDownloadLink) {
         return (
           <a
-            href={`http://localhost:6002${href}`} // Prepend the full base URL for all download links
+            href={`${API_BASE_URL}${href}`}
             target='_blank'
             rel='noopener noreferrer'
-            download // This attribute prompts the browser to download the file instead of navigating
+            download
             style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
             {...props}
           >
@@ -135,9 +160,8 @@ const Chatbot = () => {
           </a>
         );
       }
-      // For all other links, render as a regular anchor tag
       return (
-        <a href={href} {...props}>
+        <a href={href} target='_blank' rel='noopener noreferrer' {...props}>
           {children}
         </a>
       );
@@ -167,7 +191,14 @@ const Chatbot = () => {
             </button>
           </div>
 
-          <div className={`flex-1 overflow-y-auto p-3 space-y-4 bg-gray-50 ${styles.chatBody}`}>
+          <div className={`flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50 ${styles.chatBody}`}>
+            {messages.length > 0 && (
+              <div className='flex justify-center'>
+                <span className='text-xs text-gray-500'>
+                  {messages[0].time.split(',').join('')}
+                </span>
+              </div>
+            )}
             {messages.map((msg, idx) => (
               <React.Fragment key={idx}>
                 <div
@@ -182,17 +213,43 @@ const Chatbot = () => {
                       className='w-6 h-6 border border-orange-400 rounded-full p-0.5 bg-white'
                     />
                   )}
-                  <div
-                    className={`px-3 py-2 max-w-[80%] rounded-xl text-sm ${
-                      msg.from === 'user'
-                        ? 'bg-orange-500 text-white rounded-br-none'
-                        : 'bg-[#fef4e8] text-gray-800 rounded-bl-none'
-                    } prose`}
-                  >
-                    <ReactMarkdown rehypePlugins={[rehypeRaw]} components={renderers}>
-                      {msg.text}
-                    </ReactMarkdown>
-                  </div>
+                  {msg.from === 'bot' && (
+                    <div className='flex flex-col gap-2'>
+                      <div
+                        className={`px-3 py-2 max-w-[80%] rounded-xl text-sm bg-[#fef4e8] text-gray-800 rounded-bl-none prose`}
+                      >
+                        <ReactMarkdown rehypePlugins={[rehypeRaw]} components={renderers}>
+                          {msg.text}
+                        </ReactMarkdown>
+                      </div>
+                      {msg.suggestions && (
+                        <div className='flex flex-col gap-2'>
+                          {msg.suggestions.map((suggestion, suggestionIdx) => (
+                            <button
+                              key={suggestionIdx}
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className='px-3 py-2 text-sm text-orange-500 text-left cursor-pointer transition-colors hover:bg-orange-100 rounded-xl'
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {msg.from === 'user' && (
+                    <div
+                      className={`px-3 py-2 max-w-[80%] rounded-xl text-sm ${
+                        msg.from === 'user'
+                          ? 'bg-orange-500 text-white rounded-br-none'
+                          : 'bg-[#fef4e8] text-gray-800 rounded-bl-none'
+                      } prose`}
+                    >
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]} components={renderers}>
+                        {msg.text}
+                      </ReactMarkdown>
+                    </div>
+                  )}
                 </div>
               </React.Fragment>
             ))}
@@ -238,9 +295,13 @@ const Chatbot = () => {
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className='bg-orange-500 text-white rounded-full p-3 shadow-lg hover:bg-orange-600 transition-colors'
+          className='bg-transparent border-none p-0 focus:outline-none transition-colors'
         >
-          <MessageCircle size={24} />
+          <img
+            src='/chatbotpic.jpg'
+            alt='Chatbot Logo'
+            className='w-14 h-14 rounded-full object-contain'
+          />
         </button>
       )}
     </div>
