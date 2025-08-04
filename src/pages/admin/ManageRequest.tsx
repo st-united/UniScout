@@ -928,9 +928,9 @@ const ManageRequest: React.FC = () => {
                         onClose={() => removeFilter(filter.key, filter.value)}
                         closeIcon={<CloseCircleFilled />}
                         style={{
-                          backgroundColor: '#f7dac8',
-                          borderColor: '#FF7012',
-                          color: '#FF6600',
+                          background: '#FEF7E6',
+                          color: '#FF923E',
+                          border: '1px solid #FF923E',
                           fontSize: '14px',
                           padding: '4px 8px',
                           borderRadius: '6px',

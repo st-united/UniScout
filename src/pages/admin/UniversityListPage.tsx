@@ -2,7 +2,7 @@ import {
   PlusOutlined,
   ExportOutlined,
   MoreOutlined,
-  EditOutlined,
+  EyeOutlined,
   DeleteOutlined,
   CloseOutlined,
   ExclamationCircleFilled,
@@ -658,7 +658,7 @@ const UniversityListPage: React.FC = () => {
       title: 'Broad Field',
       dataIndex: 'academicFieldsCommaSeparated',
       key: 'academicFieldsCommaSeparated',
-      width: 200,
+      width: 250,
       render: (academicFieldsCommaSeparated: string) => {
         const fields = parseAcademicFields(academicFieldsCommaSeparated);
         const sortedFields = fields.sort(
@@ -667,27 +667,37 @@ const UniversityListPage: React.FC = () => {
             fieldNamesOptions.findIndex((opt) => opt.value === b),
         );
 
-        const maxDisplayFields = 1; // Set the maximum number of fields to display
-        const displayedFields = sortedFields.slice(0, maxDisplayFields);
-        const remainingFieldsCount = sortedFields.length - displayedFields.length;
-
-        const displayText = displayedFields.map((field) => getFieldNameLabel(field)).join(', ');
+        const fieldLabels = sortedFields.map((field) => getFieldNameLabel(field));
+        const firstFieldLabel = fieldLabels[0];
+        const remainingCount = fieldLabels.length - 1;
 
         return (
-          <div
-            style={{
-              maxWidth: '180px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={
-              fields.map((field) => getFieldNameLabel(field)).join(', ') // Show all on hover
-            }
-          >
-            {displayText}
-            {remainingFieldsCount > 0 && ` ... +${remainingFieldsCount}`}
-          </div>
+          <Space direction='vertical' size={4} style={{ alignItems: 'flex-start' }}>
+            {firstFieldLabel && (
+              <Tag
+                color='white' // Background color
+                style={{
+                  fontSize: '14px',
+                  color: '#000000', // Font color
+                  borderColor: '#FF6600', // Border color
+                }}
+              >
+                {firstFieldLabel}
+              </Tag>
+            )}
+            {remainingCount > 0 && (
+              <Tag
+                color='white' // Background color
+                style={{
+                  fontSize: '14px',
+                  color: '#000000', // Font color
+                  borderColor: '#FF6600', // Border color
+                }}
+              >
+                +{remainingCount}
+              </Tag>
+            )}
+          </Space>
         );
       },
     },
@@ -703,12 +713,17 @@ const UniversityListPage: React.FC = () => {
               setShowBatchActions((prev) => !prev);
             }
           }}
-          style={{ cursor: 'pointer' }}
+          style={{
+            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'space-between', // Distribute space between "Action" and icon
+            alignItems: 'center', // Vertically align the items
+            width: '100%', // Ensure it spans the full width of the container
+          }}
           aria-label='Show batch actions'
         >
-          <div style={{ textAlign: 'right' }}>
-            <MoreOutlined />
-          </div>
+          <span>Action</span> {/* Left-aligned "Action" */}
+          <MoreOutlined /> {/* Right-aligned icon */}
         </div>
       ),
 
@@ -718,7 +733,7 @@ const UniversityListPage: React.FC = () => {
         <Space>
           <Button
             type='text'
-            icon={<EditOutlined style={{ fontSize: '18px' }} />}
+            icon={<EyeOutlined style={{ fontSize: '18px' }} />}
             onClick={() => handleEdit(record.id)}
             style={{ color: '#ff7a00' }}
           />
@@ -1112,13 +1127,12 @@ const UniversityListPage: React.FC = () => {
                         onClose={() => removeFilter(filter.key, filter.itemValue)}
                         closeIcon={<CloseOutlined />}
                         style={{
-                          backgroundColor: '#fff7e6',
-                          borderColor: '#ff7a00',
-                          color: '#ff7a00',
+                          background: '#FEF7E6',
+                          color: '#FF923E',
+                          border: '1px solid #FF923E',
                           fontSize: '14px',
                           padding: '4px 8px',
                           borderRadius: '6px',
-                          marginBottom: '4px',
                         }}
                       >
                         {filter.label}: {filter.value}
