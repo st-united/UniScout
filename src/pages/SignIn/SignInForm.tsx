@@ -13,7 +13,7 @@ import { setStorageStringData } from '@app/config/storage';
 import { yupSync } from '@app/helpers/yupSync';
 import { login, setAuth } from '@app/redux/features/auth/authSlice';
 import store from '@app/redux/store';
-
+import { getMeApi, getUserProfileApi } from '@app/services/authAPI';
 type ISignInForm = {
   email: string;
   password: string;
@@ -62,16 +62,22 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
       if (accessToken && refreshToken) {
         setStorageStringData('accessToken', accessToken);
         setStorageStringData('refreshToken', refreshToken);
+        const [authRes, profileRes] = await Promise.all([getMeApi(), getUserProfileApi()]);
+
+        const mergedUser = {
+          ...authRes.data.data,
+          ...profileRes.data.data,
+        };
 
         dispatch(login());
-        dispatch(setAuth({ name, email: values.email, role, permissions: [] }));
+        dispatch(setAuth({ ...mergedUser, permissions: [] }));
 
         message.success('Login successful!');
         console.log(
           'SignInForm: Login successful. Redux isAuth after dispatch:',
           store.getState().auth.isAuth,
         );
-        console.log('SignInForm: Redirecting to /admin/dashboard');
+        console.log('SignInForm: Redirecting to /dashboard');
         navigate('/dashboard');
       } else {
         throw new Error('Authentication tokens not received from the server.');

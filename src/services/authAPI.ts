@@ -8,3 +8,5 @@ export const loginApi = (credentials: Credentials) => axios.post(API_URL.LOGIN, 
 export const refreshTokenApi = () => axios.get(API_URL.REFRESH_TOKEN);
 
 export const getLogout = () => axios.get(API_URL.LOGOUT);
+export const getMeApi = () => axios.get('/auth/me');
+export const getUserProfileApi = () => axios.get('/users/me');

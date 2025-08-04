@@ -6,6 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import { Provider } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
 
+import AppInitializer from './pages/SignIn/AppInitializer';
 import store from './redux/store';
 import i18n from '@app/config/i18n';
 import router from '@app/router';
@@ -28,7 +29,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
       <I18nextProvider i18n={i18n}>
         <Provider store={store}>
           <Suspense fallback={<Spin />}>
-            <RouterProvider router={router} />
+            <AppInitializer />
           </Suspense>
         </Provider>
       </I18nextProvider>
