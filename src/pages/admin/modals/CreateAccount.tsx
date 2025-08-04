@@ -1,4 +1,4 @@
-import { Input, Select, Button, Modal } from 'antd';
+import { Input, Select, Button, Modal, ConfigProvider } from 'antd';
 import React from 'react';
 
 const { Option } = Select;
@@ -7,9 +7,10 @@ interface CreateAccountProps {
   open: boolean;
   onCancel: () => void;
   onSubmit: (values: any) => void;
+  jobRoles: string[];
 }
 
-const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit }) => {
+const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit, jobRoles }) => {
   const [formValues, setFormValues] = React.useState({
     name: '',
     email: '',
@@ -40,86 +41,136 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit 
   };
 
   return (
-    <Modal open={open} onCancel={onCancel} footer={null} centered destroyOnClose>
-      <div className='mb-6'>
-        <h2 className='text-xl font-semibold mb-2'>Create Account</h2>
-        <div className='h-[2px] w-full bg-[#FF7A00]' />
-      </div>
-      <div className='flex flex-col gap-4 mt-2'>
-        <div>
-          <label htmlFor='name' className='font-semibold text-sm'>
-            Name
-          </label>
-          <Input
-            id='name'
-            name='name'
-            value={formValues.name}
-            onChange={handleChange}
-            placeholder='Enter the full name of the user'
-            className='mt-1'
-          />
+    <ConfigProvider
+      theme={{
+        token: {
+          fontFamily: 'Inter, sans-serif',
+          colorPrimary: '#FF7A45',
+          borderRadius: 6,
+          controlHeight: 40,
+          fontWeightStrong: 400,
+        },
+      }}
+    >
+      <Modal
+        open={open}
+        onCancel={onCancel}
+        footer={null}
+        centered
+        destroyOnClose
+        width={650}
+        bodyStyle={{ borderRadius: 20, padding: 8 }}
+      >
+        <div className='mb-6'>
+          <h2 className='text-xl font-semibold mb-2'>Create Account</h2>
+          <div className='h-[2px] w-full bg-[#FF7A45]' />
         </div>
 
-        <div>
-          <label htmlFor='email' className='font-semibold text-sm'>
-            Email
-          </label>
-          <Input
-            id='email'
-            name='email'
-            type='email'
-            value={formValues.email}
-            onChange={handleChange}
-            placeholder='Enter email address'
-            className='mt-1'
-          />
-        </div>
-
-        <div className='flex gap-4'>
-          <div className='flex-1'>
-            <label htmlFor='role' className='font-semibold text-sm'>
-              Role
+        <div className='flex flex-col gap-4 mt-2'>
+          {/* Name */}
+          <div>
+            <label htmlFor='name' className='font-semibold text-sm'>
+              Name
             </label>
-            <Select
-              id='role'
-              placeholder='Choose role'
-              value={formValues.role}
-              onChange={(value) => handleChange(value, 'role')}
-              className='w-full mt-1'
+            <Input
+              id='name'
+              name='name'
+              value={formValues.name}
+              onChange={handleChange}
+              placeholder='Enter the full name of the user'
+              className='mt-1 rounded-md h-11'
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label htmlFor='email' className='font-semibold text-sm'>
+              Email
+            </label>
+            <Input
+              id='email'
+              name='email'
+              type='email'
+              value={formValues.email}
+              onChange={handleChange}
+              placeholder='Enter email address'
+              className='mt-1 rounded-md h-11'
+            />
+          </div>
+
+          {/* Department & Status */}
+          <div className='flex gap-4'>
+            <div className='flex-1'>
+              <label htmlFor='role' className='font-semibold text-sm'>
+                Department
+              </label>
+              <Select
+                id='role'
+                placeholder='Choose Department'
+                value={formValues.role || undefined}
+                onChange={(value) => handleChange(value, 'role')}
+                className='w-full mt-1 rounded-md h-11'
+              >
+                {jobRoles.map((role: string) => (
+                  <Option key={role} value={role}>
+                    {role}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className='flex-1'>
+              <label htmlFor='status' className='font-semibold text-sm'>
+                Status
+              </label>
+              <Select
+                id='status'
+                disabled
+                value={formValues.status}
+                className='w-full mt-1 rounded-md !text-sm h-11'
+              >
+                <Option value='Pending'>Pending</Option>
+              </Select>
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className='flex flex-col'>
+            <label htmlFor='password' className='font-semibold text-sm w-full'>
+              Password
+            </label>
+            <Input.Password
+              id='password'
+              disabled
+              value={formValues.password}
+              iconRender={() => null}
+              className='mt-1 rounded-md h-10 w-full lg:max-w-[calc(50%-8px)] text-sm'
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className='flex justify-end gap-4 mt-2'>
+            <Button onClick={onCancel} style={{ height: 40, width: 75 }}>
+              Cancel
+            </Button>
+
+            <Button
+              onClick={handleSubmit}
+              type='primary'
+              style={{
+                backgroundColor: '#FF7A45',
+                borderColor: '#FF7A45',
+                padding: '8px 24px',
+                height: 40,
+                width: 75,
+              }}
             >
-              <Option value='admin'>Admin</Option>
-              <Option value='marketing'>Marketing</Option>
-            </Select>
-          </div>
-
-          <div className='flex-1'>
-            <label htmlFor='status' className='font-semibold text-sm'>
-              Status
-            </label>
-            <Select id='status' disabled value={formValues.status} className='w-full mt-1'>
-              <Option value='Pending'>Pending</Option>
-            </Select>
+              Save
+            </Button>
           </div>
         </div>
-
-        <div>
-          <label htmlFor='password' className='font-semibold text-sm'>
-            Password
-          </label>
-          <Input.Password id='password' disabled value={formValues.password} className='mt-1' />
-        </div>
-
-        <div className='flex justify-end gap-4 mt-6'>
-          <Button onClick={onCancel}>Cancel</Button>
-          <button
-            onClick={handleSubmit}
-            className='bg-[#FF7A00] text-white px-5 py-2 rounded-[5px] font-medium shadow hover:bg-[#e46b00] transition border-none'
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </Modal>
+      </Modal>
+    </ConfigProvider>
   );
 };
 

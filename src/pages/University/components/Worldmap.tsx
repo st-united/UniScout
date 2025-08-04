@@ -119,7 +119,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
     USA: { left: 8, top: 30 },
     India: { left: 70, top: 50 },
     Korea: { left: 86, top: 37 },
-    Japan: { left: 90, top: 35 },
+    Japan: { left: 90, top: 33 },
     Vietnam: { left: 81, top: 53 },
     Australia: { left: 89, top: 80 },
   };

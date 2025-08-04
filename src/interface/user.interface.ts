@@ -24,6 +24,7 @@ export interface UserProfile {
   identityId: string;
   avatar: string;
   permissions: string[];
+  role: string;
 }
 
 export interface UserDetail {

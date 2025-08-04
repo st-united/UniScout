@@ -9,8 +9,8 @@
     "test": "vitest watch",
     "test:no-watch": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,scss,md,json,html}\" ",
-    "lint": "eslint ./src --ext .jsx,.js,.ts,.tsx,.scss,.html --quiet --fix --ignore-path ./.gitignore",
+    "format": "prettier --write \"./**/*.{js,jsx,ts,tsx,css,scss,md,json}\" ",
+    "lint": "eslint ./src --ext .jsx,.js,.ts,.tsx,.scss --quiet --fix --ignore-path ./.gitignore",
     "lint:staged": "lint-staged",
     "type-check": "tsc",
     "prepare": "husky install"
@@ -22,13 +22,14 @@
     "antd": "^5.26.2",
     "antd-img-crop": "^4.5.2",
     "antd-style": "^3.7.1",
-    "axios": "^1.9.0",
+    "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "country-list": "^2.3.0",
     "countrylist": "^1.0.0",
     "i18next": "^22.0.2",
     "i18next-http-backend": "^1.4.4",
+    "json2csv": "^6.0.0-alpha.2",
     "lucide-react": "^0.518.0",
     "moment": "^2.29.4",
     "react": "^18.2.0",
@@ -84,7 +85,7 @@
     "vitest": "^0.24.3"
   },
   "lint-staged": {
-    "*.{jsx,js,ts,tsx,scss,html}": [
+    "*.{jsx,js,ts,tsx,scss}": [
       "npm run lint",
       "npm run format",
       "git add ."

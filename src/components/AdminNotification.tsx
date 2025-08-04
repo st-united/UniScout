@@ -1,7 +1,7 @@
 import { BellOutlined } from '@ant-design/icons';
 import { Badge, Button, Dropdown, List, Typography } from 'antd';
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const { Text } = Typography;
 
@@ -11,8 +11,11 @@ interface NotificationItem {
   type: 'join_request';
   title: string;
   description: string;
+  sender: string;
   timestamp: string;
   isRead: boolean;
+  requestId: string; // <-- NEW FIELD
+  redirectTo: string;
 }
 
 // Interface for component props
@@ -22,31 +25,40 @@ interface AdminNotificationProps {
   className?: string;
 }
 
-// Mock notification data - replace with real data source
+// Mock notification data
 const mockNotifications: NotificationItem[] = [
   {
     id: 1,
     type: 'join_request',
-    title: 'New Join Request',
-    description: 'MIT University wants to join the platform',
+    title: 'New Update Information',
+    description: 'MIT University wants to add subjects.',
+    sender: 'admin@mit.edu',
     timestamp: '2 minutes ago',
     isRead: false,
+    requestId: '1',
+    redirectTo: '/manage',
   },
   {
     id: 2,
     type: 'join_request',
-    title: 'New Join Request',
-    description: 'Harvard University wants to join the platform',
+    title: 'New University',
+    description: 'Ngoc Nhi added Harvard University.',
+    sender: 'admin@harvard.edu',
     timestamp: '1 hour ago',
     isRead: false,
+    requestId: '2',
+    redirectTo: '/manage',
   },
   {
     id: 3,
     type: 'join_request',
-    title: 'New Join Request',
-    description: 'Oxford University wants to join the platform',
+    title: 'New University',
+    description: 'Ngoc Nhi added Oxford University.',
+    sender: 'admin@oxford.edu',
     timestamp: '3 hours ago',
     isRead: true,
+    requestId: '3',
+    redirectTo: '/manage',
   },
 ];
 
@@ -57,6 +69,8 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
 }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
   const location = useLocation();
+  const navigate = useNavigate();
+
   const isDashboard =
     location.pathname.startsWith('/manage') || location.pathname.startsWith('/dashboard');
 
@@ -66,6 +80,15 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
     setNotifications((prev) =>
       prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
     );
+
+    // Navigate and pass state to open popup
+    navigate(notification.redirectTo, {
+      state: {
+        openPopup: true,
+        requestId: notification.requestId,
+        popupType: 'detail', // or 'edit' if needed
+      },
+    });
 
     onNotificationClick?.(notification);
   };
@@ -107,7 +130,7 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
                 !item.isRead ? 'bg-blue-50' : 'bg-white'
               }`}
               onClick={() => handleNotificationItemClick(item)}
-              style={{ paddingLeft: '10px' }} // Adjust padding inside the list item
+              style={{ paddingLeft: '10px' }}
             >
               <div className='w-full'>
                 <div className='flex justify-between items-start'>
@@ -120,6 +143,7 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
                     </div>
                     <Text className='text-gray-600 text-sm mt-1 block'>{item.description}</Text>
                     <Text className='text-gray-400 text-xs mt-1 block'>{item.timestamp}</Text>
+                    <Text className='text-gray-500 text-xs mt-1 block'>{`From: ${item.sender}`}</Text>
                   </div>
                 </div>
               </div>
@@ -152,7 +176,7 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
         <Dropdown
           overlay={notificationDropdown}
           trigger={['click']}
-          placement='bottomLeft' // Align dropdown to the left
+          placement='bottomLeft'
           overlayStyle={{ zIndex: 9999 }}
           getPopupContainer={(trigger) => trigger.parentElement || document.body}
         >

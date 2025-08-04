@@ -217,7 +217,6 @@ const EditUniversity = () => {
     },
   };
 
-  // Submit form
   const onFinish = async (values: UniversityData & Record<string, any>) => {
     setLoading(true);
 

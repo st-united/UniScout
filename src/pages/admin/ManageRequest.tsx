@@ -18,15 +18,17 @@ import {
   Modal,
 } from 'antd';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 // Removed: useNavigate as it's no longer used
 // import { useNavigate } from 'react-router-dom';
 
 import EditRequestModalContent from './EditRequest';
+import ExportRequestModal from './modals/ExportRequestModal';
 import RequestDetailModalContent from './RequestDetail';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
+import type { AxiosError } from 'axios';
 
 const { Option } = Select;
 const { Title } = Typography;
@@ -47,6 +49,18 @@ interface UserRequest {
   submittedDate: string;
   submittedAt: string;
   description?: string;
+  // Additional fields from API response
+  representativeName?: string;
+  representativeEmail?: string;
+  representativeNumber?: string;
+  message?: string;
+  type?: string;
+  universityEmail?: string;
+  universityNumber?: string;
+  website?: string;
+  subjectsExcelFilePath?: string;
+  numberOfStudents?: number;
+  rejectionReason?: string;
 }
 
 // API Response interface
@@ -55,6 +69,7 @@ interface ApiResponse {
   total: number;
   page: number;
   pageSize: number;
+  totalPages: number;
 }
 
 // Custom hook for debouncing input values - NO LONGER USED FOR SEARCH
@@ -82,6 +97,7 @@ const ManageRequest: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const topRef = useRef<HTMLDivElement>(null);
   // Removed: const navigate = useNavigate(); as it's no longer used
 
   // State for API data
@@ -110,6 +126,7 @@ const ManageRequest: React.FC = () => {
   // Modal states
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(null);
 
   // API Functions
@@ -246,7 +263,6 @@ const ManageRequest: React.FC = () => {
         const apiData: ApiResponse = response.data;
 
         if (apiData.data.length === 0) {
-          console.log('API returned empty data, using fallback mock data');
           const mockData: UserRequest[] = [
             {
               id: '1',
@@ -370,6 +386,54 @@ const ManageRequest: React.FC = () => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // Scroll to top when page changes - more robust approach
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Multiple methods for maximum compatibility
+      try {
+        // Method 1: scrollIntoView with top reference
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Method 2: window.scrollTo to very top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Method 3: document.documentElement.scrollTop
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+
+        // Method 4: document.body.scrollTop
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+
+        // Method 5: Force scroll to very top
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
+        }, 100);
+      } catch (error) {
+        // Fallback to instant scroll to very top
+        window.scrollTo(0, 0);
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
+
   const handleSearch = () => {
     setFilters((prevFilters) => ({ ...prevFilters, search: [currentSearchInput] }));
     setCurrentPage(1);
@@ -404,14 +468,8 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      message.success('Requests exported successfully');
-    } catch (error) {
-      message.error('Export failed');
-      console.error('Export error:', error);
-    }
+  const handleExport = () => {
+    setIsExportModalOpen(true);
   };
 
   // Handle opening different modals based on request type
@@ -744,7 +802,7 @@ const ManageRequest: React.FC = () => {
     <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
       <AdminHeader />
       <LayoutWrapper>
-        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+        <div ref={topRef} style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
             <Row
               justify='space-between'
@@ -870,9 +928,9 @@ const ManageRequest: React.FC = () => {
                         onClose={() => removeFilter(filter.key, filter.value)}
                         closeIcon={<CloseCircleFilled />}
                         style={{
-                          backgroundColor: '#f7dac8',
-                          borderColor: '#FF7012',
-                          color: '#FF6600',
+                          background: '#FEF7E6',
+                          color: '#FF923E',
+                          border: '1px solid #FF923E',
                           fontSize: '14px',
                           padding: '4px 8px',
                           borderRadius: '6px',
@@ -1067,6 +1125,15 @@ const ManageRequest: React.FC = () => {
             />
           </Modal>
         )}
+
+        {/* Export Request Modal */}
+        <ExportRequestModal
+          open={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          appliedFilters={filters}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+        />
       </LayoutWrapper>
     </div>
   );

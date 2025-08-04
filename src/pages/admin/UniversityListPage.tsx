@@ -2,7 +2,7 @@ import {
   PlusOutlined,
   ExportOutlined,
   MoreOutlined,
-  EditOutlined,
+  EyeOutlined,
   DeleteOutlined,
   CloseOutlined,
   ExclamationCircleFilled,
@@ -26,7 +26,7 @@ import {
   Input,
 } from 'antd';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ExportUniversityModal from './modals/ExportUniversityModal';
@@ -107,6 +107,7 @@ type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'se
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
 
   // State for university data
   const [universityData, setUniversityData] = useState<UniversityApiResponse>();
@@ -132,7 +133,36 @@ const UniversityListPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(12);
 
   const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
-    setFilters({ ...filters, [field]: values });
+    let newValues = values;
+
+    // Handle "Select All" logic for each field
+    if (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields') {
+      const allOptions =
+        field === 'country'
+          ? getUniqueCountries()
+          : field === 'type'
+          ? getUniqueTypes()
+          : field === 'size'
+          ? getUniqueSizes()
+          : getUniqueFields(); // academicFields
+
+      if (values.includes('all')) {
+        // If 'all' is selected and it's the only value, select all options
+        if (values.length === 1) {
+          newValues = allOptions;
+        } else {
+          // If 'all' is selected along with other values, it means "deselect all" was clicked
+          // So, remove 'all' from the selection and keep only specific choices
+          newValues = values.filter((val) => val !== 'all');
+        }
+      } else {
+        // If 'all' is not selected but all other options are, and then one is deselected,
+        // ensure 'all' is no longer conceptually selected (though it wouldn't be in `values`)
+        // This is more for the checkbox rendering, not the actual values.
+      }
+    }
+
+    setFilters({ ...filters, [field]: newValues });
     setCurrentPage(1);
   };
 
@@ -189,6 +219,54 @@ const UniversityListPage: React.FC = () => {
     fetchUniversities();
   }, [debouncedFilters, sortBy, currentPage, pageSize, fetchUniversities]);
 
+  // Scroll to top when page changes - more robust approach
+  useEffect(() => {
+    const scrollToTop = () => {
+      // Multiple methods for maximum compatibility
+      try {
+        // Method 1: scrollIntoView with top reference
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Method 2: window.scrollTo to very top
+        window.scrollTo({ top: -200, behavior: 'smooth' });
+
+        // Method 3: document.documentElement.scrollTop
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+
+        // Method 4: document.body.scrollTop
+        if (document.body) {
+          document.body.scrollTop = -200;
+        }
+
+        // Method 5: Force scroll to very top
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          if (document.documentElement) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body) {
+            document.body.scrollTop = 0;
+          }
+        }, 100);
+      } catch (error) {
+        // Fallback to instant scroll to very top
+        window.scrollTo(0, 0);
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+      }
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
+
   // Hide delete buttons
   const [showBatchActions, setShowBatchActions] = useState(false);
 
@@ -214,11 +292,6 @@ const UniversityListPage: React.FC = () => {
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
-
-  // Fetch universities on component mount
-  useEffect(() => {
-    fetchUniversities();
-  }, [currentPage, pageSize, fetchUniversities]);
 
   // Handle search from search input
   const handleSearchSubmit = () => {
@@ -249,7 +322,6 @@ const UniversityListPage: React.FC = () => {
 
   const handleNotificationClick = (notification: NotificationItem) => {
     // Navigate to join request management page or show details
-    console.log('Notification clicked:', notification);
     message.info(`Viewing join request: ${notification.description}`);
     // Example: navigate('/admin/join-requests/' + notification.id);
   };
@@ -302,8 +374,6 @@ const UniversityListPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
-        console.log('Deleting university ID:', universityToDelete.id);
-
         await axios.delete(`/admin/universities/${universityToDelete.id}`, {
           data: { confirm_deletion: true },
           headers: {
@@ -313,12 +383,7 @@ const UniversityListPage: React.FC = () => {
 
         setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
         message.success('University deleted successfully');
-        console.log(
-          `AUDIT: Deleted university ${universityToDelete.university} (ID: ${universityToDelete.id})`,
-        );
       } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
-        console.log('Deleting multiple universities:', selectedRowKeys);
-
         await axios.delete('/universities/admin/bulk', {
           data: {
             ids: selectedRowKeys,
@@ -336,10 +401,6 @@ const UniversityListPage: React.FC = () => {
         setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
         setSelectedRowKeys([]);
         message.success(`${selectedRowKeys.length} universities deleted successfully`);
-        console.log(
-          `AUDIT: Deleted ${universitiesToDelete.length} universities:`,
-          universitiesToDelete.map((u) => u.university),
-        );
       }
     } catch (error) {
       const errorMessage = axios.isAxiosError(error)
@@ -397,7 +458,6 @@ const UniversityListPage: React.FC = () => {
       value: 'transport_safety_security_military',
       label: 'Transport, Safety, Security & Military',
     },
-    { value: 'other', label: 'Other' },
   ];
 
   // Helper function to get label for academic field value
@@ -537,8 +597,7 @@ const UniversityListPage: React.FC = () => {
     if (size) {
       setPageSize(size);
     }
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: -700, behavior: 'smooth' });
   };
 
   // Table columns configuration
@@ -599,7 +658,7 @@ const UniversityListPage: React.FC = () => {
       title: 'Broad Field',
       dataIndex: 'academicFieldsCommaSeparated',
       key: 'academicFieldsCommaSeparated',
-      width: 200,
+      width: 250,
       render: (academicFieldsCommaSeparated: string) => {
         const fields = parseAcademicFields(academicFieldsCommaSeparated);
         const sortedFields = fields.sort(
@@ -607,20 +666,38 @@ const UniversityListPage: React.FC = () => {
             fieldNamesOptions.findIndex((opt) => opt.value === a) -
             fieldNamesOptions.findIndex((opt) => opt.value === b),
         );
-        const displayText = sortedFields.map((field) => getFieldNameLabel(field)).join(', ');
+
+        const fieldLabels = sortedFields.map((field) => getFieldNameLabel(field));
+        const firstFieldLabel = fieldLabels[0];
+        const remainingCount = fieldLabels.length - 1;
 
         return (
-          <div
-            style={{
-              maxWidth: '180px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={displayText} // Show full text on hover
-          >
-            {displayText}
-          </div>
+          <Space direction='vertical' size={4} style={{ alignItems: 'flex-start' }}>
+            {firstFieldLabel && (
+              <Tag
+                color='white' // Background color
+                style={{
+                  fontSize: '14px',
+                  color: '#000000', // Font color
+                  borderColor: '#FF6600', // Border color
+                }}
+              >
+                {firstFieldLabel}
+              </Tag>
+            )}
+            {remainingCount > 0 && (
+              <Tag
+                color='white' // Background color
+                style={{
+                  fontSize: '14px',
+                  color: '#000000', // Font color
+                  borderColor: '#FF6600', // Border color
+                }}
+              >
+                +{remainingCount}
+              </Tag>
+            )}
+          </Space>
         );
       },
     },
@@ -636,12 +713,17 @@ const UniversityListPage: React.FC = () => {
               setShowBatchActions((prev) => !prev);
             }
           }}
-          style={{ cursor: 'pointer' }}
+          style={{
+            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'space-between', // Distribute space between "Action" and icon
+            alignItems: 'center', // Vertically align the items
+            width: '100%', // Ensure it spans the full width of the container
+          }}
           aria-label='Show batch actions'
         >
-          <div style={{ textAlign: 'right' }}>
-            <MoreOutlined />
-          </div>
+          <span>Action</span> {/* Left-aligned "Action" */}
+          <MoreOutlined /> {/* Right-aligned icon */}
         </div>
       ),
 
@@ -651,7 +733,7 @@ const UniversityListPage: React.FC = () => {
         <Space>
           <Button
             type='text'
-            icon={<EditOutlined style={{ fontSize: '18px' }} />}
+            icon={<EyeOutlined style={{ fontSize: '18px' }} />}
             onClick={() => handleEdit(record.id)}
             style={{ color: '#ff7a00' }}
           />
@@ -673,7 +755,7 @@ const UniversityListPage: React.FC = () => {
       setSelectedRowKeys(newSelectedRowKeys);
     },
     onSelectAll: (selected: boolean, selectedRows: University[], changeRows: University[]) => {
-      console.log(selected, selectedRows, changeRows);
+      // Handle select all functionality
     },
   };
 
@@ -750,6 +832,19 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Country */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.country.length === getUniqueCountries().length &&
+                  getUniqueCountries().length > 0 &&
+                  filters.country.includes('all')) ||
+                filters.country.length === getUniqueCountries().length
+              } // Check if all options are selected
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueCountries().map((country) => (
             <Option key={country} value={country} label={country}>
               <Checkbox checked={filters.country.includes(country)}>{country}</Checkbox>
@@ -775,9 +870,24 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Type */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.type.length === getUniqueTypes().length &&
+                  getUniqueTypes().length > 0 &&
+                  filters.type.includes('all')) ||
+                filters.type.length === getUniqueTypes().length
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueTypes().map((type) => (
-            <Option key={type} value={type}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+            <Option key={type} value={type} label={type.charAt(0).toUpperCase() + type.slice(1)}>
+              <Checkbox checked={filters.type.includes(type)}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Checkbox>
             </Option>
           ))}
         </Select>
@@ -800,9 +910,24 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Size */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.size.length === getUniqueSizes().length &&
+                  getUniqueSizes().length > 0 &&
+                  filters.size.includes('all')) ||
+                filters.size.length === getUniqueSizes().length
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueSizes().map((size) => (
-            <Option key={size} value={size}>
-              {size.charAt(0).toUpperCase() + size.slice(1)}
+            <Option key={size} value={size} label={size.charAt(0).toUpperCase() + size.slice(1)}>
+              <Checkbox checked={filters.size.includes(size)}>
+                {size.charAt(0).toUpperCase() + size.slice(1)}
+              </Checkbox>
             </Option>
           ))}
         </Select>
@@ -825,9 +950,24 @@ const UniversityListPage: React.FC = () => {
             </span>
           )}
         >
+          {/* Select All for Broad Field */}
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                (filters.academicFields.length === getUniqueFields().length &&
+                  getUniqueFields().length > 0 &&
+                  filters.academicFields.includes('all')) ||
+                filters.academicFields.length === getUniqueFields().length
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
           {getUniqueFields().map((field) => (
             <Option key={field} value={field} label={getFieldNameLabel(field)}>
-              {getFieldNameLabel(field)}
+              <Checkbox checked={filters.academicFields.includes(field)}>
+                {getFieldNameLabel(field)}
+              </Checkbox>
             </Option>
           ))}
         </Select>
@@ -903,7 +1043,7 @@ const UniversityListPage: React.FC = () => {
 
       {/* Main Content */}
       <LayoutWrapper>
-        <div style={{ padding: isMobile ? '16px' : '24px' }}>
+        <div ref={topRef} style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
             <div style={{ marginBottom: 16 }}>
               <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
@@ -987,13 +1127,12 @@ const UniversityListPage: React.FC = () => {
                         onClose={() => removeFilter(filter.key, filter.itemValue)}
                         closeIcon={<CloseOutlined />}
                         style={{
-                          backgroundColor: '#fff7e6',
-                          borderColor: '#ff7a00',
-                          color: '#ff7a00',
+                          background: '#FEF7E6',
+                          color: '#FF923E',
+                          border: '1px solid #FF923E',
                           fontSize: '14px',
                           padding: '4px 8px',
                           borderRadius: '6px',
-                          marginBottom: '4px',
                         }}
                       >
                         {filter.label}: {filter.value}
@@ -1042,14 +1181,57 @@ const UniversityListPage: React.FC = () => {
                     gap: '4px',
                   };
 
+                  const handlePageClick = (newPage: number) => {
+                    setCurrentPage(newPage);
+
+                    // Use multiple scroll methods with delay for consistency
+                    setTimeout(() => {
+                      // Method 1: scrollIntoView with top reference
+                      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                      // Method 2: window.scrollTo to very top
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                      // Method 3: document.documentElement.scrollTop
+                      if (document.documentElement) {
+                        document.documentElement.scrollTop = 0;
+                      }
+
+                      // Method 4: document.body.scrollTop
+                      if (document.body) {
+                        document.body.scrollTop = 0;
+                      }
+
+                      // Method 5: Force scroll to very top
+                      setTimeout(() => {
+                        window.scrollTo(0, 0);
+                        if (document.documentElement) {
+                          document.documentElement.scrollTop = 0;
+                        }
+                        if (document.body) {
+                          document.body.scrollTop = 0;
+                        }
+                      }, 50);
+                    }, 100);
+                  };
+
                   if (type === 'prev') {
                     const isDisabled = currentPage === 1;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isDisabled ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: isDisabled ? '#d9d9d9' : '#ff7a00',
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        onClick={() => !isDisabled && handlePageClick(currentPage - 1)}
+                        onKeyDown={(e) => {
+                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(currentPage - 1);
+                          }
                         }}
                       >
                         &lt; Previous
@@ -1061,10 +1243,19 @@ const UniversityListPage: React.FC = () => {
                     const isDisabled = currentPage >= totalPages;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isDisabled ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: isDisabled ? '#d9d9d9' : '#ff7a00',
                           cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        }}
+                        onClick={() => !isDisabled && handlePageClick(currentPage + 1)}
+                        onKeyDown={(e) => {
+                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(currentPage + 1);
+                          }
                         }}
                       >
                         Next &gt;
@@ -1076,10 +1267,19 @@ const UniversityListPage: React.FC = () => {
                     const isCurrent = page === currentPage;
                     return (
                       <span
+                        role='button'
+                        tabIndex={isCurrent ? -1 : 0}
                         style={{
                           ...baseStyle,
                           color: '#ff7a00',
                           fontWeight: isCurrent ? 'bold' : 500,
+                        }}
+                        onClick={() => !isCurrent && handlePageClick(page)}
+                        onKeyDown={(e) => {
+                          if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handlePageClick(page);
+                          }
                         }}
                       >
                         {page}

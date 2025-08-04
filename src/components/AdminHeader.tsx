@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 import AdminNotification from './AdminNotification';
 import devplusLogo from '../assets/images/devplus.png';
@@ -13,11 +14,19 @@ const AdminHeader: React.FC<AdminHeaderProps> = () => {
     <header className='fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm'>
       <div className='flex items-center justify-between px-4 py-1 min-h-12'>
         {/* Left side - Logo */}
-        <div className='flex items-center space-x-2'>
-          <img src={devplusLogo} alt='DevPlus Logo' className='h-8 w-auto md:h-10' />
-        </div>
+        <Link
+          to='/'
+          className='flex items-center space-x-2 cursor-pointer focus:outline-none'
+          aria-label='Go to Dashboard'
+        >
+          <img
+            src={devplusLogo}
+            alt='DevPlus Logo'
+            className='h-12 w-auto md:h-14 transition-transform duration-200'
+          />
+        </Link>
 
-        {/* Right side - Notifications (always visible) */}
+        {/* Right side - Notifications */}
         <div className='flex items-center'>
           <AdminNotification />
         </div>

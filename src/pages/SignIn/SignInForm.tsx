@@ -11,8 +11,9 @@ import * as yup from 'yup';
 import i18n from '@app/config/i18n';
 import { setStorageStringData } from '@app/config/storage';
 import { yupSync } from '@app/helpers/yupSync';
-import { login } from '@app/redux/features/auth/authSlice';
+import { login, setAuth } from '@app/redux/features/auth/authSlice';
 import store from '@app/redux/store';
+
 type ISignInForm = {
   email: string;
   password: string;
@@ -56,13 +57,15 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
         password: values.password,
       });
 
-      const { accessToken, refreshToken, name } = response.data.data;
+      const { accessToken, refreshToken, name, role } = response.data.data;
 
       if (accessToken && refreshToken) {
         setStorageStringData('accessToken', accessToken);
         setStorageStringData('refreshToken', refreshToken);
 
         dispatch(login());
+        dispatch(setAuth({ name, email: values.email, role, permissions: [] }));
+
         message.success('Login successful!');
         console.log(
           'SignInForm: Login successful. Redux isAuth after dispatch:',

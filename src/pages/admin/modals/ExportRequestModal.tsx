@@ -1,10 +1,9 @@
 import { FileExcelOutlined, FileTextOutlined, CloseOutlined } from '@ant-design/icons';
 import { Modal, Button, Checkbox, Tag, message, ConfigProvider } from 'antd';
 import axios from 'axios';
-import { Check } from 'lucide-react';
 import React, { useState } from 'react';
 
-interface ExportUniversityModalProps {
+interface ExportRequestModalProps {
   open: boolean;
   onClose: () => void;
   appliedFilters: Record<string, string[]>;
@@ -13,24 +12,27 @@ interface ExportUniversityModalProps {
 }
 
 const allColumns = [
+  'ID',
+  'Request Type',
+  'Country',
   'University Name',
   'Abbreviation',
-  'Country',
-  'Location',
-  'Latitude',
-  'Longitude',
-  'Rank',
-  'Website',
-  'Email',
-  'Phone',
-  'Subjects',
+  'Status',
+  'Submitted At',
   'Description',
-  'Logo',
+  'Representative Name',
+  'Representative Email',
+  'Representative Number',
+  'Message',
   'Type',
-  'Number of students',
+  'University Email',
+  'University Number',
+  'Website',
+  'Number of Students',
+  'Rejection Reason',
 ];
 
-const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
+const ExportRequestModal: React.FC<ExportRequestModalProps> = ({
   open,
   onClose,
   appliedFilters,
@@ -67,21 +69,24 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
 
     try {
       const columnMap: Record<string, string> = {
-        'University Name': 'university',
-        Abbreviation: 'abbreviation',
+        ID: 'id',
+        'Request Type': 'requestType',
         Country: 'country',
-        Location: 'location',
-        Latitude: 'latitude',
-        Longitude: 'longitude',
-        Rank: 'rank',
-        Website: 'website',
-        Email: 'email',
-        Phone: 'contact',
-        Subjects: 'subjectsList',
+        'University Name': 'universityName',
+        Abbreviation: 'abbreviation',
+        Status: 'status',
+        'Submitted At': 'submittedAt',
         Description: 'description',
-        Logo: 'logo',
+        'Representative Name': 'representativeName',
+        'Representative Email': 'representativeEmail',
+        'Representative Number': 'representativeNumber',
+        Message: 'message',
         Type: 'type',
-        'Number of students': 'studentPopulation',
+        'University Email': 'universityEmail',
+        'University Number': 'universityNumber',
+        Website: 'website',
+        'Number of Students': 'numberOfStudents',
+        'Rejection Reason': 'rejectionReason',
       };
 
       const mappedColumns = selectedColumns.map((col) => columnMap[col]).filter(Boolean);
@@ -91,37 +96,38 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
         format: selectedFormat,
         columns: mappedColumns,
         ...safeFilters,
-        ...(sortOrder?.includes('rank')
-          ? { sortBy: 'rank', sortOrder: sortOrder.includes('desc') ? 'DESC' : 'ASC' }
-          : {}),
+        ...(sortOrder ? { sortBy: 'submittedAt', sortOrder: sortOrder } : {}),
       };
 
-      const response = await axios.get('/admin/universities/export', {
-        params,
-        responseType: 'blob',
-        paramsSerializer: (params) => {
-          const searchParams = new URLSearchParams();
-          Object.entries(params).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-              value.forEach((v) => {
-                if (v && v.trim() !== '') {
-                  searchParams.append(key === 'columns' ? 'columns[]' : key, v);
-                }
-              });
-            } else if (value !== undefined && value !== null) {
-              searchParams.append(key, value);
-            }
-          });
-          return searchParams.toString();
+      const response = await axios.get(
+        'https://api.uniscout.dev.stunited.vn/api/admin/contact/export',
+        {
+          params,
+          responseType: 'blob',
+          paramsSerializer: (params) => {
+            const searchParams = new URLSearchParams();
+            Object.entries(params).forEach(([key, value]) => {
+              if (Array.isArray(value)) {
+                value.forEach((v) => {
+                  if (v && v.trim() !== '') {
+                    searchParams.append(key === 'columns' ? 'columns[]' : key, v);
+                  }
+                });
+              } else if (value !== undefined && value !== null) {
+                searchParams.append(key, value);
+              }
+            });
+            return searchParams.toString();
+          },
         },
-      });
+      );
 
       const contentType = response.headers['content-type'] || 'application/octet-stream';
       const blob = new Blob([response.data], { type: contentType });
 
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.download = `universities.${selectedFormat === 'csv' ? 'csv' : 'xlsx'}`;
+      link.download = `requests.${selectedFormat === 'csv' ? 'csv' : 'xlsx'}`;
       link.click();
 
       message.success('Export successful');
@@ -131,24 +137,22 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
     }
   };
 
-  const formatButton = (type: 'excel' | 'csv', iconSrc: string, label: string) => {
+  const formatButton = (type: 'excel' | 'csv', icon: React.ReactNode, label: string) => {
     const isActive = selectedFormat === type;
-    const baseClasses =
-      'flex-1 h-12 font-medium rounded-lg border text-sm flex items-center justify-center gap-2 px-4';
+
+    const baseClasses = 'flex-1 h-12 font-medium rounded-lg border text-sm ';
     const activeClasses = '!bg-[#fffaeb] !border-[#ff7a00] !text-[#ff7a00]';
     const inactiveClasses = 'bg-white !border-[#d1d5db] !hover:border-[#d1d5db] !text-[#4b5563]';
-    const hoverOverride = '!hover:bg-[#fffaeb] !hover:border-[#ff7a00] !hover:text-[#ff7a00]';
 
+    const hoverOverride = '!hover:bg-[#fffaeb] !hover:border-[#ff7a00] !hover:text-[#ff7a00]';
     return (
       <Button
         type='default'
+        icon={icon}
         onClick={() => setSelectedFormat(type)}
         className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses} ${hoverOverride}`}
       >
-        <div className='flex items-center justify-center gap-2'>
-          <img src={iconSrc} alt={`${label} Logo`} className='w-6 h-6' />
-          <span>{label}</span>
-        </div>
+        {label}
       </Button>
     );
   };
@@ -166,7 +170,7 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
     >
       <div className='p-3'>
         <h2 className='text-2xl font-semibold text-center text-[#FE7743] mb-2'>
-          Export University Data
+          Export Request Data
         </h2>
 
         {hasActiveFilters && (
@@ -199,9 +203,9 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
 
         <div className='mb-4 border border-solid border-[#e5e7eb] rounded-lg p-4'>
           <p className='font-bold text-[#FE7743] mb-3'>Format</p>
-          <div className='flex gap-4 justify-center items-center'>
-            {formatButton('excel', './src/assets/images/excel-logo.png', 'Excel')}
-            {formatButton('csv', './src/assets/images/csv-logo.png', 'CSV')}
+          <div className='flex gap-4'>
+            {formatButton('excel', <FileExcelOutlined />, 'Excel')}
+            {formatButton('csv', <FileTextOutlined />, 'CSV')}
           </div>
         </div>
 
@@ -251,4 +255,4 @@ const ExportUniversityModal: React.FC<ExportUniversityModalProps> = ({
   );
 };
 
-export default ExportUniversityModal;
+export default ExportRequestModal;
