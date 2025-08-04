@@ -1,26 +1,19 @@
 import axios from 'axios';
 import { X, MessageCircle } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
-//import ReactMarkdown from 'react-markdown';
-//import rehypeRaw from 'rehype-raw';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+
+import type { Components } from 'react-markdown';
 
 import styles from './chatbot.module.css';
+const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
 
 type Message = {
   from: 'user' | 'bot';
-  text: string;
+  text?: string;
+  suggestions?: string[];
   time: string;
-  suggestedQuestions?: string[];
-  fileData?: {
-    type: 'excel' | 'pdf';
-    base64: string;
-    filename: string;
-  };
-};
-
-type BackendChatMessageDto = {
-  role: 'user' | 'model';
-  parts: { text: string }[];
 };
 
 const formatTime = (date: Date) =>
@@ -31,12 +24,27 @@ const formatTime = (date: Date) =>
     hour12: true,
   });
 
+const formatTextForMarkdown = (text: string): string => {
+  const devPlusSocialRegex = /(linkedin|facebook|tiktok):\s*(https?:\/\/\S+)/gi;
+  const formattedText = text.replace(devPlusSocialRegex, (match, platform, url) => {
+    return `[${platform}](${url})`;
+  });
+
+  const genericUrlRegex = /(\s|^)((https?:\/\/\S+)|(www\.\S+))/g;
+  const finalFormattedText = formattedText.replace(genericUrlRegex, (match, p1, p2) => {
+    return `${p1}[${p2}](${p2})`;
+  });
+
+  return finalFormattedText;
+};
+
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,90 +52,56 @@ const Chatbot = () => {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      sendMessage('', true);
+      if (!sessionId) {
+        setSessionId(`user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
+      }
+
+      const initialCombinedMessage: Message = {
+        from: 'bot',
+        text: 'Hello, I’m DevBot! 👋 I’m your personal assistant. How can I help you?',
+        suggestions: [
+          'How do I search for universities by location or type?',
+          'How can I contact with DevPlus?',
+          'What are the top-ranked universities in US?',
+        ],
+        time: formatTime(new Date()),
+      };
+      setMessages([initialCombinedMessage]);
     }
-  }, [isOpen]);
+  }, [isOpen, messages.length, sessionId]);
 
-  const handleDownloadClick = (fileData: Message['fileData']) => {
-    if (!fileData) {
-      console.error('No file data provided for download.');
-      return;
-    }
-
-    const { base64, filename, type } = fileData;
-
-    let mimeType: string;
-    if (type === 'pdf') {
-      mimeType = 'application/pdf';
-    } else if (type === 'excel') {
-      mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    } else {
-      console.error('Unsupported file type for download:', type);
-      return;
-    }
-
-    const byteCharacters = atob(base64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-
-    const blob = new Blob([byteArray], { type: mimeType });
-
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-
-    link.download = filename;
-
-    document.body.appendChild(link);
-    link.click();
-
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(link.href);
-
-    console.log('Download initiated for:', filename);
-  };
-
-  const sendMessage = async (messageToSend = input, isInitialGreeting = false) => {
-    if (!messageToSend.trim() && !isInitialGreeting) return;
+  const sendMessage = async (messageToSend = input) => {
+    if (!messageToSend.trim()) return;
 
     const currentTime = formatTime(new Date());
 
-    if (!isInitialGreeting) {
-      const newUserMessage: Message = { from: 'user', text: messageToSend, time: currentTime };
-      setMessages((prev) => [...prev, newUserMessage]);
-    }
-
-    const currentConversationHistory: BackendChatMessageDto[] = messages.map((msg) => ({
-      role: msg.from === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }],
-    }));
-
-    if (!isInitialGreeting) {
-      currentConversationHistory.push({
-        role: 'user',
-        parts: [{ text: messageToSend }],
-      });
-    }
+    const newUserMessage: Message = { from: 'user', text: messageToSend, time: currentTime };
+    setMessages((prev) => [...prev, newUserMessage]);
 
     setInput('');
     setIsBotTyping(true);
 
     try {
-      const response = await axios.post('http://localhost:6002/api/chatbot', {
+      const payload = {
         message: messageToSend,
-        conversationHistory: currentConversationHistory,
-      });
+        userId: sessionId,
+      };
 
-      const botResponseData = response.data.data;
+      const response = await axios.post('${API_BASE_URL}/chatbot/message', payload);
+
+      const botReplyText = response.data.reply;
+      const returnedSessionId = response.data.sessionId || response.data.userId;
+
+      if (returnedSessionId && returnedSessionId !== sessionId) {
+        setSessionId(returnedSessionId);
+      }
+
+      const formattedBotReplyText = formatTextForMarkdown(botReplyText);
 
       const botReply: Message = {
         from: 'bot',
-        text: botResponseData.response,
+        text: formattedBotReplyText,
         time: formatTime(new Date()),
-        suggestedQuestions: botResponseData.suggestedQuestions,
-        fileData: botResponseData.fileData,
       };
 
       setMessages((prev) => [...prev, botReply]);
@@ -144,9 +118,54 @@ const Chatbot = () => {
     }
   };
 
-  const handleSuggestedQuestionClick = (question: string) => {
-    setInput(question);
-    sendMessage(question);
+  const handleSuggestionClick = (suggestion: string) => {
+    sendMessage(suggestion);
+  };
+
+  const handleResetChat = async () => {
+    if (sessionId) {
+      try {
+        await axios.post('${API_BASE_URL}/chatbot/reset', { userId: sessionId });
+        console.log(`Session ${sessionId} reset on backend.`);
+      } catch (error) {
+        console.error('Error resetting backend session:', error);
+      }
+    }
+    setIsOpen(false);
+    setMessages([]);
+    setInput('');
+    setIsBotTyping(false);
+    setSessionId(null);
+  };
+
+  const renderers: Components = {
+    a: ({ href, children, ...props }) => {
+      const isDownloadLink =
+        href &&
+        (href.startsWith('/api/chatbot/download-pdf/') ||
+          href.startsWith('/api/chatbot/download-excel/') ||
+          href.startsWith('/api/chatbot/download-csv/'));
+
+      if (isDownloadLink) {
+        return (
+          <a
+            href={`${API_BASE_URL}${href}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            download
+            style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+            {...props}
+          >
+            {children}
+          </a>
+        );
+      }
+      return (
+        <a href={href} target='_blank' rel='noopener noreferrer' {...props}>
+          {children}
+        </a>
+      );
+    },
   };
 
   return (
@@ -165,19 +184,21 @@ const Chatbot = () => {
               <span className='text-sm'>UniScout Assistant</span>
             </div>
             <button
-              onClick={() => {
-                setIsOpen(false);
-                setMessages([]);
-                setInput('');
-                setIsBotTyping(false);
-              }}
+              onClick={handleResetChat}
               className='p-1 flex items-center justify-center transition-colors bg-transparent border-none focus:outline-none'
             >
               <X size={20} />
             </button>
           </div>
 
-          <div className={`flex-1 overflow-y-auto p-3 space-y-4 bg-gray-50 ${styles.chatBody}`}>
+          <div className={`flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50 ${styles.chatBody}`}>
+            {messages.length > 0 && (
+              <div className='flex justify-center'>
+                <span className='text-xs text-gray-500'>
+                  {messages[0].time.split(',').join('')}
+                </span>
+              </div>
+            )}
             {messages.map((msg, idx) => (
               <React.Fragment key={idx}>
                 <div
@@ -192,41 +213,44 @@ const Chatbot = () => {
                       className='w-6 h-6 border border-orange-400 rounded-full p-0.5 bg-white'
                     />
                   )}
-                  <div
-                    className={`px-3 py-2 max-w-[80%] rounded-xl text-sm ${
-                      msg.from === 'user'
-                        ? 'bg-orange-500 text-white rounded-br-none'
-                        : 'bg-[#fef4e8] text-gray-800 rounded-bl-none'
-                    } prose`}
-                  >
-                    {/* <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.text}</ReactMarkdown> */}
-
-                    {msg.fileData && (
-                      <button
-                        onClick={() => handleDownloadClick(msg.fileData)}
-                        className='mt-2 w-full bg-blue-500 hover:bg-blue-600 text-white text-xs py-1 px-2 rounded-md transition-colors'
+                  {msg.from === 'bot' && (
+                    <div className='flex flex-col gap-2'>
+                      <div
+                        className={`px-3 py-2 max-w-[80%] rounded-xl text-sm bg-[#fef4e8] text-gray-800 rounded-bl-none prose`}
                       >
-                        Download {msg.fileData.type.toUpperCase()} ({msg.fileData.filename})
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {msg.from === 'bot' &&
-                  msg.suggestedQuestions &&
-                  msg.suggestedQuestions.length > 0 && (
-                    <div className='flex flex-wrap gap-2 mt-2 px-2 py-1'>
-                      {msg.suggestedQuestions.map((question, qIdx) => (
-                        <button
-                          key={qIdx}
-                          onClick={() => handleSuggestedQuestionClick(question)}
-                          className='px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded-full hover:bg-gray-300 transition-colors cursor-pointer'
-                        >
-                          {question}
-                        </button>
-                      ))}
+                        <ReactMarkdown rehypePlugins={[rehypeRaw]} components={renderers}>
+                          {msg.text}
+                        </ReactMarkdown>
+                      </div>
+                      {msg.suggestions && (
+                        <div className='flex flex-col gap-2'>
+                          {msg.suggestions.map((suggestion, suggestionIdx) => (
+                            <button
+                              key={suggestionIdx}
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className='px-3 py-2 text-sm text-orange-500 text-left cursor-pointer transition-colors hover:bg-orange-100 rounded-xl'
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
+                  {msg.from === 'user' && (
+                    <div
+                      className={`px-3 py-2 max-w-[80%] rounded-xl text-sm ${
+                        msg.from === 'user'
+                          ? 'bg-orange-500 text-white rounded-br-none'
+                          : 'bg-[#fef4e8] text-gray-800 rounded-bl-none'
+                      } prose`}
+                    >
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]} components={renderers}>
+                        {msg.text}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+                </div>
               </React.Fragment>
             ))}
             {isBotTyping && (
@@ -271,13 +295,16 @@ const Chatbot = () => {
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className='bg-orange-500 text-white rounded-full p-3 shadow-lg hover:bg-orange-600 transition-colors'
+          className='bg-transparent border-none p-0 focus:outline-none transition-colors'
         >
-          <MessageCircle size={24} />
+          <img
+            src='/chatbotpic.jpg'
+            alt='Chatbot Logo'
+            className='w-14 h-14 rounded-full object-contain'
+          />
         </button>
       )}
     </div>
   );
 };
-
 export default Chatbot;

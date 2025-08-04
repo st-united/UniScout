@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-//import Chatbot from './Chatbot';
+import Chatbot from './Chatbot';
 import UniversityCard from './UniversityCard';
 import UniversityFilter, { FilterOptions } from './UniversityFilter';
 import WorldMap from './Worldmap';
@@ -353,7 +353,7 @@ const ViewUniversity = () => {
           </div>
         </div>
       </div>
-      {/* Chatbot /> */}
+      <Chatbot></Chatbot>
     </div>
   );
 };
