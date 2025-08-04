@@ -22,7 +22,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = () => {
           <img
             src={devplusLogo}
             alt='DevPlus Logo'
-            className='h-12 w-auto md:h-14 transition-transform duration-200 hover:scale-105'
+            className='h-12 w-auto md:h-14 transition-transform duration-200'
           />
         </Link>
 
