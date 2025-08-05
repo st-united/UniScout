@@ -88,7 +88,7 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      const response = await axios.post(`${API_BASE_URL}/chatbot/message`, payload);
+      const response = await axios.post(`${API_BASE_URL}api/chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
       if (!botReplyText) {
@@ -129,7 +129,7 @@ const Chatbot = () => {
   const handleResetChat = async () => {
     if (sessionId) {
       try {
-        await axios.post(`${API_BASE_URL}/chatbot/reset`, { userId: sessionId });
+        await axios.post(`${API_BASE_URL}api/chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
