@@ -52,7 +52,7 @@ const SignInForm: FC<SignInProps> = ({ onInputChange, previousValue, className }
   const handleSubmit = async (values: ISignInForm) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await axios.post('/auth/login', {
         email: values.email,
         password: values.password,
       });
