@@ -106,7 +106,7 @@ const ManageAccount: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get('/api/dashboard/users-overview');
+        const res = await axios.get('/dashboard/users-overview');
         const data = res.data.data;
         setStats({
           total: data.totalUsers,
@@ -161,7 +161,7 @@ const ManageAccount: React.FC = () => {
 
     const fetchJobRoles = async () => {
       try {
-        const res = await axios.get('/api/users/job-roles');
+        const res = await axios.get('/users/job-roles');
         if (Array.isArray(res.data)) {
           setJobRoles(res.data);
         } else if (Array.isArray(res.data.data)) {
