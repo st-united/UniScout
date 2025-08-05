@@ -61,7 +61,7 @@ const Chatbot = () => {
         suggestions: [
           'How do I search for universities by location or type?',
           'How can I contact with DevPlus?',
-          'What are the top-ranked universities in US?',
+          'What are the top-ranked universities in USA?',
         ],
         time: formatTime(new Date()),
       };
@@ -70,7 +70,7 @@ const Chatbot = () => {
   }, [isOpen, messages.length, sessionId]);
 
   const sendMessage = async (messageToSend = input) => {
-    if (!messageToSend.trim()) return;
+    if (!messageToSend.trim() || !sessionId) return;
 
     const currentTime = formatTime(new Date());
 
