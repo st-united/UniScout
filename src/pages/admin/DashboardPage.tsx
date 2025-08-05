@@ -655,7 +655,7 @@ const DashboardPage = () => {
                           type='monotone'
                           dataKey='thisYear'
                           stroke='#2F3F99'
-                          strokeWidth={2}
+                          strokeWidth={1.5}
                           dot={false}
                           isAnimationActive={true}
                         />
@@ -788,7 +788,6 @@ const DashboardPage = () => {
                     dataKey='month'
                     type='category'
                     interval={0}
-                    allowDuplicatedCategory={false}
                     axisLine={false}
                     tickLine={false}
                     fontSize={12}
@@ -833,10 +832,61 @@ const DashboardPage = () => {
                     tickLine={false}
                   />
 
-                  <Tooltip />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || !payload.length) return null;
+
+                      const colors: Record<string, string> = {
+                        pending: '#2259C7',
+                        inProgress: '#FFAE4C',
+                        completed: '#6FD195',
+                        rejected: '#EF3826',
+                      };
+
+                      const labelMap: Record<string, string> = {
+                        pending: 'Pending',
+                        inProgress: 'In Progress',
+                        completed: 'Completed',
+                        rejected: 'Rejected',
+                      };
+
+                      return (
+                        <div className='bg-white border border-gray-200 shadow-lg rounded-lg px-4 py-3 text-sm min-w-[125px]'>
+                          <p className='font-semibold text-gray-800 mb-2'>{label}</p>
+                          <div className='space-y-1'>
+                            {payload.map((entry, index) => {
+                              const dataKey = entry.dataKey as string;
+                              const color = colors[dataKey] || '#999';
+                              const labelName = labelMap[dataKey] || dataKey;
+
+                              return (
+                                <div
+                                  key={index}
+                                  className='flex justify-between items-center text-gray-700'
+                                >
+                                  <div className='flex items-center space-x-2'>
+                                    <span
+                                      style={{
+                                        display: 'inline-block',
+                                        width: 8,
+                                        height: 8,
+                                        backgroundColor: color,
+                                        borderRadius: '50%',
+                                      }}
+                                    />
+                                    <span>{labelName}</span>
+                                  </div>
+                                  <span className='font-medium text-gray-900'>{entry.value}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
 
                   <Bar dataKey='pending' stackId='a' fill='#2259C7' barSize={12}></Bar>
-
                   <Bar dataKey='inProgress' stackId='a' fill='#FFAE4C' barSize={12} />
                   <Bar dataKey='completed' stackId='a' fill='#6FD195' barSize={12} />
                   <Bar

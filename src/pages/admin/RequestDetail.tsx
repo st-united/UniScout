@@ -141,7 +141,7 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
           width: 100,
           height: 100,
           borderRadius: '50%',
-          backgroundColor: '#ffebee',
+          backgroundColor: 'ffebee',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -301,6 +301,158 @@ const RejectModal: React.FC<RejectModalProps> = ({ visible, onConfirm, onCancel,
     </Modal>
   );
 };
+const ConfirmCompleteModal: React.FC<{
+  visible: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}> = ({ visible, onConfirm, onCancel, loading }) => {
+  return (
+    <Modal
+      title={null}
+      open={visible}
+      onCancel={onCancel}
+      footer={null}
+      width={600}
+      centered
+      closable={false}
+      bodyStyle={{
+        padding: '24px 40px',
+        textAlign: 'center',
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        maxHeight: '450px',
+      }}
+      style={{ borderRadius: 12 }}
+    >
+      <div
+        style={{
+          width: 100,
+          height: 100,
+          borderRadius: '50%',
+          backgroundColor: '#ffebee',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 12px',
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: '50%',
+            backgroundColor: '#ffcdd2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+        >
+          <div
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '15px solid transparent',
+              borderRight: '15px solid transparent',
+              borderBottom: '25px solid #f44336',
+              position: 'relative',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '14px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: 'bold',
+            }}
+          >
+            !
+          </div>
+        </div>
+      </div>
+
+      <Title
+        level={3}
+        style={{
+          color: '#333',
+          marginBottom: 12,
+          fontSize: 22,
+          fontWeight: 700,
+          textAlign: 'center',
+        }}
+      >
+        Complete Request
+      </Title>
+
+      <Text
+        style={{
+          color: '#666',
+          fontSize: 16,
+          fontWeight: 500,
+          textAlign: 'center',
+          marginBottom: 20,
+          display: 'block',
+        }}
+      >
+        When marked as completed, the system will automatically create a new university record. Do
+        you want to proceed?
+      </Text>
+
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+        <Button
+          onClick={onCancel}
+          size='large'
+          style={{
+            minWidth: 120,
+            height: 48,
+            borderRadius: 24,
+            border: '1px solid #d9d9d9',
+            backgroundColor: '#ffffff',
+            color: '#666',
+            fontSize: 16,
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#e3f2fd';
+            e.currentTarget.style.borderColor = '#1976d2';
+            e.currentTarget.style.color = '#1976d2';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#ffffff';
+            e.currentTarget.style.borderColor = '#d9d9d9';
+            e.currentTarget.style.color = '#666';
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={onConfirm}
+          loading={loading}
+          size='large'
+          style={{
+            minWidth: 120,
+            height: 48,
+            borderRadius: 24,
+            backgroundColor: '#ff7043',
+            borderColor: '#ff7043',
+            color: 'white',
+            fontSize: 16,
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
+        >
+          OK
+        </Button>
+      </div>
+    </Modal>
+  );
+};
 
 const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
   requestId,
@@ -316,6 +468,8 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string>('');
   const [isEditable, setIsEditable] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [confirmedCompleted, setConfirmedCompleted] = useState(false);
 
   // Mock data for demonstration when API fails
   const mockDetailData: RequestDetailData = {
@@ -376,6 +530,13 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
     if (newStatus === 'Rejected') {
       setPendingStatus(newStatus);
       setRejectModalVisible(true);
+    } else if (
+      newStatus === 'Completed' &&
+      requestData?.requestType === 'New University' &&
+      !confirmedCompleted
+    ) {
+      setConfirmModalVisible(true);
+      form.setFieldsValue({ status: requestData.status });
     } else {
       form.setFieldsValue({ status: newStatus });
     }
@@ -383,6 +544,7 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
 
   // Submit form
   const onFinish = async (values: any) => {
+    console.log('🟢 onFinish called with values:', values);
     setLoading(true); // Set general loading for form submission
     try {
       const payload: any = {
@@ -398,7 +560,7 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
 
       message.success('Request updated successfully!');
       setIsEditable(false);
-
+      setConfirmedCompleted(false);
       // Update local state
       setRequestData((prev) =>
         prev
@@ -436,6 +598,16 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
   const handleRejectCancel = () => {
     setRejectModalVisible(false);
     setPendingStatus('');
+    form.setFieldsValue({ status: requestData?.status });
+  };
+  const handleConfirmModalConfirm = () => {
+    setConfirmedCompleted(true);
+    setConfirmModalVisible(false);
+    form.setFieldsValue({ status: 'Completed' });
+  };
+
+  const handleConfirmModalCancel = () => {
+    setConfirmModalVisible(false);
     form.setFieldsValue({ status: requestData?.status });
   };
 
@@ -773,44 +945,43 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
           <Form.Item name='rejectionReason' style={{ display: 'none' }}>
             <Input />
           </Form.Item>
-
-          {/* Action Buttons */}
-          <div className='flex justify-end space-x-3 mt-8'>
-            {!isEditable ? (
+        </Form>
+        {/* Action Buttons */}
+        <div className='flex justify-end space-x-3 mt-8'>
+          {!isEditable ? (
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => setIsEditable(true)}
+              style={{
+                backgroundColor: '#ff7a00',
+                borderColor: '#ff7a00',
+                color: 'white',
+                borderRadius: 6,
+              }}
+              disabled={!isStatusChangeable}
+            >
+              Edit
+            </Button>
+          ) : (
+            <>
               <Button
-                icon={<EditOutlined />}
-                onClick={() => setIsEditable(true)}
+                htmlType='submit'
+                loading={loading} // Use general loading for form submission
+                icon={<SaveOutlined />}
                 style={{
                   backgroundColor: '#ff7a00',
                   borderColor: '#ff7a00',
                   color: 'white',
                   borderRadius: 6,
                 }}
-                disabled={!isStatusChangeable}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7a445')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
               >
-                Edit
+                Save
               </Button>
-            ) : (
-              <>
-                <Button
-                  htmlType='submit'
-                  loading={loading} // Use general loading for form submission
-                  icon={<SaveOutlined />}
-                  style={{
-                    backgroundColor: '#ff7a00',
-                    borderColor: '#ff7a00',
-                    color: 'white',
-                    borderRadius: 6,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f7a445')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ff7043')}
-                >
-                  Save
-                </Button>
-              </>
-            )}
-          </div>
-        </Form>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Reject Modal */}
@@ -819,6 +990,13 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
         onConfirm={handleRejectConfirm}
         onCancel={handleRejectCancel}
         loading={rejectModalLoading} // Use rejectModalLoading here
+      />
+
+      <ConfirmCompleteModal
+        visible={confirmModalVisible}
+        onConfirm={handleConfirmModalConfirm}
+        onCancel={handleConfirmModalCancel}
+        loading={loading}
       />
     </div>
   );
