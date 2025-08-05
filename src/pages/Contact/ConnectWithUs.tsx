@@ -167,7 +167,18 @@ export default function ConnectWithUs() {
       errors.email = 'Invalid email.';
     if (!newUniData.phone) errors.phone = 'Required.';
     else if (!/^\+?\d+$/.test(newUniData.phone)) errors.phone = 'Only numbers and +.';
-    // description is now optional, so no validation here
+    if (newUniData.studentPopulation) {
+      // Only validate if a value is provided
+      const numStudents = parseInt(newUniData.studentPopulation, 10);
+      if (isNaN(numStudents)) {
+        errors.studentPopulation = 'Number of students must be a valid number.';
+      } else if (numStudents < 0) {
+        errors.studentPopulation = 'Number of students cannot be negative.';
+      } else if (!Number.isInteger(numStudents)) {
+        // Check if it's an integer
+        errors.studentPopulation = 'Number of students must be an integer.';
+      }
+    }
     return errors;
   };
 
@@ -195,7 +206,9 @@ export default function ConnectWithUs() {
       formData.append('country', apiCountry);
       formData.append('files', 'string'); // as in curl
       formData.append('universityNumber', newUniData.phone); // university phone
-      formData.append('numberOfStudents', newUniData.studentPopulation);
+      const parsedNumberOfStudents = parseInt(newUniData.studentPopulation, 10);
+      const numberOfStudentsToSend = isNaN(parsedNumberOfStudents) ? 0 : parsedNumberOfStudents;
+      formData.append('numberOfStudents', numberOfStudentsToSend.toString());
       formData.append('universityName', newUniData.universityName);
       formData.append('type', newUniData.type.toLowerCase());
       formData.append('website', newUniData.website);
