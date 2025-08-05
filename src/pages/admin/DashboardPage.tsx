@@ -1,4 +1,13 @@
-import { DatePicker, Space, Dropdown, Button, ConfigProvider, Select, Popover } from 'antd';
+import {
+  DatePicker,
+  Space,
+  Dropdown,
+  Button,
+  ConfigProvider,
+  Select,
+  Popover,
+  message,
+} from 'antd';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -41,7 +50,7 @@ interface ActiveShapeProps {
   count: number;
 }
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
+const COLORS = ['#DE5512', '#96E2D6', '#2E4EAF', '#FD8278', '#91DBAF', '#FDC078'];
 
 const DashboardPage = () => {
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
@@ -90,10 +99,25 @@ const DashboardPage = () => {
           };
         }),
       );
+      const allMonths = Array.from({ length: 12 }, (_, i) => {
+        const monthName = new Date(2020, i).toLocaleString('en-US', { month: 'short' });
+        return {
+          month: monthName,
+          pending: 0,
+          inProgress: 0,
+          completed: 0,
+          rejected: 0,
+        };
+      });
 
-      setContactRequestData(monthlyData);
+      const filledData = allMonths.map((m) => {
+        const found = monthlyData.find((d) => d.month === m.month);
+        return found || m;
+      });
+
+      setContactRequestData(filledData);
     } catch (err) {
-      console.error('Erreur chargement requêtes contact :', err);
+      message.error('Failed to load contact requests data');
     }
   };
 
@@ -127,7 +151,7 @@ const DashboardPage = () => {
           contactCount: res.data.contactCount,
         });
       } catch (error) {
-        console.error('Error :', error);
+        message.error('Error loading summary data');
       } finally {
         setLoading(false);
       }
@@ -197,7 +221,7 @@ const DashboardPage = () => {
 
       setMonthlyTrafficData(traffic);
     } catch (err) {
-      console.error('Erreur chargement données trafic :', err);
+      message.error('Error loading monthly traffic data');
     }
   };
 
@@ -234,7 +258,7 @@ const DashboardPage = () => {
 
       setMonthlyTrafficData(data);
     } catch (error) {
-      console.error('Erreur chargement trafic personnalisé :', error);
+      message.error('Error loading custom traffic data');
     }
   };
 
@@ -284,7 +308,7 @@ const DashboardPage = () => {
 
       setContactRequestData(monthlyData);
     } catch (err) {
-      console.error('Erreur filtrage contact status :', err);
+      message.error('Error loading contact request status data');
     }
   };
 
@@ -297,7 +321,7 @@ const DashboardPage = () => {
         const res = await axios.get('/dashboard/country-distribution');
         setTrafficData(res.data);
       } catch (err) {
-        console.error('Erreur chargement trafic par pays :', err);
+        message.error('Error loading traffic by country data');
       } finally {
         setTrafficLoading(false);
       }
@@ -320,7 +344,7 @@ const DashboardPage = () => {
         const res = await axios.get('/dashboard/top-searched');
         setTopSearch(res.data);
       } catch (error) {
-        console.error('Erreur chargement top search :', error);
+        message.error('Error loading top search data');
       }
     };
 
@@ -760,7 +784,16 @@ const DashboardPage = () => {
               <ResponsiveContainer width='100%' height={200}>
                 <BarChart data={contactRequestData} barCategoryGap={10} barGap={4}>
                   <CartesianGrid strokeDasharray='3 3' stroke='#e5e7eb' />
-                  <XAxis dataKey='month' axisLine={false} tickLine={false} fontSize={12} />
+                  <XAxis
+                    dataKey='month'
+                    type='category'
+                    interval={0}
+                    allowDuplicatedCategory={false}
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={12}
+                  />
+
                   <YAxis
                     domain={[
                       0,
@@ -768,17 +801,15 @@ const DashboardPage = () => {
                         if (!dataMax || isNaN(dataMax)) return 10;
                         const tickCount = 5;
                         const rawStep = dataMax / (tickCount - 1);
-                        const exponent = Math.floor(Math.log10(rawStep));
-                        const base = Math.pow(10, exponent);
-                        const niceSteps = [1, 2, 5, 10];
-                        const step = (niceSteps.find((s) => s * base >= rawStep) ?? 1) * base;
-                        return step * (tickCount - 1);
+                        const niceStep = Math.ceil(rawStep);
+                        return niceStep * (tickCount - 1);
                       },
                     ]}
                     ticks={(() => {
                       if (!contactRequestData || contactRequestData.length === 0) return [0, 10];
 
                       const tickCount = 5;
+
                       const maxValue = Math.max(
                         ...contactRequestData.map(
                           (d) =>
@@ -792,12 +823,9 @@ const DashboardPage = () => {
                       if (!maxValue || isNaN(maxValue)) return [0, 10];
 
                       const rawStep = maxValue / (tickCount - 1);
-                      const exponent = Math.floor(Math.log10(rawStep));
-                      const base = Math.pow(10, exponent);
-                      const niceSteps = [1, 2, 5, 10];
-                      const step = (niceSteps.find((s) => s * base >= rawStep) ?? 1) * base;
+                      const niceStep = Math.ceil(rawStep);
 
-                      return Array.from({ length: tickCount }, (_, i) => i * step);
+                      return Array.from({ length: tickCount }, (_, i) => i * niceStep);
                     })()}
                     tickFormatter={(value) => `${value}`}
                     tick={{ fontSize: 12 }}
@@ -807,19 +835,14 @@ const DashboardPage = () => {
 
                   <Tooltip />
 
-                  <Bar
-                    dataKey='pending'
-                    stackId='a'
-                    fill='rgba(59, 130, 246, 1)'
-                    barSize={12}
-                  ></Bar>
+                  <Bar dataKey='pending' stackId='a' fill='#2259C7' barSize={12}></Bar>
 
-                  <Bar dataKey='inProgress' stackId='a' fill='rgba(245, 158, 11, 1)' barSize={12} />
-                  <Bar dataKey='completed' stackId='a' fill='rgba(16, 185, 129, 1)' barSize={12} />
+                  <Bar dataKey='inProgress' stackId='a' fill='#FFAE4C' barSize={12} />
+                  <Bar dataKey='completed' stackId='a' fill='#6FD195' barSize={12} />
                   <Bar
                     dataKey='rejected'
                     stackId='a'
-                    fill='rgba(239, 68, 68, 1)'
+                    fill='#EF3826'
                     radius={[0, 0, 0, 0]}
                     barSize={12}
                   />
@@ -829,19 +852,19 @@ const DashboardPage = () => {
               <div className='w-full flex justify-center mt-4'>
                 <div className='flex flex-wrap justify-center items-center gap-x-6 gap-y-2'>
                   <div className='flex items-center space-x-2'>
-                    <div className='w-3 h-3 rounded-full bg-blue-500'></div>
+                    <div className='w-2 h-2 bg-[#2259C7]'></div>
                     <span className='text-xs text-gray-600'>Pending</span>
                   </div>
                   <div className='flex items-center space-x-2'>
-                    <div className='w-3 h-3 rounded-full bg-yellow-500'></div>
+                    <div className='w-2 h-2 bg-[#FFAE4C]'></div>
                     <span className='text-xs text-gray-600'>In Progress</span>
                   </div>
                   <div className='flex items-center space-x-2'>
-                    <div className='w-3 h-3 rounded-full bg-green-500'></div>
+                    <div className='w-2 h-2 bg-[#6FD195]'></div>
                     <span className='text-xs text-gray-600'>Completed</span>
                   </div>
                   <div className='flex items-center space-x-2'>
-                    <div className='w-3 h-3 rounded-full bg-red-500'></div>
+                    <div className='w-2 h-2 bg-[#FF8479]'></div>
                     <span className='text-xs text-gray-600'>Rejected</span>
                   </div>
                 </div>
