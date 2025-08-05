@@ -180,9 +180,7 @@ const UniversityFilter = ({
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await axios.get(
-          'https://api.uniscout.dev.stunited.vn/api/universities/subjects',
-        );
+        const res = await axios.get('/universities/subjects');
         if (Array.isArray(res.data.data)) {
           setSubjectOptions(
             res.data.data.map((subject: any) => ({
