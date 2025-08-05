@@ -13,16 +13,16 @@ export default async ({ mode }: any) => {
     resolve: {
       alias: { '@app': path.resolve('./src') },
     },
-    css: {
-      preprocessorOptions: {
-        scss: {
-          additionalData: `
-                @use "@app/assets/styles/_variable.scss";
-                @use "@app/assets/styles/_fonts.scss";
-                @use "@app/assets/styles/_layout.scss";`,
-        },
-      },
-    },
+    // css: {
+    //   preprocessorOptions: {
+    //     scss: {
+    //       additionalData: `
+    //             @use "@app/assets/styles/_variable.scss";
+    //             @use "@app/assets/styles/_fonts.scss";
+    //             @use "@app/assets/styles/_layout.scss";`,
+    //     },
+    //   },
+    // },
     server: {
       watch: {
         usePolling: true,
