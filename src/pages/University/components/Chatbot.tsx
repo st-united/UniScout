@@ -7,7 +7,6 @@ import rehypeRaw from 'rehype-raw';
 import type { Components } from 'react-markdown';
 
 import styles from './chatbot.module.css';
-const API_BASE_URL = import.meta.env.VITE_BASE_URL_API;
 
 type Message = {
   from: 'user' | 'bot';
@@ -87,7 +86,7 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      const response = await axios.post('${API_BASE_URL}/chatbot/message', payload);
+      const response = await axios.post('/chatbot/message', payload);
 
       const botReplyText = response.data.reply;
       const returnedSessionId = response.data.sessionId || response.data.userId;
@@ -125,7 +124,7 @@ const Chatbot = () => {
   const handleResetChat = async () => {
     if (sessionId) {
       try {
-        await axios.post('${API_BASE_URL}/chatbot/reset', { userId: sessionId });
+        await axios.post('/chatbot/reset', { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
@@ -149,7 +148,7 @@ const Chatbot = () => {
       if (isDownloadLink) {
         return (
           <a
-            href={`${API_BASE_URL}${href}`}
+            href={`${href}`}
             target='_blank'
             rel='noopener noreferrer'
             download
