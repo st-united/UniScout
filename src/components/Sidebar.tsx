@@ -1,4 +1,4 @@
-import { message } from 'antd';
+import { message, Spin } from 'antd';
 import axios from 'axios';
 import { LayoutDashboard, GraduationCap, FileText, User, LogOut, Menu, X } from 'lucide-react';
 import React, { useState } from 'react';
@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
 import devplusLogo from '../assets/images/devplus.png';
-import { removeStorageData } from '@app/config/storage';
+import { getStorageStringData, removeStorageData } from '@app/config/storage';
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '@app/constants';
 import { logout } from '@app/redux/features/auth/authSlice';
 import { RootState } from '@app/redux/store';
@@ -20,7 +20,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  // const { user } = useSelector((state: RootState) => state.auth);
+  const user = getStorageStringData('name');
+  const role = getStorageStringData('role');
 
   const menuItems = [
     {
@@ -41,8 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       icon: FileText,
       path: '/manage',
     },
-    // 👇 Affiche "Manage Account" uniquement si user.role === 'superadmin'
-    ...(user?.role === 'super'
+    ...(role === 'super'
       ? [
           {
             id: 'manage-account',
@@ -67,34 +68,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   };
 
   const handleLogout = async () => {
-    console.log('Logout clicked');
     try {
-      await axios.get('/auth/logout', {
-        headers: {
-          Authorization: '',
-        },
-      });
-      removeStorageData(ACCESS_TOKEN);
-      removeStorageData(REFRESH_TOKEN);
+      await axios.get('/auth/logout');
 
       dispatch(logout());
-
       message.success('Logged out successfully!');
-      console.log('Frontend logout complete. Redirecting to /login.');
-
       window.location.href = '/login';
     } catch (error) {
-      console.error('Logout failed:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        message.error(error.response.data.message || 'Logout failed. Please try again.');
-      } else {
-        message.error('An unexpected error occurred during logout.');
-      }
-
-      removeStorageData(ACCESS_TOKEN);
-      removeStorageData(REFRESH_TOKEN);
+      message.error('Logout failed. Please try again.');
       dispatch(logout());
     } finally {
+      removeStorageData(ACCESS_TOKEN);
+      removeStorageData(REFRESH_TOKEN);
+      removeStorageData('name');
+      removeStorageData('role');
       setIsOpen(false);
     }
   };
@@ -121,17 +108,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         lg:top-[64px] lg:h-[calc(100vh-48px)] lg:z-30
       `}
       >
-        {/* ✅ Mobile-only top bar: DevPlus logo + Close button in same row */}
-        <div className='block lg:hidden px-4 pt-4 pb-2 flex items-center justify-between'>
+        {/* Mobile-only top bar */}
+        <div className='lg:hidden px-4 pt-4 pb-2 flex items-center justify-between'>
           <img src={devplusLogo} alt='DevPlus Logo' className='h-10' />
-
           <button onClick={() => setIsOpen(false)} className='p-1 hover:bg-gray-100 rounded'>
             <X className='w-6 h-6 text-gray-700' />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className='flex-1 py-4 flex flex-col '>
+        <nav className='flex-1 py-4 flex flex-col'>
           <ul className='space-y-1 list-none mx-6'>
             {menuItems.map((item) => {
               const isActive = activeTab === item.id;
@@ -155,23 +141,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     }
                     className={`
                     w-full flex items-center space-x-3 px-4 py-3 text-sm rounded-xl
-                    transition-all duration-300 ease-in-out
+                    transition-all duration-30 ease-in-out
                     appearance-none bg-transparent border-none
                     ${
                       item.action === 'logout'
                         ? 'text-gray-500 hover:text-red-600'
                         : isActive
-                        ? 'text-[#E75200] bg-[#FF842B1C] shadow-xl font-semibold '
-                        : 'text-gray-800 hover:text-orange-600'
+                        ? 'text-[#FF6600] bg-[#FF842B1C] shadow-xl font-semibold '
+                        : 'text-gray-800 hover:text-[#FF6600]'
                     }
                   `}
                   >
                     <Icon
-                      className={`w-5 h-5 transition-colors duration-200 ${
+                      className={`w-5 h-5 ${
                         item.action === 'logout'
                           ? 'text-gray-500'
                           : isActive
-                          ? 'text-orange-600'
+                          ? 'text-[#FF6600]'
                           : 'text-gray-800'
                       }`}
                     />
@@ -183,12 +169,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </ul>
         </nav>
 
-        <div className='p-6 border-t border-gray-200 justify-start flex items-center'>
+        {/* Footer */}
+        <div className='px-6 py-2 mb-8 border-t border-gray-200 justify-start gap-3 flex items-center cursor-pointer hover:bg-gray rounded-full'>
           <div className='w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center'>
-            <User className='w-5 h-5 text-gray-600' />
+            <User className='w-6 h-6 text-[#bbb] bg-[#eee] p-2 rounded-full' />
           </div>
-          <div className='flex items-center'>
-            <span className='text-gray-700 text-base font-medium'>Ngoc Nhi</span>
+          <div className='w-3/4 relative text-xs'>
+            <span className='text-sm font-semibold truncate text-[#333] '>{user || 'User'}</span>
           </div>
         </div>
       </div>

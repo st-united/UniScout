@@ -12,7 +12,6 @@ interface AuthState {
 
 const checkAuth = (): boolean => {
   const token = getStorageStringData(ACCESS_TOKEN);
-  console.log('checkAuth called. Token found:', Boolean(token));
   return Boolean(token);
 };
 
@@ -30,20 +29,25 @@ const authSlice = createSlice({
       state.isAuth = true;
     },
     setAuth(state, action) {
-      const { permissions } = action.payload;
+      const { permissions, ...user } = action.payload;
 
+      state.user = user;
+      state.permissions = permissions || [];
+    },
+
+    setUser(state, action) {
       state.user = action.payload;
-      state.permissions = permissions;
     },
     logout(state) {
       state.isAuth = false;
       state.user = null;
+      state.permissions = [];
     },
   },
 });
 
 const { reducer, actions } = authSlice;
 
-export const { setAuth, logout, login } = actions;
+export const { setAuth, setUser, logout, login } = actions;
 
 export default reducer;

@@ -19,7 +19,6 @@ const PrivateLayout: FC = () => {
   const { isAuth } = useSelector((state: RootState) => state.auth);
 
   const { isLoading, error } = useGetProfile(isAuth);
-
   useEffect(() => {
     if (!isLoading && error && isAuth) {
       console.error(
@@ -28,7 +27,8 @@ const PrivateLayout: FC = () => {
       );
       removeStorageData(ACCESS_TOKEN);
       removeStorageData(REFRESH_TOKEN);
-
+      removeStorageData('name');
+      removeStorageData('role');
       dispatch(logout());
 
       navigate('/login', { replace: true });
