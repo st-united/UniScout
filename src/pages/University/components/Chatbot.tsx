@@ -7,7 +7,9 @@ import rehypeRaw from 'rehype-raw';
 import type { Components } from 'react-markdown';
 
 import styles from './chatbot.module.css';
-
+const API_BASE_URL = import.meta.env.DEV
+  ? import.meta.env.VITE_BACKEND_URL
+  : import.meta.env.VITE_BASE_URL_API;
 type Message = {
   from: 'user' | 'bot';
   text?: string;
@@ -86,9 +88,12 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      const response = await axios.post('/chatbot/message', payload);
+      const response = await axios.post(`${API_BASE_URL}/chatbot/message`, payload);
 
-      const botReplyText = response.data.reply;
+      const botReplyText = response.data?.reply;
+      if (!botReplyText) {
+        throw new Error('Invalid response from server: Missing reply.');
+      }
       const returnedSessionId = response.data.sessionId || response.data.userId;
 
       if (returnedSessionId && returnedSessionId !== sessionId) {
@@ -124,7 +129,7 @@ const Chatbot = () => {
   const handleResetChat = async () => {
     if (sessionId) {
       try {
-        await axios.post('/chatbot/reset', { userId: sessionId });
+        await axios.post(`${API_BASE_URL}/chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
@@ -148,7 +153,7 @@ const Chatbot = () => {
       if (isDownloadLink) {
         return (
           <a
-            href={`${href}`}
+            href={`${API_BASE_URL}${href}`}
             target='_blank'
             rel='noopener noreferrer'
             download
