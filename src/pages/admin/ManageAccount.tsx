@@ -856,8 +856,14 @@ const ManageAccount: React.FC = () => {
           <ExportAccountModal
             open={isExportOpen}
             onClose={() => setIsExportOpen(false)}
-            appliedFilters={{}}
+            appliedFilters={{
+              status: filters.status,
+              role: filters.role,
+              job: filters.role,
+              search: searchQuery ? [searchQuery] : [],
+            }}
           />
+
           <ConfigProvider
             theme={{
               token: {

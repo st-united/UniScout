@@ -536,7 +536,7 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
       !confirmedCompleted
     ) {
       setConfirmModalVisible(true);
-      form.setFieldsValue({ status: requestData.status });
+      form.setFieldsValue({ status: 'Completed' });
     } else {
       form.setFieldsValue({ status: newStatus });
     }
@@ -544,36 +544,34 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
 
   // Submit form
   const onFinish = async (values: any) => {
-    console.log('🟢 onFinish called with values:', values);
-    setLoading(true); // Set general loading for form submission
+    const formValues = form.getFieldsValue();
+    const finalStatus = formValues.status || requestData?.status;
+
+    console.log('🟢 Submitting with status:', finalStatus);
+    setLoading(true);
+
     try {
       const payload: any = {
-        status: values.status,
+        status: finalStatus,
+        rejectionReason: finalStatus === 'Rejected' ? formValues.rejectionReason : null,
       };
 
-      if (values.status === 'Rejected' && values.rejectionReason) {
-        payload.rejectionReason = values.rejectionReason;
-      }
-
-      console.log('Submitting payload:', payload);
       await axios.patch(`${API_BASE_URL}/admin/contact/${requestId}/status`, payload);
 
       message.success('Request updated successfully!');
       setIsEditable(false);
       setConfirmedCompleted(false);
-      // Update local state
       setRequestData((prev) =>
         prev
-          ? { ...prev, status: values.status, rejectionReason: values.rejectionReason || null }
+          ? { ...prev, status: finalStatus, rejectionReason: formValues.rejectionReason || null }
           : null,
-      ); // Also update rejection reason
-      if (onUpdate) onUpdate(); // Call onUpdate to refresh parent data
+      );
+      if (onUpdate) onUpdate();
     } catch (err: any) {
-      console.error('Update failed:', err);
       const msg = err?.response?.data?.message;
       message.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Update failed');
     } finally {
-      setLoading(false); // Reset general loading after submission
+      setLoading(false);
     }
   };
 
@@ -603,7 +601,8 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
   const handleConfirmModalConfirm = () => {
     setConfirmedCompleted(true);
     setConfirmModalVisible(false);
-    form.setFieldsValue({ status: 'Completed' });
+    const values = form.getFieldsValue();
+    onFinish({ ...values, status: 'Completed' });
   };
 
   const handleConfirmModalCancel = () => {
@@ -965,8 +964,8 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
           ) : (
             <>
               <Button
-                htmlType='submit'
-                loading={loading} // Use general loading for form submission
+                onClick={() => form.submit()}
+                loading={loading}
                 icon={<SaveOutlined />}
                 style={{
                   backgroundColor: '#ff7a00',
