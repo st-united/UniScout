@@ -310,7 +310,7 @@ const EditRequestModalContent: React.FC<EditRequestModalContentProps> = ({
         setPageLoading(true);
         console.log('Fetching request data for ID:', requestId);
         // Using `API_BASE_URL` from the ManageRequest.tsx context, assuming it's correctly set up for API calls
-        const response = await axios.get(`${API_BASE_URL}/admin/contact/${requestId}`);
+        const response = await axios.get(`/admin/contact/${requestId}`);
         const data = response.data;
 
         console.log('API Response:', data);
@@ -362,17 +362,17 @@ const EditRequestModalContent: React.FC<EditRequestModalContentProps> = ({
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const payload: any = {
+      const payload = {
         status: values.status,
+        rejectionReason:
+          values.status === 'Rejected'
+            ? values.rejectionReason
+            : `Status manually set to ${values.status}`,
       };
-
-      if (values.status === 'Rejected' && values.rejectionReason) {
-        payload.rejectionReason = values.rejectionReason;
-      }
 
       console.log('Submitting payload:', payload);
       // Using `API_BASE_URL` from the ManageRequest.tsx context
-      await axios.patch(`${API_BASE_URL}/admin/contact/${requestId}/status`, payload);
+      await axios.patch(`/admin/contact/${requestId}/status`, payload);
 
       message.success('Request updated successfully!');
       setIsEditable(false);
