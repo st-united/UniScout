@@ -88,7 +88,7 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      const response = await axios.post(`${API_BASE_URL}api/chatbot/message`, payload);
+      const response = await axios.post(`${API_BASE_URL}/api/chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
       if (!botReplyText) {
@@ -129,7 +129,7 @@ const Chatbot = () => {
   const handleResetChat = async () => {
     if (sessionId) {
       try {
-        await axios.post(`${API_BASE_URL}api/chatbot/reset`, { userId: sessionId });
+        await axios.post(`${API_BASE_URL}/api/chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
@@ -146,14 +146,16 @@ const Chatbot = () => {
     a: ({ href, children, ...props }) => {
       const isDownloadLink =
         href &&
-        (href.startsWith('/api/chatbot/download-pdf/') ||
-          href.startsWith('/api/chatbot/download-excel/') ||
-          href.startsWith('/api/chatbot/download-csv/'));
+        (href.startsWith('/chatbot/download-pdf/') ||
+          href.startsWith('/chatbot/download-excel/') ||
+          href.startsWith('/chatbot/download-csv/'));
 
       if (isDownloadLink) {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL;
+        const fullHref = new URL(href, baseUrl).toString();
         return (
           <a
-            href={`${API_BASE_URL}${href}`}
+            href={fullHref}
             target='_blank'
             rel='noopener noreferrer'
             download
