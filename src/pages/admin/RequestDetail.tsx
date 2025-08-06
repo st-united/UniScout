@@ -696,7 +696,7 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
               }}
             >
               <Text style={{ color: '#666', fontSize: '14px' }}>
-                {requestData.description || requestData.message || 'No description provided'}
+                {requestData.description || requestData.message || ''}
               </Text>
             </div>
           </div>
