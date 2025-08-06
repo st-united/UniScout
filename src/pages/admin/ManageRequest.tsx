@@ -1,4 +1,3 @@
-// ManageRequest.tsx
 import { ExportOutlined, EyeOutlined, CloseCircleFilled, SearchOutlined } from '@ant-design/icons';
 import {
   Table,
@@ -19,25 +18,19 @@ import {
 } from 'antd';
 import axios from 'axios';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-// Removed: useNavigate as it's no longer used
-// import { useNavigate } from 'react-router-dom';
 
 import EditRequestModalContent from './EditRequest';
 import ExportRequestModal from './modals/ExportRequestModal';
 import RequestDetailModalContent from './RequestDetail';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
-import noResults from '@app/assets/images/noimage.png';
+import noImage from '@app/assets/images/noimage.png';
 import type { ColumnsType } from 'antd/es/table';
 import type { AxiosError } from 'axios';
 
 const { Option } = Select;
 const { Title } = Typography;
 
-// API Base URL
-const API_BASE_URL = 'https://api.uniscout.dev.stunited.vn/api';
-
-// Interface for user request (updated to match API response)
 interface UserRequest {
   id: string;
   number?: number;
@@ -134,7 +127,8 @@ const ManageRequest: React.FC = () => {
   const fetchContactRequestTypes = async () => {
     setLoadingRequestTypes(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/contact/request-types`, {
+      // API_BASE_URL replaced with relative path
+      const response = await axios.get(`/admin/contact/request-types`, {
         headers: {
           accept: '*/*',
         },
@@ -157,7 +151,8 @@ const ManageRequest: React.FC = () => {
   const fetchContactSubmissionStatuses = async () => {
     setLoadingSubmissionStatuses(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/admin/contact/status`, {
+      // API_BASE_URL replaced with relative path
+      const response = await axios.get(`/admin/contact/status`, {
         headers: {
           accept: '*/*',
         },
@@ -241,7 +236,8 @@ const ManageRequest: React.FC = () => {
         requestParams.search = filters.search[0].trim();
       }
 
-      const response = await axios.get<ApiResponse>(`${API_BASE_URL}/admin/contact`, {
+      // API_BASE_URL replaced with relative path
+      const response = await axios.get<ApiResponse>(`/admin/contact`, {
         params: requestParams,
         headers: {
           accept: '*/*',
@@ -962,9 +958,9 @@ const ManageRequest: React.FC = () => {
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <img
-                  src={noResults}
+                  src={noImage}
                   alt='No matching result found'
-                  style={{ width: 200, height: 200, marginBottom: 16 }}
+                  style={{ width: 64, height: 64, marginBottom: 16 }}
                 />
                 <Title level={4} style={{ color: '#999' }}>
                   No matching result found
