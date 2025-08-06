@@ -27,6 +27,7 @@ import ExportRequestModal from './modals/ExportRequestModal';
 import RequestDetailModalContent from './RequestDetail';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
+import noResults from '@app/assets/images/noimage.png';
 import type { ColumnsType } from 'antd/es/table';
 import type { AxiosError } from 'axios';
 
@@ -240,7 +241,7 @@ const ManageRequest: React.FC = () => {
         requestParams.search = filters.search[0].trim();
       }
 
-      const response = await axios.get(`${API_BASE_URL}/admin/contact`, {
+      const response = await axios.get<ApiResponse>(`${API_BASE_URL}/admin/contact`, {
         params: requestParams,
         headers: {
           accept: '*/*',
@@ -261,122 +262,28 @@ const ManageRequest: React.FC = () => {
 
       if (response.data && response.data.data) {
         const apiData: ApiResponse = response.data;
-
-        if (apiData.data.length === 0) {
-          const mockData: UserRequest[] = [
-            {
-              id: '1',
-              requestType: 'New University',
-              country: 'Vietnam',
-              universityName: 'Mock University Vietnam',
-              abbreviation: 'MUV',
-              status: 'Pending',
-              submittedBy: 'John Doe',
-              submittedDate: '2025-07-01',
-              submittedAt: '2025-07-01T10:00:00Z',
-            },
-            {
-              id: '2',
-              requestType: 'Update Information',
-              country: 'Japan',
-              universityName: 'Mock University Japan',
-              abbreviation: 'MUJ',
-              status: 'Completed',
-              submittedBy: 'Jane Smith',
-              submittedDate: '2025-07-05',
-              submittedAt: '2025-07-05T12:00:00Z',
-            },
-            {
-              id: '3',
-              requestType: 'Remove University',
-              country: 'Korea',
-              universityName: 'Mock University Korea',
-              abbreviation: 'MUK',
-              status: 'In Progress',
-              submittedBy: 'Mike Johnson',
-              submittedDate: '2025-07-10',
-              submittedAt: '2025-07-10T14:30:00Z',
-            },
-            {
-              id: '4',
-              requestType: 'New University',
-              country: 'Australia',
-              universityName: 'Mock University Australia',
-              abbreviation: 'MUA',
-              status: 'Rejected',
-              submittedBy: 'Sarah Wilson',
-              submittedDate: '2025-07-12',
-              submittedAt: '2025-07-12T09:15:00Z',
-            },
-          ];
-
-          setRequestData(mockData);
-          setTotalCount(mockData.length);
-          message.info('No data found, showing sample data');
-        } else {
-          setRequestData(apiData.data);
-          setTotalCount(apiData.total);
-        }
+        setRequestData(apiData.data);
+        setTotalCount(apiData.total);
       } else {
         throw new Error('Invalid API response format');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch requests';
-      console.error('API Error:', err);
-      setError(errorMessage);
-
-      const mockData: UserRequest[] = [
-        {
-          id: '1',
-          requestType: 'New University',
-          country: 'Vietnam',
-          universityName: 'Mock University Vietnam',
-          abbreviation: 'MUV',
-          status: 'Pending',
-          submittedBy: 'John Doe',
-          submittedDate: '2025-07-01',
-          submittedAt: '2025-07-01T10:00:00Z',
-        },
-        {
-          id: '2',
-          requestType: 'Update Information',
-          country: 'Japan',
-          universityName: 'Mock University Japan',
-          abbreviation: 'MUJ',
-          status: 'Completed',
-          submittedBy: 'Jane Smith',
-          submittedDate: '2025-07-05',
-          submittedAt: '2025-07-05T12:00:00Z',
-        },
-        {
-          id: '3',
-          requestType: 'Remove University',
-          country: 'Korea',
-          universityName: 'Mock University Korea',
-          abbreviation: 'MUK',
-          status: 'In Progress',
-          submittedBy: 'Mike Johnson',
-          submittedDate: '2025-07-10',
-          submittedAt: '2025-07-10T14:30:00Z',
-        },
-        {
-          id: '4',
-          requestType: 'New University',
-          country: 'Australia',
-          universityName: 'Mock University Australia',
-          abbreviation: 'MUA',
-          status: 'Rejected',
-          submittedBy: 'Sarah Wilson',
-          submittedDate: '2025-07-12',
-          submittedAt: '2025-07-12T09:15:00Z',
-        },
-      ];
-
-      setRequestData(mockData);
-      setTotalCount(mockData.length);
-      message.warning('Using mock data fallback - API connection failed');
-
-      setError(null);
+      const axiosError = err as AxiosError;
+      if (axiosError.response && axiosError.response.status === 400) {
+        // This is the specific case where the API returns 400 for no matching results.
+        // We'll treat this as a successful response with zero data.
+        console.warn('API returned 400, treating as no results found.');
+        setRequestData([]);
+        setTotalCount(0);
+        setError(null);
+      } else {
+        // Handle all other types of errors as actual failures
+        const errorMessage = axiosError.message || 'Failed to fetch requests';
+        console.error('API Error:', axiosError);
+        setError(errorMessage);
+        setRequestData([]);
+        setTotalCount(0);
+      }
     } finally {
       setLoading(false);
     }
@@ -775,7 +682,7 @@ const ManageRequest: React.FC = () => {
     </Row>
   );
 
-  if (error && requestData.length === 0) {
+  if (error) {
     return (
       <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', padding: '24px' }}>
         <Card>
@@ -955,95 +862,115 @@ const ManageRequest: React.FC = () => {
               </Col>
             </Row>
 
-            <Table
-              columns={columns}
-              dataSource={requestData}
-              rowKey='id'
-              loading={loading}
-              onRow={(record: UserRequest) => ({
-                onClick: () => handleRowClick(record),
-                style: { cursor: 'pointer' },
-              })}
-              pagination={{
-                current: currentPage,
-                pageSize: pageSize,
-                total: totalCount,
-                onChange: (page: number) => setCurrentPage(page),
-                showSizeChanger: false,
-                showQuickJumper: false,
-                itemRender: (page: number, type: string, originalElement: React.ReactNode) => {
-                  const totalPages = Math.ceil(totalCount / pageSize);
-                  const baseStyle: React.CSSProperties = {
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'color 0.2s ease',
-                    display: 'inline-flex',
+            {loading ? (
+              <Table
+                columns={columns}
+                dataSource={[]}
+                rowKey='id'
+                loading={loading}
+                pagination={false}
+              />
+            ) : requestData.length > 0 ? (
+              <Table
+                columns={columns}
+                dataSource={requestData}
+                rowKey='id'
+                onRow={(record: UserRequest) => ({
+                  onClick: () => handleRowClick(record),
+                  style: { cursor: 'pointer' },
+                })}
+                pagination={{
+                  current: currentPage,
+                  pageSize: pageSize,
+                  total: totalCount,
+                  onChange: (page: number) => setCurrentPage(page),
+                  showSizeChanger: false,
+                  showQuickJumper: false,
+                  itemRender: (page: number, type: string, originalElement: React.ReactNode) => {
+                    const totalPages = Math.ceil(totalCount / pageSize);
+                    const baseStyle: React.CSSProperties = {
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'color 0.2s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    };
+
+                    if (type === 'prev') {
+                      const isDisabled = currentPage === 1;
+                      return (
+                        <span
+                          style={{
+                            ...baseStyle,
+                            color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          &lt; Previous
+                        </span>
+                      );
+                    }
+
+                    if (type === 'next') {
+                      const isDisabled = currentPage >= totalPages;
+                      return (
+                        <span
+                          style={{
+                            ...baseStyle,
+                            color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          Next &gt;
+                        </span>
+                      );
+                    }
+
+                    if (type === 'page') {
+                      const isCurrent = page === currentPage;
+                      return (
+                        <span
+                          style={{
+                            ...baseStyle,
+                            color: '#ff7a00',
+                            fontWeight: isCurrent ? 'bold' : 500,
+                          }}
+                        >
+                          {page}
+                        </span>
+                      );
+                    }
+
+                    if (type === 'jump-prev' || type === 'jump-next') {
+                      return <span style={{ color: '#999' }}>•••</span>;
+                    }
+
+                    return originalElement;
+                  },
+                  style: {
+                    display: 'flex',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    gap: '4px',
-                  };
-
-                  if (type === 'prev') {
-                    const isDisabled = currentPage === 1;
-                    return (
-                      <span
-                        style={{
-                          ...baseStyle,
-                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                          cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        &lt; Previous
-                      </span>
-                    );
-                  }
-
-                  if (type === 'next') {
-                    const isDisabled = currentPage >= totalPages;
-                    return (
-                      <span
-                        style={{
-                          ...baseStyle,
-                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                          cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        Next &gt;
-                      </span>
-                    );
-                  }
-
-                  if (type === 'page') {
-                    const isCurrent = page === currentPage;
-                    return (
-                      <span
-                        style={{
-                          ...baseStyle,
-                          color: '#ff7a00',
-                          fontWeight: isCurrent ? 'bold' : 500,
-                        }}
-                      >
-                        {page}
-                      </span>
-                    );
-                  }
-
-                  if (type === 'jump-prev' || type === 'jump-next') {
-                    return <span style={{ color: '#999' }}>•••</span>;
-                  }
-
-                  return originalElement;
-                },
-                style: {
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  width: '100%',
-                  marginTop: '24px',
-                  marginBottom: '16px',
-                },
-              }}
-              scroll={{ x: 800 }}
-            />
+                    width: '100%',
+                    marginTop: '24px',
+                    marginBottom: '16px',
+                  },
+                }}
+                scroll={{ x: 800 }}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <img
+                  src={noResults}
+                  alt='No matching result found'
+                  style={{ width: 200, height: 200, marginBottom: 16 }}
+                />
+                <Title level={4} style={{ color: '#999' }}>
+                  No matching result found
+                </Title>
+              </div>
+            )}
           </Card>
         </div>
 
