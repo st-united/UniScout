@@ -24,6 +24,8 @@ import {
   Tag,
   Checkbox,
   Input,
+  Dropdown,
+  Menu,
 } from 'antd';
 import axios from 'axios';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
@@ -131,6 +133,9 @@ const UniversityListPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState(''); // New state for actual search query
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
+
+  // Add state for the dropdown menu visibility
+  const [dropdownVisible, setDropdownVisible] = useState<boolean>(false);
 
   const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
     let newValues = values;
@@ -703,30 +708,31 @@ const UniversityListPage: React.FC = () => {
     },
     {
       title: (
-        <div
-          role='button'
-          tabIndex={0}
-          onClick={() => setShowBatchActions((prev) => !prev)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setShowBatchActions((prev) => !prev);
-            }
-          }}
-          style={{
-            cursor: 'pointer',
-            display: 'flex',
-            justifyContent: 'space-between', // Distribute space between "Action" and icon
-            alignItems: 'center', // Vertically align the items
-            width: '100%', // Ensure it spans the full width of the container
-          }}
-          aria-label='Show batch actions'
-        >
-          <span>Action</span> {/* Left-aligned "Action" */}
-          <MoreOutlined /> {/* Right-aligned icon */}
-        </div>
+        <Space>
+          <strong>Action</strong>
+          <Dropdown
+            trigger={['click']}
+            onOpenChange={(visible) => setDropdownVisible(visible)}
+            open={dropdownVisible}
+            dropdownRender={() => (
+              <Menu
+                onClick={({ key }) => {
+                  if (key === 'multiple-selection') {
+                    setShowBatchActions((prev) => !prev);
+                    setDropdownVisible(false); // Close dropdown after selection
+                  }
+                }}
+              >
+                <Menu.Item key='multiple-selection'>
+                  <Space>Multiple selection</Space>
+                </Menu.Item>
+              </Menu>
+            )}
+          >
+            <Button type='text' icon={<MoreOutlined />} />
+          </Dropdown>
+        </Space>
       ),
-
       key: 'action',
       width: 120,
       render: (_, record) => (
