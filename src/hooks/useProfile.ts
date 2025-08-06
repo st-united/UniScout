@@ -30,7 +30,7 @@ export const useGetProfile = (enabled: boolean) => {
       onError(error) {
         console.error('useGetProfile fetch error:', error);
       },
-      retry: false, // Prevent retries on failed authentication
+      retry: false,
     },
   );
 };

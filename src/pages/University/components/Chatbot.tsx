@@ -6,10 +6,10 @@ import rehypeRaw from 'rehype-raw';
 
 import type { Components } from 'react-markdown';
 
-import styles from './chatbot.module.css';
 const API_BASE_URL = import.meta.env.DEV
   ? import.meta.env.VITE_BACKEND_URL
   : import.meta.env.VITE_BASE_URL_API;
+
 type Message = {
   from: 'user' | 'bot';
   text?: string;
@@ -39,6 +39,31 @@ const formatTextForMarkdown = (text: string): string => {
   return finalFormattedText;
 };
 
+const saveChatState = (messages: Message[], sessionId: string | null) => {
+  try {
+    sessionStorage.setItem('chatbot_messages', JSON.stringify(messages));
+    if (sessionId) {
+      sessionStorage.setItem('chatbot_session_id', sessionId);
+    }
+  } catch (error) {
+    console.error('Error saving chat state to sessionStorage:', error);
+  }
+};
+
+const loadChatState = () => {
+  try {
+    const savedMessages = sessionStorage.getItem('chatbot_messages');
+    const savedSessionId = sessionStorage.getItem('chatbot_session_id');
+    return {
+      messages: savedMessages ? JSON.parse(savedMessages) : [],
+      sessionId: savedSessionId,
+    };
+  } catch (error) {
+    console.error('Error loading chat state from sessionStorage:', error);
+    return { messages: [], sessionId: null };
+  }
+};
+
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -47,29 +72,43 @@ const Chatbot = () => {
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
+  const [isClosing, setIsClosing] = useState(false);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      if (!sessionId) {
-        setSessionId(`user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
+    if (isOpen) {
+      const { messages: loadedMessages, sessionId: loadedSessionId } = loadChatState();
+
+      if (loadedMessages.length > 0) {
+        setMessages(loadedMessages);
+      } else {
+        const initialCombinedMessage: Message = {
+          from: 'bot',
+          text: 'Hello, I’m DevBot! 👋 I’m your personal assistant. How can I help you?',
+          suggestions: [
+            'How do I search for universities by location or type?',
+            'How can I contact with DevPlus?',
+            'What are the top-ranked universities in USA?',
+          ],
+          time: formatTime(new Date()),
+        };
+        setMessages([initialCombinedMessage]);
       }
 
-      const initialCombinedMessage: Message = {
-        from: 'bot',
-        text: 'Hello, I’m DevBot! 👋 I’m your personal assistant. How can I help you?',
-        suggestions: [
-          'How do I search for universities by location or type?',
-          'How can I contact with DevPlus?',
-          'What are the top-ranked universities in USA?',
-        ],
-        time: formatTime(new Date()),
-      };
-      setMessages([initialCombinedMessage]);
+      if (loadedSessionId) {
+        setSessionId(loadedSessionId);
+      } else {
+        setSessionId(`user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
+      }
     }
-  }, [isOpen, messages.length, sessionId]);
+  }, [isOpen]);
+
+  useEffect(() => {
+    saveChatState(messages, sessionId);
+  }, [messages, sessionId]);
 
   const sendMessage = async (messageToSend = input) => {
     if (!messageToSend.trim() || !sessionId) return;
@@ -77,6 +116,7 @@ const Chatbot = () => {
     const currentTime = formatTime(new Date());
 
     const newUserMessage: Message = { from: 'user', text: messageToSend, time: currentTime };
+
     setMessages((prev) => [...prev, newUserMessage]);
 
     setInput('');
@@ -127,6 +167,9 @@ const Chatbot = () => {
   };
 
   const handleResetChat = async () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setIsOpen(false);
     if (sessionId) {
       try {
         await axios.post(`${API_BASE_URL}api/chatbot/reset`, { userId: sessionId });
@@ -135,25 +178,23 @@ const Chatbot = () => {
         console.error('Error resetting backend session:', error);
       }
     }
-    setIsOpen(false);
-    setMessages([]);
-    setInput('');
-    setIsBotTyping(false);
-    setSessionId(null);
+    setIsClosing(false);
   };
 
   const renderers: Components = {
     a: ({ href, children, ...props }) => {
       const isDownloadLink =
         href &&
-        (href.startsWith('/api/chatbot/download-pdf/') ||
-          href.startsWith('/api/chatbot/download-excel/') ||
-          href.startsWith('/api/chatbot/download-csv/'));
+        (href.startsWith('api/chatbot/download-pdf/') ||
+          href.startsWith('api/chatbot/download-excel/') ||
+          href.startsWith('api/chatbot/download-csv/'));
 
       if (isDownloadLink) {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL;
+        const fullHref = new URL(href, baseUrl).toString();
         return (
           <a
-            href={`${API_BASE_URL}${href}`}
+            href={fullHref}
             target='_blank'
             rel='noopener noreferrer'
             download
@@ -176,7 +217,7 @@ const Chatbot = () => {
     <div className='fixed bottom-6 right-6 z-50 font-sans'>
       {isOpen ? (
         <div
-          className={`w-80 h-[480px] rounded-xl border border-gray-200 bg-white flex flex-col overflow-hidden ${styles.chatContainerShadow}`}
+          className={`w-80 h-[480px] rounded-xl border border-gray-200 bg-white flex flex-col overflow-hidden shadow-lg`}
         >
           <div className='bg-orange-500 text-white flex items-center px-4 py-3 justify-between'>
             <div className='flex items-center gap-2 font-semibold'>
@@ -189,13 +230,14 @@ const Chatbot = () => {
             </div>
             <button
               onClick={handleResetChat}
-              className='p-1 flex items-center justify-center transition-colors bg-transparent border-none focus:outline-none'
+              disabled={isClosing}
+              className='p-1 flex items-center justify-center transition-colors bg-transparent border-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed'
             >
               <X size={20} />
             </button>
           </div>
 
-          <div className={`flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50 ${styles.chatBody}`}>
+          <div className={`flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50`}>
             {messages.length > 0 && (
               <div className='flex justify-center'>
                 <span className='text-xs text-gray-500'>
@@ -265,10 +307,16 @@ const Chatbot = () => {
                   className='w-6 h-6 border border-orange-400 rounded-full p-0.5 bg-white'
                 />
                 <div className='bg-[#fef4e8] text-gray-800 px-3 py-2 max-w-[80%] rounded-xl rounded-bl-none text-sm'>
-                  <div className={styles.typingIndicator}>
-                    <span>.</span>
-                    <span>.</span>
-                    <span>.</span>
+                  <div className='flex space-x-1'>
+                    <span className='animate-bounce' style={{ animationDelay: '0s' }}>
+                      .
+                    </span>
+                    <span className='animate-bounce' style={{ animationDelay: '0.2s' }}>
+                      .
+                    </span>
+                    <span className='animate-bounce' style={{ animationDelay: '0.4s' }}>
+                      .
+                    </span>
                   </div>
                 </div>
               </div>
@@ -292,23 +340,25 @@ const Chatbot = () => {
               disabled={isBotTyping}
               className='bg-orange-500 hover:bg-orange-600 text-white rounded-full p-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed'
             >
-              <img src='/send.png' alt='send' className='w-7 h-7' />
+              <img src='/send.png' alt='send' className='w-7 h-7' />{' '}
             </button>
           </div>
         </div>
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className='bg-transparent border-none p-0 focus:outline-none transition-colors'
+          className='bg-transparent border-none p-0 focus:outline-none transition-transform transform hover:scale-105'
+          aria-label='Open Chatbot'
         >
           <img
-            src='/chatbotpic.jpg'
+            src='/Button.png'
             alt='Chatbot Logo'
-            className='w-14 h-14 rounded-full object-contain'
+            className='w-14 h-14 rounded-full object-cover shadow-lg'
           />
         </button>
       )}
     </div>
   );
 };
+
 export default Chatbot;

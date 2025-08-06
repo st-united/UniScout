@@ -49,37 +49,77 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
     const mappedColumns = selectedColumns.map((col) => columnMap[col]).filter(Boolean);
     const safeFilters = sanitizeFilters(appliedFilters);
 
-    try {
-      const params = {
-        format: selectedFormat,
-        columns: mappedColumns,
-        ...safeFilters,
-      };
+    const jobRoles = [
+      { id: '1', name: 'Marketing' },
+      { id: '2', name: 'Sales' },
+      { id: '3', name: 'HR' },
+    ];
 
-      const response = await axios.get('/users/export', {
-        params,
+    const jobNameToId = (name: string) => {
+      const found = jobRoles.find((role) => role.name === name);
+      return found?.id;
+    };
+
+    const jobIds = (safeFilters.job || [])
+      .map(jobNameToId)
+      .filter((id): id is string => typeof id === 'string');
+
+    const payload = {
+      fields: mappedColumns,
+      status: safeFilters.status?.map((s) => s.toLowerCase()),
+      role: safeFilters.role?.map(() => 'admin'),
+      job: jobIds.length > 0 ? jobIds : undefined,
+      search: safeFilters.search?.[0] || '',
+      format: selectedFormat === 'excel' ? 'xlsx' : 'csv',
+    };
+
+    try {
+      const response = await axios.post('/users/export', payload, {
         responseType: 'blob',
-        paramsSerializer: (params) => {
-          const searchParams = new URLSearchParams();
-          Object.entries(params).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-              value.forEach((v) => searchParams.append(key === 'columns' ? 'columns[]' : key, v));
-            } else {
-              searchParams.append(key, value);
-            }
-          });
-          return searchParams.toString();
-        },
       });
 
       const contentType = response.headers['content-type'] || 'application/octet-stream';
-      const blob = new Blob([response.data], { type: contentType });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      const today = new Date();
-      const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-      link.download = `account-data-${dateStr}.${selectedFormat === 'csv' ? 'csv' : 'xlsx'}`;
-      link.click();
+
+      if (selectedFormat === 'csv') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target?.result;
+          if (typeof text === 'string') {
+            const formatted = text.replace(
+              /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g,
+              (match) => {
+                const d = new Date(match);
+                const pad = (n: number) => n.toString().padStart(2, '0');
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+                  d.getHours(),
+                )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+              },
+            );
+
+            const blob = new Blob([formatted], { type: contentType });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+            link.download = `account-data-${dateStr}.csv`;
+            link.click();
+            message.success('Export successful');
+            onClose();
+          }
+        };
+        reader.readAsText(response.data);
+      } else {
+        const blob = new Blob([response.data], { type: contentType });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+        link.download = `account-data-${dateStr}.xlsx`;
+        link.click();
+        message.success('Export successful');
+        onClose();
+      }
+
       message.success('Export successful');
       onClose();
     } catch (error) {
@@ -137,16 +177,17 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
                 Only data matching the selected filters will be exported
               </p>
               <div className='flex flex-wrap gap-2'>
-                {Object.entries(appliedFilters).flatMap(([key, values]) =>
-                  values.map((val) => (
+                {Object.entries(appliedFilters).flatMap(([key, values]) => {
+                  const uniqueValues = [...new Set(values)];
+                  return uniqueValues.map((val) => (
                     <Tag
                       key={`${key}-${val}`}
                       className='bg-[#fff7e6] border-[#ffc069] text-[#fa8c16] font-medium rounded-full px-3 py-1'
                     >
                       {val}
                     </Tag>
-                  )),
-                )}
+                  ));
+                })}
               </div>
             </div>
           )}

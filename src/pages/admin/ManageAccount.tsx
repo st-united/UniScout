@@ -103,10 +103,32 @@ const ManageAccount: React.FC = () => {
     }
   };
 
+  const mapStatusToAPI = (status: Account['status']): string => {
+    switch (status) {
+      case 'Active':
+        return 'active';
+      case 'Deactivated':
+        return 'inactive';
+      case 'Blocked':
+        return 'blocked';
+      case 'Pending':
+        return 'pending';
+      default:
+        return 'pending';
+    }
+  };
+
+  const mapRoleToAPI = (role: string): string => {
+    // Map display role names to API job parameter
+    return role;
+  };
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get('/dashboard/users-overview');
+        const res = await axios.get(
+          'https://api.uniscout.dev.stunited.vn/api/dashboard/users-overview',
+        );
         const data = res.data.data;
         setStats({
           total: data.totalUsers,
@@ -130,14 +152,29 @@ const ManageAccount: React.FC = () => {
         }
 
         if (filters.role.length > 0) {
-          params.role = filters.role;
+          params.job = filters.role.map(mapRoleToAPI);
         }
 
         if (filters.status.length > 0) {
-          params.status = filters.status;
+          params.status = filters.status.map(mapStatusToAPI);
         }
 
-        const res = await axios.get('/users', { params });
+        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users', {
+          params,
+          paramsSerializer: (params) => {
+            const searchParams = new URLSearchParams();
+            Object.keys(params).forEach((key) => {
+              const value = params[key];
+              if (Array.isArray(value)) {
+                // For arrays, add each value as a separate parameter without brackets
+                value.forEach((item) => searchParams.append(key, item));
+              } else if (value !== undefined) {
+                searchParams.append(key, value);
+              }
+            });
+            return searchParams.toString();
+          },
+        });
 
         const users = res.data.data;
         const total = res.data.meta?.totalItems ?? users.length;
@@ -161,7 +198,7 @@ const ManageAccount: React.FC = () => {
 
     const fetchJobRoles = async () => {
       try {
-        const res = await axios.get('/users/job-roles');
+        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users/job-roles');
         if (Array.isArray(res.data)) {
           setJobRoles(res.data);
         } else if (Array.isArray(res.data.data)) {
@@ -240,10 +277,18 @@ const ManageAccount: React.FC = () => {
       const statusDropdown = document.querySelector('[data-status-dropdown]');
       const isStatusClick = statusTrigger?.contains(target) || statusDropdown?.contains(target);
 
+      // Close dropdowns if click is outside
       if (!isRoleClick) {
         setRoleDropdownVisible(false);
       }
       if (!isStatusClick) {
+        setStatusDropdownVisible(false);
+      }
+
+      // Additional check for clicks on table rows or other elements
+      const tableElement = document.querySelector('.ant-table');
+      if (tableElement?.contains(target) && !isRoleClick && !isStatusClick) {
+        setRoleDropdownVisible(false);
         setStatusDropdownVisible(false);
       }
     };
@@ -329,26 +374,43 @@ const ManageAccount: React.FC = () => {
             <div
               data-role-dropdown
               style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 1000,
+                position: 'fixed',
+                top: 'auto',
+                left: 'auto',
+                transform: 'none',
+                zIndex: 9999,
                 backgroundColor: 'white',
                 border: '1px solid #e8e8e8',
                 borderRadius: '8px',
                 boxShadow: '0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08)',
                 minWidth: '220px',
                 maxWidth: '280px',
-                padding: '12px',
+                padding: '8px',
                 animation: 'dropdownFadeIn 0.2s ease-out',
+              }}
+              ref={(el) => {
+                if (el && roleDropdownRef) {
+                  const rect = roleDropdownRef.getBoundingClientRect();
+                  const viewportHeight = window.innerHeight;
+                  const dropdownHeight = 200; // Approximate height
+
+                  // Position the dropdown below the trigger
+                  el.style.left = `${rect.left + rect.width / 2}px`;
+                  el.style.top = `${rect.bottom + 8}px`;
+                  el.style.transform = 'translateX(-50%)';
+
+                  // Check if dropdown would go below viewport
+                  if (rect.bottom + dropdownHeight > viewportHeight) {
+                    // Position above the trigger instead
+                    el.style.top = `${rect.top - dropdownHeight - 8}px`;
+                  }
+                }
               }}
             >
               <div
                 style={{
-                  maxHeight: '200px',
+                  maxHeight: '160px',
                   overflowY: 'auto',
-                  marginBottom: '8px',
                 }}
               >
                 {jobRoles.map((role) => (
@@ -357,7 +419,7 @@ const ManageAccount: React.FC = () => {
                     role='button'
                     tabIndex={0}
                     style={{
-                      padding: '8px 12px',
+                      padding: '10px 12px',
                       cursor: 'pointer',
                       borderRadius: '6px',
                       display: 'flex',
@@ -365,6 +427,8 @@ const ManageAccount: React.FC = () => {
                       gap: '10px',
                       transition: 'background-color 0.15s ease',
                       marginBottom: '2px',
+                      fontSize: '14px',
+                      lineHeight: '1.4',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -389,8 +453,25 @@ const ManageAccount: React.FC = () => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <Checkbox checked={filters.role.includes(role)} style={{ marginRight: 0 }} />
-                    <span style={{ fontSize: '14px', color: '#333' }}>{role}</span>
+                    <Checkbox
+                      checked={filters.role.includes(role)}
+                      style={{
+                        marginRight: 0,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '14px',
+                        color: '#333',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {role}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -448,26 +529,43 @@ const ManageAccount: React.FC = () => {
             <div
               data-status-dropdown
               style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 1000,
+                position: 'fixed',
+                top: 'auto',
+                left: 'auto',
+                transform: 'none',
+                zIndex: 9999,
                 backgroundColor: 'white',
                 border: '1px solid #e8e8e8',
                 borderRadius: '8px',
                 boxShadow: '0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.08)',
-                minWidth: '150px',
-                maxWidth: '180px',
-                padding: '12px',
+                minWidth: '180px',
+                maxWidth: '220px',
+                padding: '8px',
                 animation: 'dropdownFadeIn 0.2s ease-out',
+              }}
+              ref={(el) => {
+                if (el && statusDropdownRef) {
+                  const rect = statusDropdownRef.getBoundingClientRect();
+                  const viewportHeight = window.innerHeight;
+                  const dropdownHeight = 200; // Approximate height
+
+                  // Position the dropdown below the trigger
+                  el.style.left = `${rect.left + rect.width / 2}px`;
+                  el.style.top = `${rect.bottom + 8}px`;
+                  el.style.transform = 'translateX(-50%)';
+
+                  // Check if dropdown would go below viewport
+                  if (rect.bottom + dropdownHeight > viewportHeight) {
+                    // Position above the trigger instead
+                    el.style.top = `${rect.top - dropdownHeight - 8}px`;
+                  }
+                }
               }}
             >
               <div
                 style={{
-                  maxHeight: '200px',
+                  maxHeight: '160px',
                   overflowY: 'auto',
-                  marginBottom: '8px',
                 }}
               >
                 {Object.keys(colorMap).map((status) => (
@@ -476,7 +574,7 @@ const ManageAccount: React.FC = () => {
                     role='button'
                     tabIndex={0}
                     style={{
-                      padding: '8px 12px',
+                      padding: '10px 12px',
                       cursor: 'pointer',
                       borderRadius: '6px',
                       display: 'flex',
@@ -484,6 +582,8 @@ const ManageAccount: React.FC = () => {
                       gap: '10px',
                       transition: 'background-color 0.15s ease',
                       marginBottom: '2px',
+                      fontSize: '14px',
+                      lineHeight: '1.4',
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -510,9 +610,23 @@ const ManageAccount: React.FC = () => {
                   >
                     <Checkbox
                       checked={filters.status.includes(status)}
-                      style={{ marginRight: 0 }}
+                      style={{
+                        marginRight: 0,
+                        flexShrink: 0,
+                      }}
                     />
-                    <span style={{ fontSize: '14px', color: '#333' }}>{status}</span>
+                    <span
+                      style={{
+                        fontSize: '14px',
+                        color: '#333',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {status}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -827,10 +941,10 @@ const ManageAccount: React.FC = () => {
                   email: values.email,
                   job: values.role,
                 };
-                await axios.post('/users', payload);
+                await axios.post('https://api.uniscout.dev.stunited.vn/api/users', payload);
 
                 // Refresh list
-                const res = await axios.get('/users');
+                const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users');
                 const users = res.data.data;
                 const total = res.data.meta?.totalItems ?? users.length;
                 const formattedUsers = users.map((user: any) => ({
@@ -856,8 +970,14 @@ const ManageAccount: React.FC = () => {
           <ExportAccountModal
             open={isExportOpen}
             onClose={() => setIsExportOpen(false)}
-            appliedFilters={{}}
+            appliedFilters={{
+              status: filters.status,
+              role: filters.role,
+              job: filters.role,
+              search: searchQuery ? [searchQuery] : [],
+            }}
           />
+
           <ConfigProvider
             theme={{
               token: {
@@ -1097,9 +1217,9 @@ const ManageAccount: React.FC = () => {
                     setIsSaving(true);
                     const statusMap = {
                       Active: 'active',
-                      Blocked: 'BLOCKED',
+                      Blocked: 'blocked',
                       Deactivated: 'inactive',
-                      Pending: 'PENDING',
+                      Pending: 'pending',
                     };
                     const payload = {
                       name: selectedUser.name,
