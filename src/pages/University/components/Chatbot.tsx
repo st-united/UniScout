@@ -190,7 +190,7 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-csv/'));
 
       if (isDownloadLink) {
-        const baseUrl = import.meta.env.VITE_BACKEND_URL;
+        const baseUrl = 'https://api.uniscout.dev.stunited.vn';
         const fullHref = new URL(href, baseUrl).toString();
         return (
           <a
