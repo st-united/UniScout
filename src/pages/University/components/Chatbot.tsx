@@ -1,15 +1,14 @@
 import axios from 'axios';
-import { X, MessageCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
 import type { Components } from 'react-markdown';
 
-const API_BASE_URL = import.meta.env.DEV
-  ? import.meta.env.VITE_BACKEND_URL
-  : import.meta.env.VITE_BASE_URL_API;
-const URL = import.meta.env.VITE_BASE_URL_API;
+// NOTE: Using a relative path for API calls as requested.
+// This is a common practice when the frontend and backend are hosted on the same domain.
+
 type Message = {
   from: 'user' | 'bot';
   text?: string;
@@ -128,7 +127,8 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      const response = await axios.post(`${API_BASE_URL}api/chatbot/message`, payload);
+      // Changed the URL to a relative path as requested.
+      const response = await axios.post(`chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
       if (!botReplyText) {
@@ -172,7 +172,8 @@ const Chatbot = () => {
     setIsOpen(false);
     if (sessionId) {
       try {
-        await axios.post(`${API_BASE_URL}api/chatbot/reset`, { userId: sessionId });
+        // Changed the URL to a relative path as requested.
+        await axios.post(`chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
