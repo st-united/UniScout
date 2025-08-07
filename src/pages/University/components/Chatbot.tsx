@@ -9,7 +9,6 @@ import type { Components } from 'react-markdown';
 const API_BASE_URL = import.meta.env.DEV
   ? import.meta.env.VITE_BACKEND_URL
   : import.meta.env.VITE_BASE_URL_API;
-const URL = import.meta.env.VITE_BASE_URL_API;
 type Message = {
   from: 'user' | 'bot';
   text?: string;
@@ -190,7 +189,9 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-csv/'));
 
       if (isDownloadLink) {
-        const fullHref = `${API_BASE_URL}${href}`;
+        const fullHref = href.startsWith('http')
+          ? href
+          : `${API_BASE_URL}${href.startsWith('/') ? href.slice(1) : href}`;
         return (
           <a
             href={fullHref}
