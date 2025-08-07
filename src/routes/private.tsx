@@ -62,7 +62,10 @@ const routes = [
         path: 'manage',
         element: <ManageRequest />,
       },
-
+      {
+        path: 'manage/:requestId',
+        element: <ManageRequest />,
+      },
       {
         path: 'account',
         element: (
