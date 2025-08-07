@@ -48,8 +48,8 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
           borderRadius: 6,
           controlHeight: 40,
           fontWeightStrong: 500,
-          fontSize: 14,
-          fontFamily: 'Quicksand, BlinkMacSystemFont,Helvetica Neue,sans-serif',
+          fontSize: 13,
+          fontFamily: 'Quicksand, BlinkMacSystemFont, Helvetica Neue,sans-serif',
         },
       }}
     >
@@ -107,7 +107,7 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
               </label>
               <Select
                 id='role'
-                placeholder='Choose Department'
+                placeholder='Choose department'
                 value={formValues.role || undefined}
                 onChange={(value) => handleChange(value, 'role')}
                 className='w-full mt-1 rounded-md h-12 !font-[500]'
