@@ -190,7 +190,7 @@ const Chatbot = () => {
           ? href.replace(/https:\/\/[^/]+\//, '')
           : href.replace(/^\//, '');
 
-        finalHref = `${BACKEND_URL}/${path}`;
+        finalHref = `${BACKEND_URL}${path}`;
       }
 
       console.log('final href:', finalHref);
