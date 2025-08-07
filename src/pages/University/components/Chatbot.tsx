@@ -4,10 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
+import { BACKEND_URL } from '@app/constants/socket';
 import type { Components } from 'react-markdown';
-
-// NOTE: Using environment variables for API base URLs as requested.
-// This is a common practice for flexible deployment and configuration.
 
 type Message = {
   from: 'user' | 'bot';
@@ -195,7 +193,7 @@ const Chatbot = () => {
           ? href.replace(/https:\/\/[^/]+\//, '') // Remove the existing domain
           : href.replace(/^\//, ''); // Remove leading slash if it's a relative path
 
-        finalHref = `${path}`;
+        finalHref = `${BACKEND_URL}/${path}`;
       }
 
       console.log('final href:', finalHref);
