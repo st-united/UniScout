@@ -125,7 +125,6 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      // Changed the URL to use the environment variable.
       const response = await axios.post(`chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
@@ -170,7 +169,6 @@ const Chatbot = () => {
     setIsOpen(false);
     if (sessionId) {
       try {
-        // Changed the URL to use the environment variable.
         await axios.post(`chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
@@ -188,10 +186,9 @@ const Chatbot = () => {
       let finalHref = href;
 
       if (isDownloadLink) {
-        // Correct the domain to use the environment variable and ensure a single slash.
         const path = href.startsWith('https://')
-          ? href.replace(/https:\/\/[^/]+\//, '') // Remove the existing domain
-          : href.replace(/^\//, ''); // Remove leading slash if it's a relative path
+          ? href.replace(/https:\/\/[^/]+\//, '')
+          : href.replace(/^\//, '');
 
         finalHref = `${BACKEND_URL}/${path}`;
       }
