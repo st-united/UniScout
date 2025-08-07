@@ -1,21 +1,25 @@
-import { InboxOutlined, ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
+import { InboxOutlined, SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import {
   Form,
   Input,
   Select,
   Button,
-  Upload,
   message,
   Typography,
-  InputNumber,
-  ConfigProvider,
   Spin,
+  InputNumber,
+  Upload,
+  Card,
+  Row,
+  Col,
+  ConfigProvider,
 } from 'antd';
 import axios from 'axios';
-import { Pencil } from 'lucide-react';
+import { Pencil, GraduationCap } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
+import excelLogo from '../../assets/images/excel-logo.png';
 import AdminHeader from '../../components/AdminHeader';
 import LayoutWrapper from '../../components/LayoutWrapper';
 
@@ -41,6 +45,7 @@ interface UniversityData {
   logo?: File;
   logoUrl?: string;
   abbreviation?: string;
+  subjectsList?: string; // Added for subjects list from API
 }
 
 const fieldSearchMapping: Record<string, string> = {
@@ -75,6 +80,7 @@ const mapApiToFormData = (data: any): UniversityData => ({
   website: data.website || 'https://',
   description: data.description || '',
   logoUrl: data.logoUrl || data.logo || '',
+  subjectsList: data.subjectsList || '', // Map subjectsList from API
 });
 
 const mapToUpdateDto = (values: UniversityData) => ({
@@ -382,21 +388,232 @@ const EditUniversity = () => {
                     <Form.Item label='Description' name='description'>
                       <TextArea rows={4} showCount disabled={!isEditable} className='rounded-md' />
                     </Form.Item>
+
+                    {/* Download Template Button - Only show when in edit mode */}
+                    {isEditable && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <Typography.Text
+                          style={{
+                            fontSize: '14px',
+                            color: '#333',
+                            display: 'block',
+                            marginBottom: '12px',
+                          }}
+                        >
+                          Please download this Excel file to fill in the subjects, then upload the
+                          completed file. This sample file is intended for first-time entries only.
+                          If you have an existing file, please upload the updated version instead!
+                        </Typography.Text>
+                        <div
+                          role='button'
+                          tabIndex={0}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '12px 16px',
+                            border: '1px solid #e8e8e8',
+                            borderRadius: '8px',
+                            backgroundColor: '#fafafa',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                          }}
+                          onClick={async () => {
+                            try {
+                              const response = await axios.get(
+                                'https://api.uniscout.dev.stunited.vn/api/contact/template/Subjects_Template.xlsx',
+                                {
+                                  responseType: 'blob',
+                                },
+                              );
+                              const blob = new Blob([response.data]);
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = 'Subjects_Template.xlsx';
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              window.URL.revokeObjectURL(url);
+                              message.success('Template downloaded successfully');
+                            } catch (error) {
+                              message.error('Failed to download template. Please try again later.');
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              // Trigger the same download function
+                              (async () => {
+                                try {
+                                  const response = await axios.get(
+                                    'https://api.uniscout.dev.stunited.vn/api/contact/template/Subjects_Template.xlsx',
+                                    {
+                                      responseType: 'blob',
+                                    },
+                                  );
+                                  const blob = new Blob([response.data]);
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = 'Subjects_Template.xlsx';
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  a.remove();
+                                  window.URL.revokeObjectURL(url);
+                                  message.success('Template downloaded successfully');
+                                } catch (error) {
+                                  message.error(
+                                    'Failed to download template. Please try again later.',
+                                  );
+                                }
+                              })();
+                            }
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f0f0f0';
+                            e.currentTarget.style.borderColor = '#ff7a00';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#fafafa';
+                            e.currentTarget.style.borderColor = '#e8e8e8';
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginRight: '12px',
+                            }}
+                          >
+                            <img
+                              src={excelLogo}
+                              alt='Excel'
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                objectFit: 'contain',
+                              }}
+                            />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <Typography.Text strong style={{ fontSize: '14px', color: '#333' }}>
+                              Subjects_Template.xlsx
+                            </Typography.Text>
+                          </div>
+                          <div
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <svg
+                              width='20'
+                              height='20'
+                              viewBox='0 0 24 24'
+                              fill='none'
+                              xmlns='http://www.w3.org/2000/svg'
+                            >
+                              <path
+                                d='M12 16L12 8M12 8L8 12M12 8L16 12'
+                                stroke='#ff7a00'
+                                strokeWidth='2'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                              />
+                              <path
+                                d='M3 15V16C3 18.8284 3 20.2426 3.87868 21.1213C4.75736 22 6.17157 22 9 22H15C17.8284 22 19.2426 22 20.1213 21.1213C21 20.2426 21 18.8284 21 16V15'
+                                stroke='#ff7a00'
+                                strokeWidth='2'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                              />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <Form.Item
                       label='Subjects'
                       name='subjectsExcelFile'
                       valuePropName='fileList'
                       getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                     >
-                      <Dragger {...excelUploadProps} disabled={!isEditable}>
-                        <p className='ant-upload-drag-icon'>
-                          <InboxOutlined />
-                        </p>
-                        <p>
-                          Drag your Excel file or <span className='text-[#ff7a00]'>browse</span>
-                        </p>
-                        <p className='text-xs'>Accepted formats: .xlsx, .xls — Max 5 MB</p>
-                      </Dragger>
+                      {!isEditable ? (
+                        // Display subjects as cards when not in edit mode
+                        <div>
+                          {form.getFieldValue('subjectsList') ? (
+                            <Row gutter={[16, 16]}>
+                              {form
+                                .getFieldValue('subjectsList')
+                                .split(', ')
+                                .map((subject: string, index: number) => (
+                                  <Col xs={24} sm={12} md={8} lg={6} key={index}>
+                                    <Card
+                                      size='small'
+                                      style={{
+                                        border: '1px solid #e8e8e8',
+                                        borderRadius: '4px',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                        backgroundColor: '#fafafa',
+                                        height: '50px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                      bodyStyle={{
+                                        padding: '2px',
+                                        height: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      <div style={{ textAlign: 'center' }}>
+                                        <Typography.Text
+                                          style={{ fontSize: '14px', color: '#B8B8B8' }}
+                                        >
+                                          {subject.trim()}
+                                        </Typography.Text>
+                                      </div>
+                                    </Card>
+                                  </Col>
+                                ))}
+                            </Row>
+                          ) : (
+                            <div
+                              style={{
+                                border: '1px solid #e8e8e8',
+                                borderRadius: '8px',
+                                padding: '32px 16px',
+                                textAlign: 'center',
+                                backgroundColor: '#fafafa',
+                              }}
+                            >
+                              <Typography.Text type='secondary'>
+                                No subjects available
+                              </Typography.Text>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        // Show drag/browse interface when in edit mode
+                        <Dragger {...excelUploadProps} disabled={!isEditable}>
+                          <p className='ant-upload-drag-icon'>
+                            <InboxOutlined />
+                          </p>
+                          <p>
+                            Drag your Excel file or <span className='text-[#ff7a00]'>browse</span>
+                          </p>
+                          <p className='text-xs'>Accepted formats: .xlsx, .xls — Max 5 MB</p>
+                        </Dragger>
+                      )}
                     </Form.Item>
 
                     {/* Buttons */}
