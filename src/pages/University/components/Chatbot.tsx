@@ -189,10 +189,15 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-excel/') ||
           href.startsWith('api/chatbot/download-csv/'));
 
+      console.log('final href:', `https://api.uniscout.dev.stunited.vn/${href}`);
+      const isAbsoluteUrl = href?.startsWith('http://') || href?.startsWith('https://');
+      const fullHref = isAbsoluteUrl
+        ? href
+        : `https://api.uniscout.dev.stunited.vn/${href?.replace(/^\/+/, '')}`;
       if (isDownloadLink) {
         return (
           <a
-            href={`https://api.uniscout.dev.stunited.vn/${href}`}
+            href={fullHref}
             target='_blank'
             rel='noopener noreferrer'
             download
@@ -213,6 +218,16 @@ const Chatbot = () => {
 
   return (
     <div className='fixed bottom-6 right-6 z-50 font-sans'>
+      <a
+        href={`https://api.uniscout.dev.stunited.vn/api/chatbot/download-pdf/top_universities_Japan_20_1754554990424.pdf`}
+        target='_blank'
+        rel='noopener noreferrer'
+        download
+        style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
+        // {...props}
+      >
+        Hello abcxyz
+      </a>
       {isOpen ? (
         <div
           className={`w-80 h-[480px] rounded-xl border border-gray-200 bg-white flex flex-col overflow-hidden shadow-lg`}
