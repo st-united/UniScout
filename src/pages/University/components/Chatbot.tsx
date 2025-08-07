@@ -131,7 +131,7 @@ const Chatbot = () => {
       };
 
       // Changed the URL to use the environment variable.
-      const response = await axios.post(`${BACKEND_URL}chatbot/message`, payload);
+      const response = await axios.post(`${BACKEND_URL}/chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
       if (!botReplyText) {
@@ -176,7 +176,7 @@ const Chatbot = () => {
     if (sessionId) {
       try {
         // Changed the URL to use the environment variable.
-        await axios.post(`${BACKEND_URL}chatbot/reset`, { userId: sessionId });
+        await axios.post(`${BACKEND_URL}/chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
@@ -198,7 +198,7 @@ const Chatbot = () => {
           ? href.replace(/https:\/\/[^/]+\//, '') // Remove the existing domain
           : href.replace(/^\//, ''); // Remove leading slash if it's a relative path
 
-        finalHref = `${BACKEND_URL}${path}`;
+        finalHref = `${BACKEND_URL}/${path}`;
       }
 
       console.log('final href:', finalHref);
