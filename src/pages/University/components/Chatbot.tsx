@@ -184,30 +184,38 @@ const Chatbot = () => {
 
   const renderers: Components = {
     a: ({ href, children, ...props }) => {
-      const isDownloadLink =
-        href &&
-        (href.startsWith('api/chatbot/download-pdf/') ||
-          href.startsWith('api/chatbot/download-excel/') ||
-          href.startsWith('api/chatbot/download-csv/'));
+      const downloadUrlPrefix = 'api/chatbot/download-';
+      const correctApiDomain = 'https://api.uniscout.dev.stunited.vn';
+      const isDownloadLink = href && href.includes(downloadUrlPrefix);
 
-      console.log('final href:', `https://api.uniscout.dev.stunited.vn/${href}`);
-      const fullHref = `https://api.uniscout.dev.stunited.vn${href}`;
+      let finalHref = href;
+
       if (isDownloadLink) {
-        return (
-          <a
-            href={fullHref}
-            target='_blank'
-            rel='noopener noreferrer'
-            download
-            style={{ color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}
-            {...props}
-          >
-            {children}
-          </a>
-        );
+        // If the link from the bot has the wrong domain, correct it.
+        // This also handles cases where the bot might return a relative path.
+        const path = href.startsWith('https://')
+          ? href.replace('https://uniscout.dev.stunited.vn', '')
+          : href;
+
+        // Construct the final URL with the correct domain and a single slash.
+        finalHref = `${correctApiDomain}/${path.replace(/^\//, '')}`;
       }
+
+      console.log('final href:', finalHref);
+
       return (
-        <a href={href} target='_blank' rel='noopener noreferrer' {...props}>
+        <a
+          href={finalHref}
+          target='_blank'
+          rel='noopener noreferrer'
+          download={isDownloadLink ? 'true' : undefined}
+          style={{
+            color: 'blue',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+          }}
+          {...props}
+        >
           {children}
         </a>
       );
