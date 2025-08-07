@@ -190,10 +190,7 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-csv/'));
 
       console.log('final href:', `https://api.uniscout.dev.stunited.vn/${href}`);
-      const isAbsoluteUrl = href?.startsWith('http://') || href?.startsWith('https://');
-      const fullHref = isAbsoluteUrl
-        ? href
-        : `https://api.uniscout.dev.stunited.vn${href?.replace(/^\/+/, '')}`;
+      const fullHref = `https://api.uniscout.dev.stunited.vn${href}`;
       if (isDownloadLink) {
         return (
           <a
