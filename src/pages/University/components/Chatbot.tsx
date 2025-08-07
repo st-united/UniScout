@@ -9,7 +9,7 @@ import type { Components } from 'react-markdown';
 const API_BASE_URL = import.meta.env.DEV
   ? import.meta.env.VITE_BACKEND_URL
   : import.meta.env.VITE_BASE_URL_API;
-
+const URL = import.meta.env.VITE_BASE_URL_API;
 type Message = {
   from: 'user' | 'bot';
   text?: string;
@@ -190,8 +190,9 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-csv/'));
 
       if (isDownloadLink) {
-        const baseUrl = 'https://api.uniscout.dev.stunited.vn';
-        const fullHref = new URL(href, baseUrl).toString();
+        const apiUrlObject = new URL(URL);
+        const downloadBaseUrl = `${apiUrlObject.protocol}//${apiUrlObject.host}`;
+        const fullHref = `${downloadBaseUrl}/${href}`;
         return (
           <a
             href={fullHref}
