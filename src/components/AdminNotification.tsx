@@ -1,21 +1,26 @@
 import { BellOutlined } from '@ant-design/icons';
 import { Badge, Button, Dropdown, List, Typography } from 'antd';
-import React, { useState } from 'react';
+import axios from 'axios';
+import moment from 'moment';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const { Text } = Typography;
 
-// Interface for notification items
 interface NotificationItem {
   id: number;
-  type: 'join_request';
+  adminId: number;
   title: string;
-  description: string;
-  sender: string;
-  timestamp: string;
+  message: string;
+  submissionId: number;
+  createdAt: string;
   isRead: boolean;
-  requestId: string; // <-- NEW FIELD
-  redirectTo: string;
+  readAt?: string;
+  // Assuming sender info will be part of the notification object in the future
+  // sender?: {
+  //   name: string;
+  //   email: string;
+  // };
 }
 
 // Interface for component props
@@ -25,76 +30,110 @@ interface AdminNotificationProps {
   className?: string;
 }
 
-// Mock notification data
-const mockNotifications: NotificationItem[] = [
-  {
-    id: 1,
-    type: 'join_request',
-    title: 'New Update Information',
-    description: 'MIT University wants to add subjects.',
-    sender: 'admin@mit.edu',
-    timestamp: '2 minutes ago',
-    isRead: false,
-    requestId: '1',
-    redirectTo: '/manage',
-  },
-  {
-    id: 2,
-    type: 'join_request',
-    title: 'New University',
-    description: 'Ngoc Nhi added Harvard University.',
-    sender: 'admin@harvard.edu',
-    timestamp: '1 hour ago',
-    isRead: false,
-    requestId: '2',
-    redirectTo: '/manage',
-  },
-  {
-    id: 3,
-    type: 'join_request',
-    title: 'New University',
-    description: 'Ngoc Nhi added Oxford University.',
-    sender: 'admin@oxford.edu',
-    timestamp: '3 hours ago',
-    isRead: true,
-    requestId: '3',
-    redirectTo: '/manage',
-  },
-];
-
 const AdminNotification: React.FC<AdminNotificationProps> = ({
   onNotificationClick,
   onMarkAllAsRead,
   className = '',
 }) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   const isDashboard =
     location.pathname.startsWith('/manage') || location.pathname.startsWith('/dashboard');
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  // --- API Functions ---
 
-  const handleNotificationItemClick = (notification: NotificationItem) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
-    );
+  // Fetches the list of all notifications from the API using Axios
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      // Fetches all notifications (read and unread)
+      const response = await axios.get('/admin/notifications');
+      // Mapping the API response to the NotificationItem interface
+      setNotifications(response.data.data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Navigate and pass state to open popup
-    navigate(notification.redirectTo, {
+  // Fetches the count of unread notifications from the API using Axios
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await axios.get('/admin/notifications/unread/count');
+      setUnreadCount(response.data.count);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      setUnreadCount(0);
+    }
+  };
+
+  // Marks a specific notification as read via Axios API call
+  const markNotificationAsRead = async (notificationId: number) => {
+    try {
+      await axios.patch(`/admin/notifications/${notificationId}/read`);
+      return true;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      return false;
+    }
+  };
+
+  // Marks all notifications as read via a single API call
+  const markAllNotificationsAsRead = async () => {
+    try {
+      await axios.patch('/admin/notifications/read-all');
+      return true;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      return false;
+    }
+  };
+
+  // Use useEffect to fetch data when the component mounts
+  useEffect(() => {
+    fetchNotifications();
+    fetchUnreadCount();
+  }, []);
+
+  // --- Event Handlers ---
+
+  const handleNotificationItemClick = async (notification: NotificationItem) => {
+    if (!notification.isRead) {
+      const success = await markNotificationAsRead(notification.id);
+      if (success) {
+        // Update local state to reflect the change
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)),
+        );
+        setUnreadCount((prev) => prev - 1);
+      }
+    }
+
+    // navigate based on submissionId
+    navigate(`/manage`, {
       state: {
         openPopup: true,
-        requestId: notification.requestId,
-        popupType: 'detail', // or 'edit' if needed
+        requestId: notification.submissionId,
+        popupType: 'detail',
       },
     });
 
     onNotificationClick?.(notification);
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const handleMarkAllAsRead = async () => {
+    const success = await markAllNotificationsAsRead();
+    if (success) {
+      // Re-fetch all notifications and the unread count to get the most up-to-date state
+      fetchNotifications();
+      fetchUnreadCount();
+    }
     onMarkAllAsRead?.();
   };
 
@@ -123,6 +162,7 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
 
       <div className='max-h-96 overflow-y-auto bg-white'>
         <List
+          loading={loading}
           dataSource={notifications}
           renderItem={(item) => (
             <List.Item
@@ -141,9 +181,11 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
                       </Text>
                       {!item.isRead && <div className='w-2 h-2 bg-blue-500 rounded-full'></div>}
                     </div>
-                    <Text className='text-gray-600 text-sm mt-1 block'>{item.description}</Text>
-                    <Text className='text-gray-400 text-xs mt-1 block'>{item.timestamp}</Text>
-                    <Text className='text-gray-500 text-xs mt-1 block'>{`From: ${item.sender}`}</Text>
+                    <Text className='text-gray-600 text-sm mt-1 block'>{item.message}</Text>
+                    <Text className='text-gray-500 text-xs mt-1 block'>{`From: Unknown`}</Text>
+                    <Text className='text-gray-400 text-xs mt-1 block'>
+                      {moment(item.createdAt).fromNow()}
+                    </Text>
                   </div>
                 </div>
               </div>

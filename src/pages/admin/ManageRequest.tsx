@@ -18,6 +18,7 @@ import {
 } from 'antd';
 import axios from 'axios';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import EditRequestModalContent from './EditRequest';
 import ExportRequestModal from './modals/ExportRequestModal';
@@ -43,7 +44,6 @@ interface UserRequest {
   submittedDate: string;
   submittedAt: string;
   description?: string;
-  // Additional fields from API response
   representativeName?: string;
   representativeEmail?: string;
   representativeNumber?: string;
@@ -86,15 +86,14 @@ const sortOptions = [
 type FilterKey = 'country' | 'requestType' | 'status' | 'search';
 
 const ManageRequest: React.FC = () => {
-  // State for request data
   const [requestData, setRequestData] = useState<UserRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
-  // Removed: const navigate = useNavigate(); as it's no longer used
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // State for API data
   const [contactRequestTypes, setContactRequestTypes] = useState<string[]>([]);
   const [contactSubmissionStatuses, setContactSubmissionStatuses] = useState<string[]>([]);
   const [loadingRequestTypes, setLoadingRequestTypes] = useState(false);
@@ -113,25 +112,19 @@ const ManageRequest: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  // Mobile responsive states
   const [isMobile, setIsMobile] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
 
-  // Modal states
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<UserRequest | null>(null);
 
-  // API Functions
   const fetchContactRequestTypes = async () => {
     setLoadingRequestTypes(true);
     try {
-      // API_BASE_URL replaced with relative path
       const response = await axios.get(`/admin/contact/request-types`, {
-        headers: {
-          accept: '*/*',
-        },
+        headers: { accept: '*/*' },
       });
 
       if (Array.isArray(response.data.data)) {
@@ -151,11 +144,8 @@ const ManageRequest: React.FC = () => {
   const fetchContactSubmissionStatuses = async () => {
     setLoadingSubmissionStatuses(true);
     try {
-      // API_BASE_URL replaced with relative path
       const response = await axios.get(`/admin/contact/status`, {
-        headers: {
-          accept: '*/*',
-        },
+        headers: { accept: '*/*' },
       });
 
       if (Array.isArray(response.data.data)) {
@@ -172,7 +162,6 @@ const ManageRequest: React.FC = () => {
     }
   };
 
-  // Check screen size
   useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -183,7 +172,6 @@ const ManageRequest: React.FC = () => {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // Load API data on component mount
   useEffect(() => {
     fetchContactRequestTypes();
     fetchContactSubmissionStatuses();
@@ -191,7 +179,6 @@ const ManageRequest: React.FC = () => {
 
   const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
     let newValues = [...values];
-
     let allOptions: string[] = [];
     if (field === 'country') allOptions = getUniqueCountries();
     if (field === 'requestType') allOptions = getUniqueRequestTypes();
@@ -206,7 +193,6 @@ const ManageRequest: React.FC = () => {
     }
 
     const finalValues = newValues.filter((value) => value !== '__SELECT_ALL__');
-
     setFilters((prevFilters) => ({ ...prevFilters, [field]: finalValues }));
     setCurrentPage(1);
   };
@@ -223,25 +209,15 @@ const ManageRequest: React.FC = () => {
         sortOrder: sortOrder,
       };
 
-      if (filters.requestType.length > 0) {
-        requestParams.requestType = filters.requestType;
-      }
-      if (filters.country.length > 0) {
-        requestParams.country = filters.country;
-      }
-      if (filters.status.length > 0) {
-        requestParams.status = filters.status;
-      }
-      if (filters.search.length > 0 && filters.search[0].trim()) {
+      if (filters.requestType.length > 0) requestParams.requestType = filters.requestType;
+      if (filters.country.length > 0) requestParams.country = filters.country;
+      if (filters.status.length > 0) requestParams.status = filters.status;
+      if (filters.search.length > 0 && filters.search[0].trim())
         requestParams.search = filters.search[0].trim();
-      }
 
-      // API_BASE_URL replaced with relative path
       const response = await axios.get<ApiResponse>(`/admin/contact`, {
         params: requestParams,
-        headers: {
-          accept: '*/*',
-        },
+        headers: { accept: '*/*' },
         paramsSerializer: (params) => {
           const searchParams = new URLSearchParams();
           Object.keys(params).forEach((key) => {
@@ -266,14 +242,11 @@ const ManageRequest: React.FC = () => {
     } catch (err) {
       const axiosError = err as AxiosError;
       if (axiosError.response && axiosError.response.status === 400) {
-        // This is the specific case where the API returns 400 for no matching results.
-        // We'll treat this as a successful response with zero data.
         console.warn('API returned 400, treating as no results found.');
         setRequestData([]);
         setTotalCount(0);
         setError(null);
       } else {
-        // Handle all other types of errors as actual failures
         const errorMessage = axiosError.message || 'Failed to fetch requests';
         console.error('API Error:', axiosError);
         setError(errorMessage);
@@ -289,50 +262,43 @@ const ManageRequest: React.FC = () => {
     fetchRequests();
   }, [fetchRequests]);
 
+  // Handle opening modal from notification link
+  useEffect(() => {
+    const state = location.state as { openPopup?: boolean; requestId?: string; popupType?: string };
+    if (state?.openPopup && state.requestId) {
+      const foundRequest = requestData.find((req) => req.id === state.requestId);
+      if (foundRequest) {
+        setSelectedRequest(foundRequest);
+        if (foundRequest.requestType === 'New University') {
+          setIsDetailModalVisible(true);
+        } else if (foundRequest.requestType === 'Update Information') {
+          setIsEditModalVisible(true);
+        } else {
+          setIsDetailModalVisible(true);
+        }
+      }
+    }
+  }, [location.state, requestData]);
+
   // Scroll to top when page changes - more robust approach
   useEffect(() => {
     const scrollToTop = () => {
-      // Multiple methods for maximum compatibility
       try {
-        // Method 1: scrollIntoView with top reference
         topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        // Method 2: window.scrollTo to very top
         window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // Method 3: document.documentElement.scrollTop
-        if (document.documentElement) {
-          document.documentElement.scrollTop = 0;
-        }
-
-        // Method 4: document.body.scrollTop
-        if (document.body) {
-          document.body.scrollTop = 0;
-        }
-
-        // Method 5: Force scroll to very top
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
         setTimeout(() => {
           window.scrollTo(0, 0);
-          if (document.documentElement) {
-            document.documentElement.scrollTop = 0;
-          }
-          if (document.body) {
-            document.body.scrollTop = 0;
-          }
+          if (document.documentElement) document.documentElement.scrollTop = 0;
+          if (document.body) document.body.scrollTop = 0;
         }, 100);
       } catch (error) {
-        // Fallback to instant scroll to very top
         window.scrollTo(0, 0);
-        if (document.documentElement) {
-          document.documentElement.scrollTop = 0;
-        }
-        if (document.body) {
-          document.body.scrollTop = 0;
-        }
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
       }
     };
-
-    // Small delay to ensure DOM is updated
     const timer = setTimeout(scrollToTop, 50);
     return () => clearTimeout(timer);
   }, [currentPage]);
@@ -375,35 +341,31 @@ const ManageRequest: React.FC = () => {
     setIsExportModalOpen(true);
   };
 
-  // Handle opening different modals based on request type
   const handleViewRequest = (record: UserRequest) => {
     setSelectedRequest(record);
     if (record.requestType === 'Update Information') {
       setIsEditModalVisible(true);
-    } else if (record.requestType === 'New University') {
-      setIsDetailModalVisible(true);
     } else {
-      // Default action if neither Update Information nor New University
       setIsDetailModalVisible(true);
     }
   };
 
-  // Handle row click to view request details
   const handleRowClick = (record: UserRequest) => {
     handleViewRequest(record);
   };
 
-  // Handlers to close modals
   const handleDetailModalClose = () => {
     setIsDetailModalVisible(false);
     setSelectedRequest(null);
-    fetchRequests(); // Refresh data after closing detail modal (optional)
+    fetchRequests();
+    navigate('/manage');
   };
 
   const handleEditModalClose = () => {
     setIsEditModalVisible(false);
     setSelectedRequest(null);
-    fetchRequests(); // Refresh data after closing edit modal (important for status updates)
+    fetchRequests();
+    navigate('/manage');
   };
 
   const getUniqueCountries = () => {
@@ -427,7 +389,6 @@ const ManageRequest: React.FC = () => {
 
   const getActiveFilters = () => {
     const activeFilters: Array<{ key: FilterKey; label: string; value: string }> = [];
-
     filters.country.forEach((country) => {
       activeFilters.push({ key: 'country', label: 'Country', value: country });
     });
@@ -440,7 +401,6 @@ const ManageRequest: React.FC = () => {
     if (filters.search.length > 0 && filters.search[0].trim()) {
       activeFilters.push({ key: 'search', label: 'Search', value: filters.search[0].trim() });
     }
-
     return activeFilters;
   };
 
@@ -575,7 +535,6 @@ const ManageRequest: React.FC = () => {
           ))}
         </Select>
       </Col>
-
       <Col xs={24} sm={12} md={6} lg={6}>
         <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
           Request Type
@@ -606,7 +565,6 @@ const ManageRequest: React.FC = () => {
           ))}
         </Select>
       </Col>
-
       <Col xs={24} sm={12} md={6} lg={6}>
         <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
           Status
@@ -636,7 +594,6 @@ const ManageRequest: React.FC = () => {
           ))}
         </Select>
       </Col>
-
       <Col xs={24} sm={24} md={6} lg={6}>
         <div
           style={{
@@ -772,7 +729,6 @@ const ManageRequest: React.FC = () => {
                   </div>
                 </div>
               </Col>
-
               <Col xs={24} md={8} style={{ textAlign: isMobile ? 'left' : 'right' }}>
                 <Button
                   icon={<ExportOutlined />}
@@ -998,7 +954,6 @@ const ManageRequest: React.FC = () => {
           </Space>
         </Drawer>
 
-        {/* Request Detail Modal */}
         {selectedRequest && (
           <Modal
             title={
@@ -1013,8 +968,8 @@ const ManageRequest: React.FC = () => {
             footer={null}
             width={700}
             destroyOnClose={true}
-            centered={false} // <--- Set centered to false
-            style={{ top: 20 }} // <--- Position it 20px from the top
+            centered={false}
+            style={{ top: 20 }}
           >
             <RequestDetailModalContent
               requestId={selectedRequest.id}
@@ -1023,7 +978,6 @@ const ManageRequest: React.FC = () => {
           </Modal>
         )}
 
-        {/* Edit Request Modal */}
         {selectedRequest && (
           <Modal
             title={
@@ -1038,8 +992,8 @@ const ManageRequest: React.FC = () => {
             footer={null}
             width={700}
             destroyOnClose={true}
-            centered={false} // <--- Set centered to false
-            style={{ top: 20 }} // <--- Position it 20px from the top
+            centered={false}
+            style={{ top: 20 }}
           >
             <EditRequestModalContent
               requestId={selectedRequest.id}
@@ -1049,7 +1003,6 @@ const ManageRequest: React.FC = () => {
           </Modal>
         )}
 
-        {/* Export Request Modal */}
         <ExportRequestModal
           open={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}

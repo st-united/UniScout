@@ -82,7 +82,10 @@ const routes = [
           </ProtectedRoute>
         ),
       },
-
+      {
+        path: 'manage/:requestId',
+        element: <ManageRequest />,
+      },
       {
         path: 'account',
         element: (
