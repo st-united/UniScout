@@ -190,7 +190,7 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-csv/'));
 
       if (isDownloadLink) {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL;
+        const baseUrl = import.meta.env.VITE_BACKEND_URL;
         const fullHref = new URL(href, baseUrl).toString();
         return (
           <a
