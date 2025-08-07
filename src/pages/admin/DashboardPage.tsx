@@ -797,17 +797,21 @@ const DashboardPage = () => {
                     domain={[
                       0,
                       (dataMax: number) => {
-                        if (!dataMax || isNaN(dataMax)) return 10;
+                        if (!dataMax || isNaN(dataMax)) return 40;
+
+                        const minMax = Math.max(dataMax, 40);
                         const tickCount = 5;
-                        const rawStep = dataMax / (tickCount - 1);
-                        const niceStep = Math.ceil(rawStep);
+                        const rawStep = minMax / (tickCount - 1);
+                        const niceStep = Math.ceil(rawStep / 10) * 10; // round up to nearest 10
                         return niceStep * (tickCount - 1);
                       },
                     ]}
                     ticks={(() => {
-                      if (!contactRequestData || contactRequestData.length === 0) return [0, 10];
-
                       const tickCount = 5;
+
+                      if (!contactRequestData || contactRequestData.length === 0) {
+                        return [0, 10, 20, 30, 40];
+                      }
 
                       const maxValue = Math.max(
                         ...contactRequestData.map(
@@ -819,10 +823,9 @@ const DashboardPage = () => {
                         ),
                       );
 
-                      if (!maxValue || isNaN(maxValue)) return [0, 10];
-
-                      const rawStep = maxValue / (tickCount - 1);
-                      const niceStep = Math.ceil(rawStep);
+                      const minMax = Math.max(maxValue, 40);
+                      const rawStep = minMax / (tickCount - 1);
+                      const niceStep = Math.ceil(rawStep / 10) * 10;
 
                       return Array.from({ length: tickCount }, (_, i) => i * niceStep);
                     })()}
