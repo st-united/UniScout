@@ -189,10 +189,15 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-excel/') ||
           href.startsWith('api/chatbot/download-csv/'));
 
+      console.log('final href:', `https://api.uniscout.dev.stunited.vn/${href}`);
+      const isAbsoluteUrl = href?.startsWith('http://') || href?.startsWith('https://');
+      const fullHref = isAbsoluteUrl
+        ? href
+        : `https://api.uniscout.dev.stunited.vn/${href?.replace(/^\/+/, '')}`;
       if (isDownloadLink) {
         return (
           <a
-            href={`https://api.uniscout.dev.stunited.vn/${href}`}
+            href={fullHref}
             target='_blank'
             rel='noopener noreferrer'
             download
