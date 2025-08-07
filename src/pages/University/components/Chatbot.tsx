@@ -6,8 +6,8 @@ import rehypeRaw from 'rehype-raw';
 
 import type { Components } from 'react-markdown';
 
-// NOTE: Using a relative path for API calls as requested.
-// This is a common practice when the frontend and backend are hosted on the same domain.
+// NOTE: Using environment variables for API base URLs as requested.
+// This is a common practice for flexible deployment and configuration.
 
 type Message = {
   from: 'user' | 'bot';
@@ -15,6 +15,9 @@ type Message = {
   suggestions?: string[];
   time: string;
 };
+
+// Define the API base URL from the environment variable
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const formatTime = (date: Date) =>
   date.toLocaleString('en-US', {
@@ -127,8 +130,8 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      // Changed the URL to a relative path as requested.
-      const response = await axios.post(`chatbot/message`, payload);
+      // Changed the URL to use the environment variable.
+      const response = await axios.post(`${BACKEND_URL}chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
       if (!botReplyText) {
@@ -172,8 +175,8 @@ const Chatbot = () => {
     setIsOpen(false);
     if (sessionId) {
       try {
-        // Changed the URL to a relative path as requested.
-        await axios.post(`chatbot/reset`, { userId: sessionId });
+        // Changed the URL to use the environment variable.
+        await axios.post(`${BACKEND_URL}chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
@@ -185,20 +188,17 @@ const Chatbot = () => {
   const renderers: Components = {
     a: ({ href, children, ...props }) => {
       const downloadUrlPrefix = 'api/chatbot/download-';
-      const correctApiDomain = 'https://api.uniscout.dev.stunited.vn';
       const isDownloadLink = href && href.includes(downloadUrlPrefix);
 
       let finalHref = href;
 
       if (isDownloadLink) {
-        // If the link from the bot has the wrong domain, correct it.
-        // This also handles cases where the bot might return a relative path.
+        // Correct the domain to use the environment variable and ensure a single slash.
         const path = href.startsWith('https://')
-          ? href.replace('https://uniscout.dev.stunited.vn', '')
-          : href;
+          ? href.replace(/https:\/\/[^/]+\//, '') // Remove the existing domain
+          : href.replace(/^\//, ''); // Remove leading slash if it's a relative path
 
-        // Construct the final URL with the correct domain and a single slash.
-        finalHref = `${correctApiDomain}/${path.replace(/^\//, '')}`;
+        finalHref = `${BACKEND_URL}${path}`;
       }
 
       console.log('final href:', finalHref);
