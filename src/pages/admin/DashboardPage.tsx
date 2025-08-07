@@ -799,7 +799,7 @@ const DashboardPage = () => {
                       (dataMax: number) => {
                         if (!dataMax || isNaN(dataMax)) return 40;
 
-                        const minMax = Math.max(dataMax, 40); // valeur minimale de 40
+                        const minMax = Math.max(dataMax, 40);
                         const tickCount = 5;
                         const rawStep = minMax / (tickCount - 1);
                         const niceStep = Math.ceil(rawStep / 10) * 10; // round up to nearest 10
