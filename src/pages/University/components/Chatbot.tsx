@@ -16,9 +16,6 @@ type Message = {
   time: string;
 };
 
-// Define the API base URL from the environment variable
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 const formatTime = (date: Date) =>
   date.toLocaleString('en-US', {
     weekday: 'short',
@@ -131,7 +128,7 @@ const Chatbot = () => {
       };
 
       // Changed the URL to use the environment variable.
-      const response = await axios.post(`${BACKEND_URL}/api/chatbot/message`, payload);
+      const response = await axios.post(`chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
       if (!botReplyText) {
@@ -176,7 +173,7 @@ const Chatbot = () => {
     if (sessionId) {
       try {
         // Changed the URL to use the environment variable.
-        await axios.post(`${BACKEND_URL}/api/chatbot/reset`, { userId: sessionId });
+        await axios.post(`chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
         console.error('Error resetting backend session:', error);
@@ -198,7 +195,7 @@ const Chatbot = () => {
           ? href.replace(/https:\/\/[^/]+\//, '') // Remove the existing domain
           : href.replace(/^\//, ''); // Remove leading slash if it's a relative path
 
-        finalHref = `${BACKEND_URL}/${path}`;
+        finalHref = `${path}`;
       }
 
       console.log('final href:', finalHref);
