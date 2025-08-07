@@ -190,9 +190,7 @@ const Chatbot = () => {
           href.startsWith('api/chatbot/download-csv/'));
 
       if (isDownloadLink) {
-        const apiUrlObject = new URL(URL);
-        const downloadBaseUrl = `${apiUrlObject.protocol}//${apiUrlObject.host}`;
-        const fullHref = `${downloadBaseUrl}/${href}`;
+        const fullHref = `${API_BASE_URL}${href}`;
         return (
           <a
             href={fullHref}
