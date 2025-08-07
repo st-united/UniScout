@@ -44,11 +44,12 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
     <ConfigProvider
       theme={{
         token: {
-          fontFamily: 'Inter, sans-serif',
           colorPrimary: '#FF7A45',
           borderRadius: 6,
           controlHeight: 40,
-          fontWeightStrong: 400,
+          fontWeightStrong: 500,
+          fontSize: 14,
+          fontFamily: 'Quicksand, BlinkMacSystemFont,Helvetica Neue,sans-serif',
         },
       }}
     >
@@ -78,7 +79,7 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
               value={formValues.name}
               onChange={handleChange}
               placeholder='Enter the full name of the user'
-              className='mt-1 rounded-md h-11'
+              className='mt-1 rounded-md h-12 !font-medium '
             />
           </div>
 
@@ -94,7 +95,7 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
               value={formValues.email}
               onChange={handleChange}
               placeholder='Enter email address'
-              className='mt-1 rounded-md h-11'
+              className='mt-1 rounded-md h-12 !font-[500] '
             />
           </div>
 
@@ -109,7 +110,14 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
                 placeholder='Choose Department'
                 value={formValues.role || undefined}
                 onChange={(value) => handleChange(value, 'role')}
-                className='w-full mt-1 rounded-md h-11'
+                className='w-full mt-1 rounded-md h-12 !font-[500]'
+                dropdownStyle={{
+                  fontSize: 13,
+                  fontWeight: 400,
+                  fontFamily: 'Inter, sans-serif',
+                  backgroundColor: '#fff',
+                  borderRadius: 8,
+                }}
               >
                 {jobRoles.map((role: string) => (
                   <Option key={role} value={role}>
@@ -127,7 +135,7 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
                 id='status'
                 disabled
                 value={formValues.status}
-                className='w-full mt-1 rounded-md !text-sm h-11'
+                className='w-full mt-1 rounded-md h-12 !font-[500]'
               >
                 <Option value='Pending'>Pending</Option>
               </Select>
@@ -144,7 +152,7 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
               disabled
               value={formValues.password}
               iconRender={() => null}
-              className='mt-1 rounded-md h-10 w-full lg:max-w-[calc(50%-8px)] text-sm'
+              className='mt-1 rounded-md h-12 w-full lg:max-w-[calc(50%-8px)] text-sm !font-[500]'
             />
           </div>
 
