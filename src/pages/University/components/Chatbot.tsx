@@ -193,7 +193,7 @@ const Chatbot = () => {
       const isAbsoluteUrl = href?.startsWith('http://') || href?.startsWith('https://');
       const fullHref = isAbsoluteUrl
         ? href
-        : `https://api.uniscout.dev.stunited.vn/${href?.replace(/^\/+/, '')}`;
+        : `https://api.uniscout.dev.stunited.vn${href?.replace(/^\/+/, '')}`;
       if (isDownloadLink) {
         return (
           <a
