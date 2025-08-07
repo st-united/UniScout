@@ -3,6 +3,7 @@ import { FC, lazy, useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 
+import { getStorageStringData } from '@app/config/storage';
 import { RootState } from '@app/redux/store';
 import './SignIn.scss';
 
@@ -16,8 +17,12 @@ const SignIn: FC = () => {
   useEffect(() => {
     console.log('SignIn useEffect: isAuth changed to', isAuth);
     if (isAuth) {
-      console.log('SignIn useEffect: Redirecting to /admin/dashboard');
-      navigate('/');
+      const role = getStorageStringData('role')?.toLowerCase();
+      if (role === 'super') {
+        navigate('/account');
+      } else {
+        navigate('/');
+      }
     }
   }, [isAuth, navigate]);
 

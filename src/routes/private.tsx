@@ -44,23 +44,43 @@ const routes = [
     children: [
       {
         index: true,
-        element: <DashboardPage />,
+        element: (
+          <ProtectedRoute forbidSuperAdmin>
+            <DashboardPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'universities',
-        element: <UniversityListPage />,
+        element: (
+          <ProtectedRoute forbidSuperAdmin>
+            <UniversityListPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'create-university',
-        element: <CreateUniversity />,
+        element: (
+          <ProtectedRoute forbidSuperAdmin>
+            <CreateUniversity />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'edit-university/:id',
-        element: <EditUniversity />,
+        element: (
+          <ProtectedRoute forbidSuperAdmin>
+            <EditUniversity />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'manage',
-        element: <ManageRequest />,
+        element: (
+          <ProtectedRoute forbidSuperAdmin>
+            <ManageRequest />
+          </ProtectedRoute>
+        ),
       },
 
       {

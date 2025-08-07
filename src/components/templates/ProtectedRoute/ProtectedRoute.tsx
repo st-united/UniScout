@@ -9,6 +9,7 @@ import { RootState } from '@app/redux/store';
 interface ProtectedRouteProps {
   children: ReactNode;
   requireSuperAdmin?: boolean;
+  forbidSuperAdmin?: boolean;
 }
 
 /**
@@ -16,15 +17,24 @@ interface ProtectedRouteProps {
  * If the user is not authenticated, they are redirected to the login page.
  * @param children The content to render if the user is authenticated.
  */
-const ProtectedRoute: FC<ProtectedRouteProps> = ({ children, requireSuperAdmin }) => {
+const ProtectedRoute: FC<ProtectedRouteProps> = ({
+  children,
+  requireSuperAdmin,
+  forbidSuperAdmin,
+}) => {
   const { isAuth } = useSelector((state: RootState) => state.auth);
   const location = useLocation();
   const role = getStorageStringData('role');
+
   if (!isAuth) {
     return <Navigate to='/login' replace state={{ from: location }} />;
   }
 
   if (requireSuperAdmin && role !== 'super') {
+    return <Navigate to='/403' replace />;
+  }
+
+  if (forbidSuperAdmin && role === 'super') {
     return <Navigate to='/403' replace />;
   }
 

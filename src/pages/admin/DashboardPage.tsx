@@ -840,7 +840,7 @@ const DashboardPage = () => {
                         pending: '#2259C7',
                         inProgress: '#FFAE4C',
                         completed: '#6FD195',
-                        rejected: '#EF3826',
+                        rejected: '#FF8479',
                       };
 
                       const labelMap: Record<string, string> = {
@@ -892,7 +892,7 @@ const DashboardPage = () => {
                   <Bar
                     dataKey='rejected'
                     stackId='a'
-                    fill='#EF3826'
+                    fill='#FF8479'
                     radius={[0, 0, 0, 0]}
                     barSize={12}
                   />

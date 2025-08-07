@@ -24,26 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const user = getStorageStringData('name');
   const role = getStorageStringData('role');
 
-  const menuItems = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      path: '/',
-    },
-    {
-      id: 'manage-university',
-      label: 'Manage University',
-      icon: GraduationCap,
-      path: '/universities',
-    },
-    {
-      id: 'manage-request',
-      label: 'Manage Request',
-      icon: FileText,
-      path: '/manage',
-    },
-    ...(role === 'super'
+  const menuItems =
+    role === 'super'
       ? [
           {
             id: 'manage-account',
@@ -51,15 +33,39 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
             icon: User,
             path: '/account',
           },
+          {
+            id: 'logout',
+            label: 'Logout',
+            icon: LogOut,
+            action: 'logout',
+          },
         ]
-      : []),
-    {
-      id: 'logout',
-      label: 'Logout',
-      icon: LogOut,
-      action: 'logout',
-    },
-  ];
+      : [
+          {
+            id: 'dashboard',
+            label: 'Dashboard',
+            icon: LayoutDashboard,
+            path: '/',
+          },
+          {
+            id: 'manage-university',
+            label: 'Manage University',
+            icon: GraduationCap,
+            path: '/universities',
+          },
+          {
+            id: 'manage-request',
+            label: 'Manage Request',
+            icon: FileText,
+            path: '/manage',
+          },
+          {
+            id: 'logout',
+            label: 'Logout',
+            icon: LogOut,
+            action: 'logout',
+          },
+        ];
 
   const handleMenuClick = (path: string, tabId: string) => {
     setActiveTab(tabId);
