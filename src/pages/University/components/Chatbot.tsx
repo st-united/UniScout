@@ -4,10 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
+import { BACKEND_URL } from '@app/constants/socket';
 import type { Components } from 'react-markdown';
-
-// NOTE: Using environment variables for API base URLs as requested.
-// This is a common practice for flexible deployment and configuration.
 
 type Message = {
   from: 'user' | 'bot';
@@ -127,7 +125,6 @@ const Chatbot = () => {
         userId: sessionId,
       };
 
-      // Changed the URL to use the environment variable.
       const response = await axios.post(`chatbot/message`, payload);
 
       const botReplyText = response.data?.reply;
@@ -172,7 +169,6 @@ const Chatbot = () => {
     setIsOpen(false);
     if (sessionId) {
       try {
-        // Changed the URL to use the environment variable.
         await axios.post(`chatbot/reset`, { userId: sessionId });
         console.log(`Session ${sessionId} reset on backend.`);
       } catch (error) {
@@ -190,12 +186,11 @@ const Chatbot = () => {
       let finalHref = href;
 
       if (isDownloadLink) {
-        // Correct the domain to use the environment variable and ensure a single slash.
         const path = href.startsWith('https://')
-          ? href.replace(/https:\/\/[^/]+\//, '') // Remove the existing domain
-          : href.replace(/^\//, ''); // Remove leading slash if it's a relative path
+          ? href.replace(/https:\/\/[^/]+\//, '')
+          : href.replace(/^\//, '');
 
-        finalHref = `${path}`;
+        finalHref = `${BACKEND_URL}/${path}`;
       }
 
       console.log('final href:', finalHref);
