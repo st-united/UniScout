@@ -17,7 +17,7 @@ type Message = {
 };
 
 // Define the API base URL from the environment variable
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_BASE_URL_API;
 
 const formatTime = (date: Date) =>
   date.toLocaleString('en-US', {
