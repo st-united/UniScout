@@ -32,6 +32,37 @@ interface Account {
   status: string;
 }
 
+type Status = Account['status'];
+const ALL_STATUSES: Status[] = ['Active', 'Blocked', 'Deactivated', 'Pending'];
+
+const isForbiddenTransitionForSuperAdmin = (from: Status, to: Status) => {
+  if (to === 'Pending' && from !== 'Pending') return true;
+  if (from === 'Pending' && to === 'Blocked') return true;
+  if (from === 'Deactivated' && to === 'Pending') return true;
+  if (from === 'Blocked' && to === 'Pending') return true;
+  return false;
+};
+
+const getVisibleTargets = (current: Status, isSuperAdmin: boolean): Status[] => {
+  if (!isSuperAdmin) return ALL_STATUSES;
+  return ALL_STATUSES.filter(
+    (to) => to === current || !isForbiddenTransitionForSuperAdmin(current, to),
+  );
+};
+
+const safeApplyStatus = (
+  from: Status,
+  to: Status,
+  isSuperAdmin: boolean,
+  onAllowed: () => void,
+) => {
+  if (isSuperAdmin && isForbiddenTransitionForSuperAdmin(from, to)) {
+    message.warning('This status change is not allowed.');
+    return;
+  }
+  onAllowed();
+};
+
 const ManageAccount: React.FC = () => {
   const [createAccountModal, setCreateAccountModal] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -337,6 +368,8 @@ const ManageAccount: React.FC = () => {
     }));
     setCurrentPage(1);
   };
+
+  const isSuperAdmin = true;
 
   const columns: ColumnsType<Account> = [
     {
@@ -644,6 +677,7 @@ const ManageAccount: React.FC = () => {
         };
 
         const { text, bg } = colorMap[status];
+        const visibleOptions = getVisibleTargets(status, isSuperAdmin);
 
         return (
           <div
@@ -667,16 +701,16 @@ const ManageAccount: React.FC = () => {
               }}
               getPopupContainer={(trigger: HTMLElement) => trigger.parentNode as HTMLElement}
             >
-              {Object.entries(colorMap).map(([key, value]) => (
-                <Option key={key} value={key}>
+              {visibleOptions.map((opt) => (
+                <Option key={opt} value={opt}>
                   <span
                     className='text-sm font-bold'
                     style={{
-                      color: key === status ? value.text : '#000',
-                      fontWeight: key === status ? 600 : 400,
+                      color: opt === status ? colorMap[opt].text : '#000',
+                      fontWeight: opt === status ? 600 : 400,
                     }}
                   >
-                    {key}
+                    {opt}
                   </span>
                 </Option>
               ))}
@@ -732,6 +766,11 @@ const ManageAccount: React.FC = () => {
       </div>
     );
   }
+
+  const currentStatus = selectedUser?.status as Status | undefined;
+  const visibleEditOptions = currentStatus
+    ? getVisibleTargets(currentStatus, isSuperAdmin)
+    : ALL_STATUSES;
 
   return (
     <div style={{ backgroundColor: '#fffff', minHeight: '100vh' }}>
@@ -1175,12 +1214,15 @@ const ManageAccount: React.FC = () => {
                     id='edit-account-status'
                     value={selectedUser?.status}
                     disabled={!isEditMode}
-                    onChange={(value: string) => {
-                      if (isEditMode && value === 'Deactivated') {
-                        setShowStatusWarning(true);
-                      } else if (selectedUser) {
-                        setSelectedUser({ ...selectedUser, status: value });
-                      }
+                    onChange={(value: Status) => {
+                      if (!selectedUser || !currentStatus) return;
+                      safeApplyStatus(currentStatus, value, isSuperAdmin, () => {
+                        if (isEditMode && value === 'Deactivated') {
+                          setShowStatusWarning(true);
+                        } else {
+                          setSelectedUser({ ...selectedUser, status: value });
+                        }
+                      });
                     }}
                     style={{
                       width: '100%',
@@ -1191,10 +1233,11 @@ const ManageAccount: React.FC = () => {
                       borderRadius: !isEditMode ? 8 : undefined,
                     }}
                   >
-                    <Select.Option value='Active'>Active</Select.Option>
-                    <Select.Option value='Blocked'>Blocked</Select.Option>
-                    <Select.Option value='Deactivated'>Deactivated</Select.Option>
-                    <Select.Option value='Pending'>Pending</Select.Option>
+                    {visibleEditOptions.map((opt) => (
+                      <Select.Option key={opt} value={opt}>
+                        {opt}
+                      </Select.Option>
+                    ))}
                   </Select>
                 </div>
               </div>
@@ -1221,6 +1264,18 @@ const ManageAccount: React.FC = () => {
                       Deactivated: 'inactive',
                       Pending: 'pending',
                     };
+                    const from =
+                      (accounts.find((a) => a.key === selectedUser.key)?.status as
+                        | Status
+                        | undefined) ?? (selectedUser.status as Status);
+                    if (
+                      isSuperAdmin &&
+                      isForbiddenTransitionForSuperAdmin(from, selectedUser.status as Status)
+                    ) {
+                      message.warning('This status change is not allowed.');
+                      setIsSaving(false);
+                      return;
+                    }
                     const payload = {
                       name: selectedUser.name,
                       email: selectedUser.email,
