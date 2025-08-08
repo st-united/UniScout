@@ -11,8 +11,8 @@ interface AdminHeaderProps {
 
 const AdminHeader: React.FC<AdminHeaderProps> = () => {
   return (
-    <header className='fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm'>
-      <div className='flex items-center justify-between px-4 py-1 min-h-12'>
+    <header className='fixed min-h-16 items-center top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm'>
+      <div className='flex items-center justify-between px-4 py-1 min-h-16'>
         {/* Left side - Logo */}
         <Link
           to='/'
@@ -22,7 +22,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = () => {
           <img
             src={devplusLogo}
             alt='DevPlus Logo'
-            className='h-12 w-auto md:h-14 transition-transform duration-200'
+            className='h-12 w-auto md:h-14 transition-transform duration-200 ml-10 lg:ml-3'
           />
         </Link>
 

@@ -95,11 +95,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   return (
     <>
       {/* Mobile menu button */}
-      <div className='lg:hidden fixed top-3 left-3 z-50'>
+      <div className='fixed lg:hidden  top-4 left-4 z-50'>
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className='p-2 bg-white rounded-lg shadow text-gray-700 hover:bg-gray-50'
+            className='p-2 bg-white border-none rounded-lg  text-[#FF6600] hover:bg-gray-50'
           >
             <Menu className='w-6 h-6' />
           </button>
@@ -115,10 +115,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       `}
       >
         {/* Mobile-only top bar */}
-        <div className='lg:hidden px-4 pt-4 pb-2 flex items-center justify-between'>
+        <div className='lg:hidden px-4 pt-4 pb-2 flex items-center justify-between '>
           <img src={devplusLogo} alt='DevPlus Logo' className='h-10' />
-          <button onClick={() => setIsOpen(false)} className='p-1 hover:bg-gray-100 rounded'>
-            <X className='w-6 h-6 text-gray-700' />
+          <button
+            onClick={() => setIsOpen(false)}
+            className='p-1 bg-white border-none hover:bg-gray rounded-1/2'
+          >
+            <X className='w-6 h-6 text-[#666]' />
           </button>
         </div>
 
