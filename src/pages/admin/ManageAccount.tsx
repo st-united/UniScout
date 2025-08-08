@@ -1,5 +1,16 @@
 import { ExclamationCircleOutlined, SearchOutlined, CloseCircleFilled } from '@ant-design/icons';
-import { Table, Select, Modal, Input, Button, message, ConfigProvider, Checkbox, Tag } from 'antd';
+import {
+  Table,
+  Select,
+  Modal,
+  Input,
+  Button,
+  message,
+  ConfigProvider,
+  Checkbox,
+  Tag,
+  Spin,
+} from 'antd';
 import axios from 'axios';
 import {
   Users,
@@ -32,6 +43,37 @@ interface Account {
   status: string;
 }
 
+type Status = Account['status'];
+const ALL_STATUSES: Status[] = ['Active', 'Blocked', 'Deactivated', 'Pending'];
+
+const isForbiddenTransitionForSuperAdmin = (from: Status, to: Status) => {
+  if (to === 'Pending' && from !== 'Pending') return true;
+  if (from === 'Pending' && to === 'Blocked') return true;
+  if (from === 'Deactivated' && to === 'Pending') return true;
+  if (from === 'Blocked' && to === 'Pending') return true;
+  return false;
+};
+
+const getVisibleTargets = (current: Status, isSuperAdmin: boolean): Status[] => {
+  if (!isSuperAdmin) return ALL_STATUSES;
+  return ALL_STATUSES.filter(
+    (to) => to === current || !isForbiddenTransitionForSuperAdmin(current, to),
+  );
+};
+
+const safeApplyStatus = (
+  from: Status,
+  to: Status,
+  isSuperAdmin: boolean,
+  onAllowed: () => void,
+) => {
+  if (isSuperAdmin && isForbiddenTransitionForSuperAdmin(from, to)) {
+    message.warning('This status change is not allowed.');
+    return;
+  }
+  onAllowed();
+};
+
 const ManageAccount: React.FC = () => {
   const [createAccountModal, setCreateAccountModal] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -46,7 +88,8 @@ const ManageAccount: React.FC = () => {
   } | null>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -123,9 +166,11 @@ const ManageAccount: React.FC = () => {
     return role;
   };
 
+  // -- mount: job roles + stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setStatsLoading(true);
         const res = await axios.get(
           'https://api.uniscout.dev.stunited.vn/api/dashboard/users-overview',
         );
@@ -137,14 +182,35 @@ const ManageAccount: React.FC = () => {
           Deactivated: data.deactivatedUsers,
           Pending: data.pendingUsers,
         });
-      } catch (error) {
+      } catch {
         message.error('Error fetching overview stats');
+      } finally {
+        setStatsLoading(false);
       }
     };
 
+    const fetchJobRoles = async () => {
+      try {
+        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users/job-roles');
+        if (Array.isArray(res.data)) {
+          setJobRoles(res.data);
+        } else if (Array.isArray(res.data.data)) {
+          setJobRoles(res.data.data);
+        }
+      } catch {
+        setJobRoles([]);
+      }
+    };
+
+    fetchJobRoles();
+    fetchStats();
+  }, []);
+
+  // -- users: refetch when pagination/search/filters changent
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
-        setLoading(true);
+        setTableLoading(true);
         const params: any = {};
 
         if (searchQuery.trim()) {
@@ -189,30 +255,23 @@ const ManageAccount: React.FC = () => {
         }));
         setAccounts(formattedUsers);
         setTotalCount(total);
-      } catch (error) {
+      } catch {
         message.error('Error fetching users');
       } finally {
-        setLoading(false);
+        setTableLoading(false);
       }
     };
 
-    const fetchJobRoles = async () => {
-      try {
-        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users/job-roles');
-        if (Array.isArray(res.data)) {
-          setJobRoles(res.data);
-        } else if (Array.isArray(res.data.data)) {
-          setJobRoles(res.data.data);
-        }
-      } catch (error) {
-        setJobRoles([]);
-      }
-    };
-    fetchJobRoles();
-
-    fetchStats();
     fetchUsers();
   }, [currentPage, pageSize, searchQuery, filters]);
+
+  // === Full-screen initial loading: show one spinner until stats + table loaded once
+  const [initialLoading, setInitialLoading] = useState(true);
+  useEffect(() => {
+    if (!statsLoading && !tableLoading) {
+      setInitialLoading(false);
+    }
+  }, [statsLoading, tableLoading]);
 
   // Scroll to top when page changes - more robust approach
   useEffect(() => {
@@ -320,7 +379,7 @@ const ManageAccount: React.FC = () => {
   // Filter handlers
   const handleFilterChange = (field: 'role' | 'status', values: string[]) => {
     setFilters((prev) => ({ ...prev, [field]: values }));
-    setCurrentPage(1);
+    if (currentPage !== 1) setCurrentPage(1);
   };
 
   const resetFilters = () => {
@@ -337,6 +396,8 @@ const ManageAccount: React.FC = () => {
     }));
     setCurrentPage(1);
   };
+
+  const isSuperAdmin = true;
 
   const columns: ColumnsType<Account> = [
     {
@@ -435,7 +496,8 @@ const ManageAccount: React.FC = () => {
                       const newRoles = filters.role.includes(role)
                         ? filters.role.filter((r) => r !== role)
                         : [...filters.role, role];
-                      setFilters((prev) => ({ ...prev, role: newRoles }));
+                      handleFilterChange('role', newRoles);
+                      setRoleDropdownVisible(false);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -443,7 +505,8 @@ const ManageAccount: React.FC = () => {
                         const newRoles = filters.role.includes(role)
                           ? filters.role.filter((r) => r !== role)
                           : [...filters.role, role];
-                        setFilters((prev) => ({ ...prev, role: newRoles }));
+                        handleFilterChange('role', newRoles);
+                        setRoleDropdownVisible(false);
                       }
                     }}
                     onMouseEnter={(e) => {
@@ -590,7 +653,8 @@ const ManageAccount: React.FC = () => {
                       const newStatuses = filters.status.includes(status)
                         ? filters.status.filter((s) => s !== status)
                         : [...filters.status, status];
-                      setFilters((prev) => ({ ...prev, status: newStatuses }));
+                      handleFilterChange('status', newStatuses);
+                      setStatusDropdownVisible(false);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -598,7 +662,8 @@ const ManageAccount: React.FC = () => {
                         const newStatuses = filters.status.includes(status)
                           ? filters.status.filter((s) => s !== status)
                           : [...filters.status, status];
-                        setFilters((prev) => ({ ...prev, status: newStatuses }));
+                        handleFilterChange('status', newStatuses);
+                        setStatusDropdownVisible(false);
                       }
                     }}
                     onMouseEnter={(e) => {
@@ -644,6 +709,7 @@ const ManageAccount: React.FC = () => {
         };
 
         const { text, bg } = colorMap[status];
+        const visibleOptions = getVisibleTargets(status, isSuperAdmin);
 
         return (
           <div
@@ -667,16 +733,16 @@ const ManageAccount: React.FC = () => {
               }}
               getPopupContainer={(trigger: HTMLElement) => trigger.parentNode as HTMLElement}
             >
-              {Object.entries(colorMap).map(([key, value]) => (
-                <Option key={key} value={key}>
+              {visibleOptions.map((opt) => (
+                <Option key={opt} value={opt}>
                   <span
                     className='text-sm font-bold'
                     style={{
-                      color: key === status ? value.text : '#000',
-                      fontWeight: key === status ? 600 : 400,
+                      color: opt === status ? colorMap[opt].text : '#000',
+                      fontWeight: opt === status ? 600 : 400,
                     }}
                   >
-                    {key}
+                    {opt}
                   </span>
                 </Option>
               ))}
@@ -725,10 +791,23 @@ const ManageAccount: React.FC = () => {
     },
   ];
 
-  if (loading || !stats) {
+  const currentStatus = selectedUser?.status as Status | undefined;
+  const visibleEditOptions = currentStatus
+    ? getVisibleTargets(currentStatus, isSuperAdmin)
+    : ALL_STATUSES;
+
+  // Full-screen initial spinner (single loading at page load)
+  if (initialLoading) {
     return (
-      <div className='flex justify-center items-center py-10'>
-        <p className='text-gray-500'>Loading stats...</p>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Spin size='large' />
       </div>
     );
   }
@@ -988,8 +1067,11 @@ const ManageAccount: React.FC = () => {
             <Table
               columns={columns}
               dataSource={accounts}
-              loading={loading}
-              rowKey='id'
+              loading={{
+                spinning: tableLoading,
+                indicator: <Spin size='large' />,
+              }}
+              rowKey='key'
               pagination={{
                 current: currentPage,
                 pageSize: pageSize,
@@ -1175,12 +1257,15 @@ const ManageAccount: React.FC = () => {
                     id='edit-account-status'
                     value={selectedUser?.status}
                     disabled={!isEditMode}
-                    onChange={(value: string) => {
-                      if (isEditMode && value === 'Deactivated') {
-                        setShowStatusWarning(true);
-                      } else if (selectedUser) {
-                        setSelectedUser({ ...selectedUser, status: value });
-                      }
+                    onChange={(value: Status) => {
+                      if (!selectedUser || !currentStatus) return;
+                      safeApplyStatus(currentStatus, value, isSuperAdmin, () => {
+                        if (isEditMode && value === 'Deactivated') {
+                          setShowStatusWarning(true);
+                        } else {
+                          setSelectedUser({ ...selectedUser, status: value });
+                        }
+                      });
                     }}
                     style={{
                       width: '100%',
@@ -1191,10 +1276,11 @@ const ManageAccount: React.FC = () => {
                       borderRadius: !isEditMode ? 8 : undefined,
                     }}
                   >
-                    <Select.Option value='Active'>Active</Select.Option>
-                    <Select.Option value='Blocked'>Blocked</Select.Option>
-                    <Select.Option value='Deactivated'>Deactivated</Select.Option>
-                    <Select.Option value='Pending'>Pending</Select.Option>
+                    {visibleEditOptions.map((opt) => (
+                      <Select.Option key={opt} value={opt}>
+                        {opt}
+                      </Select.Option>
+                    ))}
                   </Select>
                 </div>
               </div>
@@ -1221,6 +1307,18 @@ const ManageAccount: React.FC = () => {
                       Deactivated: 'inactive',
                       Pending: 'pending',
                     };
+                    const from =
+                      (accounts.find((a) => a.key === selectedUser.key)?.status as
+                        | Status
+                        | undefined) ?? (selectedUser.status as Status);
+                    if (
+                      isSuperAdmin &&
+                      isForbiddenTransitionForSuperAdmin(from, selectedUser.status as Status)
+                    ) {
+                      message.warning('This status change is not allowed.');
+                      setIsSaving(false);
+                      return;
+                    }
                     const payload = {
                       name: selectedUser.name,
                       email: selectedUser.email,

@@ -23,10 +23,10 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
     const cleaned: Record<string, string[]> = {};
     for (const [key, value] of Object.entries(filters)) {
       if (Array.isArray(value)) {
-        const cleanedValues = value.filter((v) => v && v.trim && v.trim() !== '');
-        if (cleanedValues.length > 0) {
-          cleaned[key] = cleanedValues;
-        }
+        const cleanedValues = value
+          .map((v) => (typeof v === 'string' ? v.trim() : ''))
+          .filter((v) => v !== '');
+        if (cleanedValues.length > 0) cleaned[key] = cleanedValues;
       }
     }
     return cleaned;
@@ -40,7 +40,7 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
 
     const columnMap: Record<string, string> = {
       Name: 'name',
-      Department: 'role',
+      Department: 'job',
       Email: 'email',
       'Create Time': 'createdAt',
       Status: 'status',
@@ -49,26 +49,33 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
     const mappedColumns = selectedColumns.map((col) => columnMap[col]).filter(Boolean);
     const safeFilters = sanitizeFilters(appliedFilters);
 
-    const jobRoles = [
-      { id: '1', name: 'Marketing' },
-      { id: '2', name: 'Sales' },
-      { id: '3', name: 'HR' },
-    ];
-
-    const jobNameToId = (name: string) => {
-      const found = jobRoles.find((role) => role.name === name);
-      return found?.id;
+    const ALLOWED_STATUS = new Set(['active', 'inactive', 'pending', 'blocked']);
+    const ALLOWED_ROLES = new Set(['admin', 'user', 'super']);
+    const JOB_CANON: Record<string, string> = {
+      marketing: 'Marketing',
+      'business development': 'Business Development',
     };
 
-    const jobIds = (safeFilters.job || [])
-      .map(jobNameToId)
-      .filter((id): id is string => typeof id === 'string');
+    const statusArr = (safeFilters.status ?? [])
+      .map((s) => s.toLowerCase())
+      .filter((s) => ALLOWED_STATUS.has(s));
+    const statusPayload: string | undefined = statusArr[0];
+
+    const roleArr = (safeFilters.role ?? [])
+      .map((r) => r.toLowerCase())
+      .filter((r) => ALLOWED_ROLES.has(r));
+    const rolePayload = roleArr.length ? roleArr : undefined;
+
+    const jobArrLower = (safeFilters.job ?? [])
+      .map((j) => j.toLowerCase())
+      .filter((j) => JOB_CANON[j]);
+    const jobPayload = jobArrLower.length ? jobArrLower.map((j) => JOB_CANON[j]) : undefined;
 
     const payload = {
       fields: mappedColumns,
-      status: safeFilters.status?.map((s) => s.toLowerCase()),
-      role: safeFilters.role?.map(() => 'admin'),
-      job: jobIds.length > 0 ? jobIds : undefined,
+      status: statusPayload,
+      role: rolePayload,
+      job: jobPayload,
       search: safeFilters.search?.[0] || '',
       format: selectedFormat === 'excel' ? 'xlsx' : 'csv',
     };
@@ -85,16 +92,27 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
         reader.onload = (e) => {
           const text = e.target?.result;
           if (typeof text === 'string') {
-            const formatted = text.replace(
-              /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g,
-              (match) => {
+            const reverseColumnMap: Record<string, string> = {};
+            for (const [label, key] of Object.entries(columnMap)) {
+              if (selectedColumns.includes(label)) reverseColumnMap[key] = label;
+            }
+
+            const lines = text.split(/\r?\n/);
+            if (lines.length > 0) {
+              const headers = lines[0].split(',').map((h) => h.trim());
+              const remappedHeaders = headers.map((h) => reverseColumnMap[h] || h);
+              lines[0] = remappedHeaders.join(',');
+            }
+
+            const formatted = lines
+              .join('\n')
+              .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, (match) => {
                 const d = new Date(match);
                 const pad = (n: number) => n.toString().padStart(2, '0');
                 return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
                   d.getHours(),
                 )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-              },
-            );
+              });
 
             const blob = new Blob([formatted], { type: contentType });
             const link = document.createElement('a');
@@ -119,10 +137,7 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
         message.success('Export successful');
         onClose();
       }
-
-      message.success('Export successful');
-      onClose();
-    } catch (error) {
+    } catch {
       message.error('Export failed');
     }
   };
@@ -177,17 +192,40 @@ const ExportAccountModal: React.FC<ExportAccountModalProps> = ({
                 Only data matching the selected filters will be exported
               </p>
               <div className='flex flex-wrap gap-2'>
-                {Object.entries(appliedFilters).flatMap(([key, values]) => {
-                  const uniqueValues = [...new Set(values)];
-                  return uniqueValues.map((val) => (
-                    <Tag
-                      key={`${key}-${val}`}
-                      className='bg-[#fff7e6] border-[#ffc069] text-[#fa8c16] font-medium rounded-full px-3 py-1'
-                    >
-                      {val}
-                    </Tag>
-                  ));
-                })}
+                {(() => {
+                  const seen = new Set<string>();
+                  const tags: React.ReactElement[] = [];
+
+                  const merged: Record<string, string[]> = { ...appliedFilters };
+                  if (appliedFilters.job && appliedFilters.role) {
+                    merged.job = Array.from(
+                      new Set([...appliedFilters.job, ...appliedFilters.role]),
+                    );
+                    delete merged.role;
+                  }
+
+                  for (const [key, values] of Object.entries(merged)) {
+                    for (const rawVal of values) {
+                      const val = rawVal?.trim();
+                      const k = `${key}:${val?.toLowerCase()}`;
+                      if (val && !seen.has(k)) {
+                        seen.add(k);
+                        const label =
+                          key === 'job' ? 'Department' : key.charAt(0).toUpperCase() + key.slice(1);
+                        tags.push(
+                          <Tag
+                            key={k}
+                            className='bg-[#fff7e6] border-[#ffc069] text-[#fa8c16] font-medium rounded-full px-3 py-1'
+                          >
+                            {`${label}: ${val}`}
+                          </Tag>,
+                        );
+                      }
+                    }
+                  }
+
+                  return tags;
+                })()}
               </div>
             </div>
           )}
