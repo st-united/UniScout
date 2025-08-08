@@ -211,7 +211,7 @@ const AdminNotification: React.FC<AdminNotificationProps> = ({
 
   return (
     <div
-      className={`px-6 pt-4 pb-0 border-b border-gray-200 ${className}`}
+      className={`px-6  pb-0 border-b border-gray-200 ${className}`}
       style={{ backgroundColor: '#FFFFFF' }}
     >
       <div className={`flex items-center justify-end ${!isDashboard ? 'max-w-7xl mx-auto' : ''}`}>
