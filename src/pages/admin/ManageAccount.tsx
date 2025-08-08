@@ -1,5 +1,16 @@
 import { ExclamationCircleOutlined, SearchOutlined, CloseCircleFilled } from '@ant-design/icons';
-import { Table, Select, Modal, Input, Button, message, ConfigProvider, Checkbox, Tag } from 'antd';
+import {
+  Table,
+  Select,
+  Modal,
+  Input,
+  Button,
+  message,
+  ConfigProvider,
+  Checkbox,
+  Tag,
+  Spin,
+} from 'antd';
 import axios from 'axios';
 import {
   Users,
@@ -77,7 +88,8 @@ const ManageAccount: React.FC = () => {
   } | null>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -154,9 +166,11 @@ const ManageAccount: React.FC = () => {
     return role;
   };
 
+  // -- mount: job roles + stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setStatsLoading(true);
         const res = await axios.get(
           'https://api.uniscout.dev.stunited.vn/api/dashboard/users-overview',
         );
@@ -168,14 +182,35 @@ const ManageAccount: React.FC = () => {
           Deactivated: data.deactivatedUsers,
           Pending: data.pendingUsers,
         });
-      } catch (error) {
+      } catch {
         message.error('Error fetching overview stats');
+      } finally {
+        setStatsLoading(false);
       }
     };
 
+    const fetchJobRoles = async () => {
+      try {
+        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users/job-roles');
+        if (Array.isArray(res.data)) {
+          setJobRoles(res.data);
+        } else if (Array.isArray(res.data.data)) {
+          setJobRoles(res.data.data);
+        }
+      } catch {
+        setJobRoles([]);
+      }
+    };
+
+    fetchJobRoles();
+    fetchStats();
+  }, []);
+
+  // -- users: refetch when pagination/search/filters changent
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
-        setLoading(true);
+        setTableLoading(true);
         const params: any = {};
 
         if (searchQuery.trim()) {
@@ -220,30 +255,23 @@ const ManageAccount: React.FC = () => {
         }));
         setAccounts(formattedUsers);
         setTotalCount(total);
-      } catch (error) {
+      } catch {
         message.error('Error fetching users');
       } finally {
-        setLoading(false);
+        setTableLoading(false);
       }
     };
 
-    const fetchJobRoles = async () => {
-      try {
-        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users/job-roles');
-        if (Array.isArray(res.data)) {
-          setJobRoles(res.data);
-        } else if (Array.isArray(res.data.data)) {
-          setJobRoles(res.data.data);
-        }
-      } catch (error) {
-        setJobRoles([]);
-      }
-    };
-    fetchJobRoles();
-
-    fetchStats();
     fetchUsers();
   }, [currentPage, pageSize, searchQuery, filters]);
+
+  // === Full-screen initial loading: show one spinner until stats + table loaded once
+  const [initialLoading, setInitialLoading] = useState(true);
+  useEffect(() => {
+    if (!statsLoading && !tableLoading) {
+      setInitialLoading(false);
+    }
+  }, [statsLoading, tableLoading]);
 
   // Scroll to top when page changes - more robust approach
   useEffect(() => {
@@ -351,7 +379,7 @@ const ManageAccount: React.FC = () => {
   // Filter handlers
   const handleFilterChange = (field: 'role' | 'status', values: string[]) => {
     setFilters((prev) => ({ ...prev, [field]: values }));
-    setCurrentPage(1);
+    if (currentPage !== 1) setCurrentPage(1);
   };
 
   const resetFilters = () => {
@@ -468,7 +496,8 @@ const ManageAccount: React.FC = () => {
                       const newRoles = filters.role.includes(role)
                         ? filters.role.filter((r) => r !== role)
                         : [...filters.role, role];
-                      setFilters((prev) => ({ ...prev, role: newRoles }));
+                      handleFilterChange('role', newRoles);
+                      setRoleDropdownVisible(false);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -476,7 +505,8 @@ const ManageAccount: React.FC = () => {
                         const newRoles = filters.role.includes(role)
                           ? filters.role.filter((r) => r !== role)
                           : [...filters.role, role];
-                        setFilters((prev) => ({ ...prev, role: newRoles }));
+                        handleFilterChange('role', newRoles);
+                        setRoleDropdownVisible(false);
                       }
                     }}
                     onMouseEnter={(e) => {
@@ -623,7 +653,8 @@ const ManageAccount: React.FC = () => {
                       const newStatuses = filters.status.includes(status)
                         ? filters.status.filter((s) => s !== status)
                         : [...filters.status, status];
-                      setFilters((prev) => ({ ...prev, status: newStatuses }));
+                      handleFilterChange('status', newStatuses);
+                      setStatusDropdownVisible(false);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -631,7 +662,8 @@ const ManageAccount: React.FC = () => {
                         const newStatuses = filters.status.includes(status)
                           ? filters.status.filter((s) => s !== status)
                           : [...filters.status, status];
-                        setFilters((prev) => ({ ...prev, status: newStatuses }));
+                        handleFilterChange('status', newStatuses);
+                        setStatusDropdownVisible(false);
                       }
                     }}
                     onMouseEnter={(e) => {
@@ -759,18 +791,26 @@ const ManageAccount: React.FC = () => {
     },
   ];
 
-  if (loading || !stats) {
-    return (
-      <div className='flex justify-center items-center py-10'>
-        <p className='text-gray-500'>Loading stats...</p>
-      </div>
-    );
-  }
-
   const currentStatus = selectedUser?.status as Status | undefined;
   const visibleEditOptions = currentStatus
     ? getVisibleTargets(currentStatus, isSuperAdmin)
     : ALL_STATUSES;
+
+  // Full-screen initial spinner (single loading at page load)
+  if (initialLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Spin size='large' />
+      </div>
+    );
+  }
 
   return (
     <div style={{ backgroundColor: '#fffff', minHeight: '100vh' }}>
@@ -1027,8 +1067,11 @@ const ManageAccount: React.FC = () => {
             <Table
               columns={columns}
               dataSource={accounts}
-              loading={loading}
-              rowKey='id'
+              loading={{
+                spinning: tableLoading,
+                indicator: <Spin size='large' />,
+              }}
+              rowKey='key'
               pagination={{
                 current: currentPage,
                 pageSize: pageSize,
