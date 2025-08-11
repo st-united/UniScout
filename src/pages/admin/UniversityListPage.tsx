@@ -85,6 +85,13 @@ const getSortByLabel = (value: string): string => {
   const option = sortOptions.find((opt) => opt.value === value);
   return option?.label || value;
 };
+const sanitizeSearch = (raw: string) => {
+  const cleaned = raw
+    .replace(/[^\p{L}\p{N}\s\-']/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned.slice(0, 120);
+};
 
 // Custom hook for debouncing input values
 export function useDebounce<T>(value: T, delay: number): T {
@@ -176,9 +183,11 @@ const UniversityListPage: React.FC = () => {
     setError(null);
 
     try {
+      const safeSearch = sanitizeSearch(searchQuery);
+
       const response = await axios.get<UniversityApiResponse>('/admin/universities', {
         params: {
-          search: searchQuery || undefined, // Use searchQuery instead of debouncedFilters.search
+          search: safeSearch || undefined,
           type:
             debouncedFilters.type.length > 0
               ? debouncedFilters.type.map((t) => t.toLowerCase())
@@ -188,14 +197,14 @@ const UniversityListPage: React.FC = () => {
           fieldNames:
             debouncedFilters.academicFields.length > 0
               ? debouncedFilters.academicFields
-              : undefined, // Updated to academicFields
+              : undefined,
           sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
           page: currentPage,
         },
         paramsSerializer: (params) => {
           const searchParams = new URLSearchParams();
           Object.keys(params).forEach((key) => {
-            const value = params[key];
+            const value = (params as any)[key];
             if (Array.isArray(value)) {
               value.forEach((v) => searchParams.append(key, v));
             } else if (value !== undefined) {
@@ -209,10 +218,15 @@ const UniversityListPage: React.FC = () => {
       setCurrentUniversityData(response.data.data);
       setUniversityData(response.data);
     } catch (err) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || err.message || 'Failed to fetch universities'
-        : 'An unexpected error occurred';
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message || err.message || '' : '';
 
+      if (/syntax error/i.test(msg) || /at or near/i.test(msg)) {
+        setCurrentUniversityData([]);
+        setUniversityData({ message: 'ok', data: [], totalCount: 0 });
+        return;
+      }
+
+      const errorMessage = msg || 'Failed to fetch universities';
       setError(errorMessage);
       message.error(errorMessage);
     } finally {
@@ -300,14 +314,17 @@ const UniversityListPage: React.FC = () => {
 
   // Handle search from search input
   const handleSearchSubmit = () => {
-    setSearchQuery(searchInput);
+    const safe = sanitizeSearch(searchInput);
+    setSearchInput(safe);
+    setSearchQuery(safe);
     setCurrentPage(1);
   };
 
   // Handle search from AdminSearchbar component (if still used)
   const handleGlobalSearch = (searchValue: string) => {
-    setSearchInput(searchValue);
-    setSearchQuery(searchValue);
+    const safe = sanitizeSearch(searchValue);
+    setSearchInput(safe);
+    setSearchQuery(safe);
     setCurrentPage(1);
   };
 
@@ -354,6 +371,12 @@ const UniversityListPage: React.FC = () => {
 
   // Remove individual filter
   const removeFilter = (field: FilterKey, value?: string) => {
+    if (field === 'search') {
+      setSearchInput('');
+      setSearchQuery('');
+      setCurrentPage(1);
+      return;
+    }
     if (
       value &&
       (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields')
@@ -832,6 +855,7 @@ const UniversityListPage: React.FC = () => {
           style={{ width: '100%' }}
           placeholder='All Countries'
           optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
           popupRender={(menu) => (
             <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
               {menu}
@@ -870,6 +894,8 @@ const UniversityListPage: React.FC = () => {
           onChange={(values) => handleMultiFilterChange('type', values || [])}
           style={{ width: '100%' }}
           placeholder='All Types'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
           popupRender={(menu) => (
             <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
               {menu}
@@ -910,6 +936,8 @@ const UniversityListPage: React.FC = () => {
           onChange={(values) => handleMultiFilterChange('size', values || [])}
           style={{ width: '100%' }}
           placeholder='All Size'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
           popupRender={(menu) => (
             <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
               {menu}
@@ -950,6 +978,8 @@ const UniversityListPage: React.FC = () => {
           onChange={(values) => handleMultiFilterChange('academicFields', values || [])}
           style={{ width: '100%' }}
           placeholder='All Broad Fields'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
           popupRender={(menu) => (
             <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
               {menu}
@@ -1054,7 +1084,7 @@ const UniversityListPage: React.FC = () => {
             <div style={{ marginBottom: 16 }}>
               <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                 <Col xs={24} md={12}>
-                  <AdminSearchbar onSearch={handleGlobalSearch} placeholder='Search' />
+                  <CustomSearchBar />
                 </Col>
                 <Col xs={24} sm={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
                   <Space
