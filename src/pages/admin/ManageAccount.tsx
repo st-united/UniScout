@@ -24,7 +24,7 @@ import {
   ChevronRight,
   ChevronLeft,
 } from 'lucide-react';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 
 import CreateAccount from './modals/CreateAccount';
 import ExportAccountModal from './modals/ExportAccountModal';
@@ -165,6 +165,26 @@ const ManageAccount: React.FC = () => {
     // Map display role names to API job parameter
     return role;
   };
+  const fetchStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const res = await axios.get(
+        'https://api.uniscout.dev.stunited.vn/api/dashboard/users-overview',
+      );
+      const data = res.data.data;
+      setStats({
+        total: data.totalUsers,
+        Active: data.activeUsers,
+        Blocked: data.blockedUsers,
+        Deactivated: data.deactivatedUsers,
+        Pending: data.pendingUsers,
+      });
+    } catch {
+      message.error('Error fetching overview stats');
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
 
   // -- mount: job roles + stats
   useEffect(() => {
@@ -204,7 +224,7 @@ const ManageAccount: React.FC = () => {
 
     fetchJobRoles();
     fetchStats();
-  }, []);
+  }, [fetchStats]);
 
   // -- users: refetch when pagination/search/filters changent
   useEffect(() => {
@@ -1204,25 +1224,24 @@ const ManageAccount: React.FC = () => {
                 }}
                 placeholder='Example'
               />
+
               <label htmlFor='edit-account-email'>Email</label>
               <Input
                 id='edit-account-email'
                 value={selectedUser?.email}
-                onChange={(e) => {
-                  if (selectedUser) {
-                    setSelectedUser({ ...selectedUser, email: e.target.value });
-                  }
-                }}
-                disabled={!isEditMode}
+                disabled
+                readOnly
                 style={{
                   marginTop: 4,
                   marginBottom: 10,
-                  background: !isEditMode ? '#eee' : undefined,
+                  background: '#eee',
                   height: 44,
                   fontSize: 15,
+                  cursor: 'not-allowed',
                 }}
                 placeholder='example@gmail.com'
               />
+
               <div style={{ display: 'flex', gap: 16 }}>
                 <div style={{ flex: 1 }}>
                   <label htmlFor='edit-account-role'>Department</label>
@@ -1321,7 +1340,6 @@ const ManageAccount: React.FC = () => {
                     }
                     const payload = {
                       name: selectedUser.name,
-                      email: selectedUser.email,
                       job: selectedUser.role,
                       status:
                         statusMap[selectedUser.status as keyof typeof statusMap] ||
@@ -1337,6 +1355,7 @@ const ManageAccount: React.FC = () => {
                           acc.key === selectedUser.key ? { ...acc, ...selectedUser } : acc,
                         ),
                       );
+                      await fetchStats();
                       setIsEditMode(false);
                       setIsModalOpen(false);
                       message.success('User updated successfully');
