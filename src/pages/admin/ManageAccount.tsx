@@ -168,9 +168,7 @@ const ManageAccount: React.FC = () => {
   const fetchStats = useCallback(async () => {
     try {
       setStatsLoading(true);
-      const res = await axios.get(
-        'https://api.uniscout.dev.stunited.vn/api/dashboard/users-overview',
-      );
+      const res = await axios.get('/dashboard/users-overview');
       const data = res.data.data;
       setStats({
         total: data.totalUsers,
@@ -191,9 +189,7 @@ const ManageAccount: React.FC = () => {
     const fetchStats = async () => {
       try {
         setStatsLoading(true);
-        const res = await axios.get(
-          'https://api.uniscout.dev.stunited.vn/api/dashboard/users-overview',
-        );
+        const res = await axios.get('/dashboard/users-overview');
         const data = res.data.data;
         setStats({
           total: data.totalUsers,
@@ -211,7 +207,7 @@ const ManageAccount: React.FC = () => {
 
     const fetchJobRoles = async () => {
       try {
-        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users/job-roles');
+        const res = await axios.get('/users/job-roles');
         if (Array.isArray(res.data)) {
           setJobRoles(res.data);
         } else if (Array.isArray(res.data.data)) {
@@ -245,7 +241,7 @@ const ManageAccount: React.FC = () => {
           params.status = filters.status.map(mapStatusToAPI);
         }
 
-        const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users', {
+        const res = await axios.get('/users', {
           params,
           paramsSerializer: (params) => {
             const searchParams = new URLSearchParams();
@@ -1040,10 +1036,10 @@ const ManageAccount: React.FC = () => {
                   email: values.email,
                   job: values.role,
                 };
-                await axios.post('https://api.uniscout.dev.stunited.vn/api/users', payload);
+                await axios.post('/users', payload);
 
                 // Refresh list
-                const res = await axios.get('https://api.uniscout.dev.stunited.vn/api/users');
+                const res = await axios.get('/users');
                 const users = res.data.data;
                 const total = res.data.meta?.totalItems ?? users.length;
                 const formattedUsers = users.map((user: any) => ({
@@ -1346,10 +1342,7 @@ const ManageAccount: React.FC = () => {
                         selectedUser.status,
                     };
                     try {
-                      await axios.patch(
-                        `https://api.uniscout.dev.stunited.vn/api/users/${selectedUser.key}`,
-                        payload,
-                      );
+                      await axios.patch(`/users/${selectedUser.key}`, payload);
                       setAccounts((prev) =>
                         prev.map((acc) =>
                           acc.key === selectedUser.key ? { ...acc, ...selectedUser } : acc,
