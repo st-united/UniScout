@@ -2,7 +2,7 @@ import { ConfigProvider } from 'antd';
 import React, { useState, useCallback } from 'react';
 
 import ConnectWithUsForm from './ConnectWithUsForm';
-import { ORANGE, PLACEHOLDER, TabKey } from './helpers/connectWithUsHelpers';
+import { ORANGE, PLACEHOLDER, TabKey } from '../../constants/contact';
 
 const FONT_STACK = 'Arial, "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, sans-serif';
 
@@ -49,7 +49,7 @@ function TabsToggle({ active, onChange }: { active: TabKey; onChange: (t: TabKey
               role='tab'
               aria-selected={selected}
               onClick={() => onChange(key)}
-              className='relative bg-transparent border-none text-sm md:text-base font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FD6B1A] focus-visible:ring-opacity-40'
+              className='relative cursor-pointer bg-transparent border-none text-sm md:text-base font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FD6B1A] focus-visible:ring-opacity-40'
               style={{ color: selected ? '#FFFFFF' : '#292D32' }}
             >
               {label}

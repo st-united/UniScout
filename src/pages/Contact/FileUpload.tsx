@@ -69,7 +69,7 @@ export default function FileUpload({
         <input
           ref={inputRef}
           type='file'
-          className='hidden'
+          className='!hidden'
           multiple={multiple}
           accept={accept}
           onChange={(e) => {

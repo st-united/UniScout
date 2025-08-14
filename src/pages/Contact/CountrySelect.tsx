@@ -10,7 +10,7 @@ type Props = {
   options: SelectProps['options'];
   placeholder?: string;
   error?: string;
-  onChange: (v: string) => void;
+  onChange?: (v: string) => void;
   describedById?: string;
 };
 
@@ -48,8 +48,8 @@ export default function CountrySelect({
           paddingRight: 0,
           fontFamily: token.fontFamily,
         }}
-        dropdownStyle={{ borderRadius: 8, fontFamily: token.fontFamily }}
-        onChange={(v) => onChange(v as string)}
+        styles={{ popup: { root: { borderRadius: 8, fontFamily: token.fontFamily } } }}
+        onChange={(v) => onChange?.(v as string)}
         getPopupContainer={(trigger) => trigger.parentElement as HTMLElement}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? describedById : undefined}
