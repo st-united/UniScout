@@ -436,6 +436,18 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
       onFinish={handleSubmitUpdate}
       validateTrigger={['onBlur', 'onSubmit']}
       className='connect-form'
+      requiredMark={(label, { required }) => (
+        <>
+          {required && (
+            <Asterisk
+              size={12}
+              style={{ color: ORANGE, marginInlineEnd: 4, verticalAlign: 'text-top' }}
+              aria-hidden='true'
+            />
+          )}
+          {label}
+        </>
+      )}
     >
       {/* attach the other form to avoid the "useForm instance not connected" warning */}
       <Form form={newForm} component={false} />
