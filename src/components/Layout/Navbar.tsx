@@ -18,7 +18,7 @@ const Navbar = () => {
           <div className='flex items-center'>
             <button
               onClick={() => navigate('contact')}
-              className='inline-flex items-center px-4 py-2 border border-orange-500 bg-orange-500 text-white rounded-md hover:bg-white hover:text-orange-500 font-bold'
+              className='inline-flex items-center px-4 py-2 border border-solid border-orange-500 bg-orange-500 text-white rounded-md hover:bg-white hover:text-orange-500 font-bold'
             >
               Join Us
             </button>

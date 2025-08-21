@@ -1,5 +1,5 @@
 import { Button } from 'antd';
-import { Building2, Users } from 'lucide-react';
+import { Building2, Users, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import noImage from '@app/assets/images/noimage.png';
@@ -20,31 +20,17 @@ const UniversityCard = ({ university }: UniversityCardProps) => {
           <div className='w-4/5'>
             {university.abbreviation && (
               <div style={{ marginBottom: 8 }}>
-                <Button
-                  type='default'
-                  ghost
-                  style={{
-                    borderColor: '#f2993f',
-                    color: '#f2993f',
-                    fontWeight: 700,
-                    fontSize: '0.75rem',
-                    borderRadius: '4px',
-                    padding: '2px 12px',
-                    lineHeight: 1.2,
-                    background: 'transparent',
-                    height: 'auto',
-                    boxShadow: 'none',
-                    display: 'inline-block',
-                  }}
-                >
+                <span className='inline-flex items-center gap-1 rounded-sm px-3 text-xs font-semibold text-[#FF6600] border border-solid border-[#FF6600] '>
                   {university.abbreviation}
-                </Button>
+                </span>
               </div>
             )}
-            <h3 className='text-blue-700 font-bold text-sm leading-tight line-clamp-2'>
+            <h3 className='text-blue-700 font-bold text-sm leading-tight line-clamp-2 mb-1'>
               {university.name}
             </h3>
-            <div className='text-orange-500 text-xs'>{university.country}</div>
+            <div className='flex text-[#FF6600] text-xs items-center gap-1'>
+              <MapPin className='w-3 h-3' /> {university.country}
+            </div>
           </div>
           <img
             src={university.logo.replace('http://localhost:3000/static/', '')}
