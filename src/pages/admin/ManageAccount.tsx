@@ -48,18 +48,14 @@ const ALL_STATUSES: Status[] = ['Active', 'Blocked', 'Deactivated', 'Pending'];
 
 const isForbiddenTransitionForSuperAdmin = (from: Status, to: Status) => {
   if (to === 'Pending' && from !== 'Pending') return true;
-  if (from === 'Pending' && to === 'Blocked') return true;
+  if (from === 'Pending' && to !== 'Pending') return true;
+  if (to === 'Blocked' && from !== 'Blocked') return true;
   if (from === 'Deactivated' && to === 'Pending') return true;
   if (from === 'Blocked' && to === 'Pending') return true;
   return false;
 };
-
-const getVisibleTargets = (current: Status, isSuperAdmin: boolean): Status[] => {
-  if (!isSuperAdmin) return ALL_STATUSES;
-  return ALL_STATUSES.filter(
-    (to) => to === current || !isForbiddenTransitionForSuperAdmin(current, to),
-  );
-};
+const isDisabledStatus = (to: Status) => to === 'Pending' || to === 'Blocked';
+const isStatusLocked = (current?: Status) => current === 'Pending' || current === 'Blocked';
 
 const safeApplyStatus = (
   from: Status,
@@ -67,11 +63,18 @@ const safeApplyStatus = (
   isSuperAdmin: boolean,
   onAllowed: () => void,
 ) => {
-  if (isSuperAdmin && isForbiddenTransitionForSuperAdmin(from, to)) {
-    message.warning('This status change is not allowed.');
+  if (isSuperAdmin && (isStatusLocked(from) || isDisabledStatus(to))) {
+    message.warning('This status is managed by the system and cannot be changed.');
     return;
   }
   onAllowed();
+};
+
+const getVisibleTargets = (current: Status, isSuperAdmin: boolean): Status[] => {
+  if (!isSuperAdmin) return ALL_STATUSES;
+  return ALL_STATUSES.filter(
+    (to) => to === current || !isForbiddenTransitionForSuperAdmin(current, to),
+  );
 };
 
 const ManageAccount: React.FC = () => {
@@ -222,7 +225,6 @@ const ManageAccount: React.FC = () => {
     fetchStats();
   }, [fetchStats]);
 
-  // -- users: refetch when pagination/search/filters changent
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -424,29 +426,27 @@ const ManageAccount: React.FC = () => {
     },
     {
       title: (
-        <div className='flex items-center gap-1 relative'>
-          <span>ROLE</span>
-          <div
-            ref={setRoleDropdownRef}
-            data-role-trigger
-            role='button'
-            tabIndex={0}
-            onClick={(e) => {
-              e.stopPropagation();
+        <div
+          className='flex items-center gap-1 relative  w-fit h-full cursor-pointer'
+          ref={setRoleDropdownRef}
+          data-role-trigger
+          role='button'
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            setRoleDropdownVisible(!roleDropdownVisible);
+            setStatusDropdownVisible(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
               setRoleDropdownVisible(!roleDropdownVisible);
               setStatusDropdownVisible(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setRoleDropdownVisible(!roleDropdownVisible);
-                setStatusDropdownVisible(false);
-              }
-            }}
-            style={{ cursor: 'pointer' }}
-          >
-            <ChevronDown className='w-4 h-4 text-gray-400' />
-          </div>
+            }
+          }}
+        >
+          <span>ROLE</span>
+          <ChevronDown className='w-4 h-4 text-gray-400' />
           {roleDropdownVisible && (
             <div
               data-role-dropdown
@@ -582,7 +582,6 @@ const ManageAccount: React.FC = () => {
     {
       title: (
         <div className='flex items-center gap-1 relative'>
-          <span>STATUS</span>
           <div
             ref={setStatusDropdownRef}
             data-status-trigger
@@ -600,8 +599,9 @@ const ManageAccount: React.FC = () => {
                 setRoleDropdownVisible(false);
               }
             }}
-            style={{ cursor: 'pointer' }}
+            className='flex items-center gap-1 relative cursor-pointer'
           >
+            <span>STATUS</span>
             <ChevronDown className='w-4 h-4 text-gray-400' />
           </div>
           {statusDropdownVisible && (
@@ -643,7 +643,7 @@ const ManageAccount: React.FC = () => {
             >
               <div
                 style={{
-                  maxHeight: '160px',
+                  maxHeight: '180px',
                   overflowY: 'auto',
                 }}
               >
@@ -718,14 +718,7 @@ const ManageAccount: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (status: Account['status'], record: Account) => {
-        const handleChange = (value: Account['status']) => {
-          setAccounts((prev) =>
-            prev.map((acc) => (acc.key === record.key ? { ...acc, status: value } : acc)),
-          );
-        };
-
         const { text, bg } = colorMap[status];
-        const visibleOptions = getVisibleTargets(status, isSuperAdmin);
 
         return (
           <div
@@ -735,12 +728,7 @@ const ManageAccount: React.FC = () => {
             <Select
               value={status}
               open={false}
-              onChange={handleChange}
               bordered={false}
-              dropdownStyle={{
-                backgroundColor: '#ffffff',
-                borderRadius: 8,
-              }}
               className='!bg-transparent !border-none !outline-none !shadow-none !text-sm w-full text-center'
               style={{
                 backgroundColor: 'transparent',
@@ -748,9 +736,16 @@ const ManageAccount: React.FC = () => {
                 fontWeight: 600,
               }}
               getPopupContainer={(trigger: HTMLElement) => trigger.parentNode as HTMLElement}
+              onChange={(value: Account['status']) => {
+                safeApplyStatus(status, value, isSuperAdmin, () => {
+                  setAccounts((prev) =>
+                    prev.map((acc) => (acc.key === record.key ? { ...acc, status: value } : acc)),
+                  );
+                });
+              }}
             >
-              {visibleOptions.map((opt) => (
-                <Option key={opt} value={opt}>
+              {ALL_STATUSES.map((opt) => (
+                <Option key={opt} value={opt} disabled={isDisabledStatus(opt)}>
                   <span
                     className='text-sm font-bold'
                     style={{
@@ -1230,7 +1225,7 @@ const ManageAccount: React.FC = () => {
                 style={{
                   marginTop: 4,
                   marginBottom: 10,
-                  background: '#eee',
+                  background: !isEditMode ? '#eee' : undefined,
                   height: 44,
                   fontSize: 15,
                   cursor: 'not-allowed',
@@ -1271,7 +1266,7 @@ const ManageAccount: React.FC = () => {
                   <Select
                     id='edit-account-status'
                     value={selectedUser?.status}
-                    disabled={!isEditMode}
+                    disabled={!isEditMode || isStatusLocked(selectedUser?.status as Status)}
                     onChange={(value: Status) => {
                       if (!selectedUser || !currentStatus) return;
                       safeApplyStatus(currentStatus, value, isSuperAdmin, () => {
@@ -1291,10 +1286,10 @@ const ManageAccount: React.FC = () => {
                       borderRadius: !isEditMode ? 8 : undefined,
                     }}
                   >
-                    {visibleEditOptions.map((opt) => (
-                      <Select.Option key={opt} value={opt}>
+                    {ALL_STATUSES.map((opt) => (
+                      <Option key={opt} value={opt} disabled={isDisabledStatus(opt)}>
                         {opt}
-                      </Select.Option>
+                      </Option>
                     ))}
                   </Select>
                 </div>
@@ -1321,11 +1316,28 @@ const ManageAccount: React.FC = () => {
                       Blocked: 'blocked',
                       Deactivated: 'inactive',
                       Pending: 'pending',
-                    };
+                    } as const;
                     const from =
                       (accounts.find((a) => a.key === selectedUser.key)?.status as
                         | Status
                         | undefined) ?? (selectedUser.status as Status);
+                    if (isStatusLocked(from) && selectedUser.status !== from) {
+                      message.warning(
+                        'This status is managed by the system and cannot be changed.',
+                      );
+                      setIsSaving(false);
+                      return;
+                    }
+                    if (
+                      isDisabledStatus(selectedUser.status as Status) &&
+                      selectedUser.status !== from
+                    ) {
+                      message.warning(
+                        'Pending and Blocked are system-managed and cannot be selected.',
+                      );
+                      setIsSaving(false);
+                      return;
+                    }
                     if (
                       isSuperAdmin &&
                       isForbiddenTransitionForSuperAdmin(from, selectedUser.status as Status)
