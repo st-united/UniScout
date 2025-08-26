@@ -108,9 +108,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
   const handleCountryClick = (country: string) => {
     setSelectedCountry((prev) => (prev === country ? null : country));
-    if (onCountryClick) {
-      onCountryClick(country);
-    }
   };
 
   // These are % relative to the original container.
@@ -166,7 +163,23 @@ const WorldMap: React.FC<WorldMapProps> = ({
         {/* Image wrapper to size exactly to the image */}
         <div
           ref={imageWrapperRef}
-          className='relative mx-auto' // centers image horizontally
+          className='relative mx-auto'
+          role='button'
+          tabIndex={0}
+          onClick={(e) => {
+            if (e.currentTarget === e.target) {
+              setSelectedCountry(null);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setSelectedCountry(null);
+            }
+            if (e.key === 'Escape') {
+              setSelectedCountry(null);
+            }
+          }}
           style={{
             maxWidth: '100%',
             maxHeight: '600px', // you can adjust max height here
@@ -198,10 +211,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
                     role='button'
                     tabIndex={0}
                     aria-pressed={isSelected}
-                    onClick={() => handleCountryClick(country)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCountryClick(country);
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
+                        e.stopPropagation();
                         handleCountryClick(country);
                       }
                     }}
@@ -251,13 +268,17 @@ const WorldMap: React.FC<WorldMapProps> = ({
                           </div>
                           <div
                             className='text-lg md:text-xl font-bold text-blue-900 cursor-pointer hover:underline'
-                            onClick={() => onCountryCountClick && onCountryCountClick(country)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCountryCountClick?.(country);
+                            }}
                             role='button'
                             tabIndex={0}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
-                                onCountryCountClick && onCountryCountClick(country);
+                                e.stopPropagation();
+                                onCountryCountClick?.(country);
                               }
                             }}
                           >

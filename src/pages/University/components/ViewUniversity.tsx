@@ -1,7 +1,7 @@
 import { ConfigProvider, Pagination, Input, Select, Tag, Button } from 'antd';
 import axios from 'axios';
 import { Search as SearchIcon } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import Chatbot from './Chatbot';
@@ -33,7 +33,9 @@ const ViewUniversity: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<FilterOptions>(DEFAULT_FILTERS);
   const [searchInput, setSearchInput] = useState('');
   const [params, setParams] = useSearchParams();
-  const cardsRef = useRef<HTMLDivElement>(null);
+
+  const listTopRef = useRef<HTMLDivElement>(null);
+  const [scrollAfterLayout, setScrollAfterLayout] = useState(false);
 
   const { data, isLoading, isFetching } = useUniversities({
     page: currentPage,
@@ -47,6 +49,20 @@ const ViewUniversity: React.FC = () => {
   });
   const universities = data?.universities || [];
   const total = data?.totalCount || 0;
+
+  useLayoutEffect(() => {
+    if (!scrollAfterLayout) return;
+    const sticky = document.getElementById('list-controls');
+    const anchor = listTopRef.current;
+    if (!anchor) {
+      setScrollAfterLayout(false);
+      return;
+    }
+    const stickyH = sticky?.getBoundingClientRect().height ?? 0;
+    const top = anchor.getBoundingClientRect().top + window.scrollY - stickyH - 50;
+    window.scrollTo({ top, behavior: 'smooth' });
+    setScrollAfterLayout(false);
+  }, [scrollAfterLayout, universities.length, activeFilters, currentPage]);
 
   const ignore = () => void 0;
 
@@ -92,22 +108,24 @@ const ViewUniversity: React.FC = () => {
   const handleFiltersUpdate = useCallback((nf: FilterOptions) => {
     setActiveFilters(nf);
     setCurrentPage(1);
+    setScrollAfterLayout(true);
   }, []);
+
   const onPageChange = useCallback((p: number) => {
     setCurrentPage(p);
-    window.scrollTo({ top: 200, behavior: 'smooth' });
+    setScrollAfterLayout(true);
   }, []);
 
   const handleCountryClick = useCallback((country: string) => {
     setActiveFilters({ ...DEFAULT_FILTERS, country: [country] });
     setCurrentPage(1);
-    setTimeout(() => cardsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    setScrollAfterLayout(true);
   }, []);
 
   const handleCountryCountClick = useCallback((country: string) => {
     setActiveFilters({ ...DEFAULT_FILTERS, country: [country] });
     setCurrentPage(1);
-    setTimeout(() => cardsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    setScrollAfterLayout(true);
   }, []);
 
   const removeFilter = useCallback(
@@ -140,8 +158,8 @@ const ViewUniversity: React.FC = () => {
         <h2 className='mt-6 mb-3 text-center text-4xl font-bold'>DISCOVER UNIVERSITIES</h2>
 
         <div className='mt-6 flex justify-center'>
-          <div className='w-full max-w-screen-xl flex flex-col lg:flex-row'>
-            <div className='w-full lg:w-[320px] flex-none'>
+          <div className='w-full max-w-screen-xl flex flex-col lg:flex-row lg:items-start lg:gap-6 min-h-0'>
+            <div className='w-full lg:w-[320px] flex-none lg:sticky lg:top-20 max-h-[calc(100vh-6rem)] overflow-auto'>
               <UniversityFilter
                 onFiltersUpdate={handleFiltersUpdate}
                 initialFilters={activeFilters}
@@ -150,9 +168,12 @@ const ViewUniversity: React.FC = () => {
               />
             </div>
 
-            <div ref={cardsRef} className='relative w-full'>
+            <div className='relative w-full'>
               {/* Sticky Controls */}
-              <div className='sticky top-[63px] z-20 bg-[#F5F5F5] pt-4 pb-3 px-1'>
+              <div
+                id='list-controls'
+                className='sticky top-[63px] z-20 bg-[#F5F5F5] pt-4 pb-3 px-1'
+              >
                 <div className='pl-0 lg:pl-4 grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-6 w-full'>
                   {/* Search */}
                   <div className='col-span-1 md:col-span-2 2xl:col-span-2 min-w-0'>
@@ -214,6 +235,9 @@ const ViewUniversity: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Anchor for precise scrolling */}
+              <div ref={listTopRef} className='h-0' />
 
               {/* Results grid */}
               {busy && universities.length === 0 ? (

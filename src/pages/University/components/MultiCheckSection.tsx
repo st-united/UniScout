@@ -37,7 +37,7 @@ export const MultiCheckSection = <T extends Value = string>({
       : columns === 2
       ? 'grid-cols-2'
       : 'grid-cols-1';
-
+  const isTouch = typeof window !== 'undefined' && matchMedia('(pointer: coarse)').matches;
   return (
     <section
       className={`rounded-lg p-4 shadow-sm border border-solid  border-[#E2E8F0] ${className}`}
@@ -62,7 +62,14 @@ export const MultiCheckSection = <T extends Value = string>({
           );
 
           return showHints && opt.hint ? (
-            <Tooltip key={String(opt.value)} title={opt.hint} placement='top'>
+            <Tooltip
+              key={String(opt.value)}
+              title={opt.hint}
+              placement='top'
+              trigger={isTouch ? [] : ['hover']}
+              getPopupContainer={(n) => n?.parentElement ?? document.body}
+              destroyTooltipOnHide
+            >
               {node}
             </Tooltip>
           ) : (
