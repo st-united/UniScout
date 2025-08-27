@@ -74,7 +74,7 @@ export function useConnectWithUsForm() {
       await axios.post('/contact', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
 
       setSubmissionStatus('success');
-      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'University submitted successfully.');
+      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'University submitted successfully!');
     } catch (err: any) {
       setSubmissionStatus('error');
       const msg = err?.response?.data?.message ?? 'Unknown error';
@@ -109,7 +109,7 @@ export function useConnectWithUsForm() {
       await axios.post('/contact', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
 
       setSubmissionStatus('success');
-      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'Information updated successfully.');
+      openNotificationWithIcon(NotificationTypeEnum.SUCCESS, 'Message sent successfully!');
     } catch {
       setSubmissionStatus('error');
       openNotificationWithIcon(NotificationTypeEnum.ERROR, 'Submission failed.');
