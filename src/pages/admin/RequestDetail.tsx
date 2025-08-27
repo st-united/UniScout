@@ -503,7 +503,7 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
 
       try {
         console.log('Fetching request detail for ID:', requestId);
-        const response = await axios.get(`${API_BASE_URL}/admin/contact/${requestId}`);
+        const response = await axios.get(`/admin/contact/${requestId}`);
         const data = response.data;
 
         console.log('API Response:', data);
@@ -556,7 +556,7 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
         rejectionReason: finalStatus === 'Rejected' ? formValues.rejectionReason : null,
       };
 
-      await axios.patch(`${API_BASE_URL}/admin/contact/${requestId}/status`, payload);
+      await axios.patch(`/admin/contact/${requestId}/status`, payload);
 
       message.success('Request updated successfully!');
       setIsEditable(false);
@@ -620,10 +620,9 @@ const RequestDetailModalContent: React.FC<RequestDetailModalContentProps> = ({
   const handleDownload = async () => {
     if (requestData?.id) {
       try {
-        const response = await axios.get(
-          `${API_BASE_URL}/admin/contact/download-excel/${requestData.id}`,
-          { responseType: 'blob' },
-        );
+        const response = await axios.get(`/admin/contact/download-excel/${requestData.id}`, {
+          responseType: 'blob',
+        });
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;

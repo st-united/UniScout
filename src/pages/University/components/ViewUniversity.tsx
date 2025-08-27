@@ -159,7 +159,7 @@ const ViewUniversity: React.FC = () => {
 
         <div className='mt-6 flex justify-center'>
           <div className='w-full max-w-screen-xl flex flex-col lg:flex-row lg:items-start lg:gap-6 min-h-0'>
-            <div className='w-full lg:w-[320px] flex-none lg:sticky lg:top-20 max-h-[calc(100vh-6rem)] overflow-auto'>
+            <div className='w-full lg:w-[320px] flex-none lg:sticky lg:top-20 h-fit overflow-hidden'>
               <UniversityFilter
                 onFiltersUpdate={handleFiltersUpdate}
                 initialFilters={activeFilters}
