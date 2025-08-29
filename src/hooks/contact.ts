@@ -52,6 +52,7 @@ export function useConnectWithUsForm() {
       fd.append('representativeName', '');
       fd.append('requestType', 'New University');
       fd.append('universityEmail', values.email);
+      fd.append('representativeEmail', values.email);
       fd.append('abbreviation', values.abbreviation || '');
 
       const file = values.subjects?.[0];

@@ -48,8 +48,8 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
           borderRadius: 6,
           controlHeight: 40,
           fontWeightStrong: 500,
-          fontSize: 13,
-          fontFamily: 'Quicksand, BlinkMacSystemFont, Helvetica Neue,sans-serif',
+          fontSize: 14,
+          fontFamily: 'Arial,sans-serif',
         },
       }}
     >
@@ -63,8 +63,8 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
         bodyStyle={{ borderRadius: 20, padding: 8 }}
       >
         <div className='mb-6'>
-          <h2 className='text-xl font-semibold mb-2'>Create Account</h2>
-          <div className='h-[2px] w-full bg-[#FF7A45]' />
+          <h2 className='text-[21px] font-semibold mb-2'>Create Account</h2>
+          <div className='border-solid border-[1px] border-[#FF7A45] w-full' />
         </div>
 
         <div className='flex flex-col gap-4 mt-2'>
@@ -79,7 +79,7 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ open, onCancel, onSubmit,
               value={formValues.name}
               onChange={handleChange}
               placeholder='Enter the full name of the user'
-              className='mt-1 rounded-md h-12 !font-medium '
+              className='mt-1 rounded-md h-12 !font-medium'
             />
           </div>
 

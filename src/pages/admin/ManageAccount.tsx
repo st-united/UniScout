@@ -10,6 +10,7 @@ import {
   Checkbox,
   Tag,
   Spin,
+  Empty,
 } from 'antd';
 import axios from 'axios';
 import {
@@ -120,7 +121,7 @@ const ManageAccount: React.FC = () => {
     role: [],
     status: [],
   });
-
+  const hasActiveFilters = filters.role.length > 0 || filters.status.length > 0 || !!searchQuery;
   // Dropdown states
   const [roleDropdownVisible, setRoleDropdownVisible] = useState(false);
   const [statusDropdownVisible, setStatusDropdownVisible] = useState(false);
@@ -906,13 +907,13 @@ const ManageAccount: React.FC = () => {
             <div className='flex gap-2'>
               <button
                 onClick={() => setIsCreateOpen(true)}
-                className='flex bg-[#FF7A00] text-white px-5 py-3 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+                className='flex bg-[#FF7A00] text-white px-5 py-3 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1 cursor-pointer'
               >
                 <Plus width={'15px'} height={'15px'} /> Create
               </button>
               <button
                 onClick={() => setIsExportOpen(true)}
-                className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1'
+                className='flex bg-[#FF7A00] text-white px-4 py-2 rounded-md font-medium shadow-lg hover:bg-[#e46b00] transition border-none items-center justify-center gap-1 cursor-pointer'
               >
                 <ClipboardPaste width={'15px'} height={'15px'} /> Export
               </button>
@@ -920,7 +921,7 @@ const ManageAccount: React.FC = () => {
           </div>
 
           {/* Active Filters Display */}
-          {(filters.role.length > 0 || filters.status.length > 0 || searchQuery) && (
+          {hasActiveFilters && (
             <div className='mb-4'>
               <div className='flex items-center gap-2 flex-wrap'>
                 {filters.role.map((role) => (
@@ -1072,6 +1073,8 @@ const ManageAccount: React.FC = () => {
             theme={{
               token: {
                 colorPrimary: '#FF842B',
+                fontFamily: 'Arial, sans-serif',
+                fontSize: 14,
               },
             }}
           >
@@ -1174,209 +1177,225 @@ const ManageAccount: React.FC = () => {
                 },
                 style: { cursor: 'pointer' },
               })}
-            />
-          </ConfigProvider>
-          <Modal
-            open={isModalOpen}
-            onCancel={() => setIsModalOpen(false)}
-            footer={null}
-            centered
-            width={650}
-            bodyStyle={{ borderRadius: 20, padding: 8 }}
-          >
-            <h2
-              style={{
-                fontWeight: 600,
-                fontSize: 24,
-                marginBottom: 16,
-                borderBottom: '2px solid #e67c3f',
-                paddingBottom: 8,
+              locale={{
+                emptyText: hasActiveFilters ? (
+                  <Empty description='No matching result found' />
+                ) : (
+                  <Empty description='No data' />
+                ),
               }}
+            />
+
+            <Modal
+              open={isModalOpen}
+              onCancel={() => setIsModalOpen(false)}
+              footer={null}
+              centered
+              width={650}
+              bodyStyle={{ borderRadius: 20, padding: 8 }}
             >
-              Edit Account
-            </h2>
-            <div style={{ marginBottom: 10 }}>
-              <label htmlFor='edit-account-name'>Name</label>
-              <Input
-                id='edit-account-name'
-                value={selectedUser?.name}
-                onChange={(e) => {
-                  if (selectedUser) {
-                    setSelectedUser({ ...selectedUser, name: e.target.value });
-                  }
-                }}
-                disabled={!isEditMode}
+              <h2
                 style={{
-                  marginTop: 4,
-                  marginBottom: 10,
-                  background: !isEditMode ? '#eee' : undefined,
-                  height: 44,
-                  fontSize: 15,
+                  fontWeight: 600,
+                  fontSize: 21,
+                  marginBottom: 20,
+                  borderBottom: '2px solid #FF7A45',
+                  paddingBottom: 8,
                 }}
-                placeholder='Example'
-              />
-
-              <label htmlFor='edit-account-email'>Email</label>
-              <Input
-                id='edit-account-email'
-                value={selectedUser?.email}
-                disabled
-                readOnly
-                style={{
-                  marginTop: 4,
-                  marginBottom: 10,
-                  background: !isEditMode ? '#eee' : undefined,
-                  height: 44,
-                  fontSize: 15,
-                  cursor: 'not-allowed',
-                }}
-                placeholder='example@gmail.com'
-              />
-
-              <div style={{ display: 'flex', gap: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor='edit-account-role'>Department</label>
-                  <Select
-                    id='edit-account-role'
-                    value={selectedUser?.role}
-                    disabled={!isEditMode}
-                    onChange={(value: string) => {
-                      if (selectedUser) {
-                        setSelectedUser({ ...selectedUser, role: value });
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      marginTop: 4,
-                      background: !isEditMode ? '#eee' : undefined,
-                      height: 44,
-                      fontSize: 14,
-                      borderRadius: !isEditMode ? 8 : undefined,
-                    }}
-                  >
-                    {jobRoles.map((role) => (
-                      <Select.Option key={role} value={role}>
-                        {role}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label htmlFor='edit-account-status'>Status</label>
-                  <Select
-                    id='edit-account-status'
-                    value={selectedUser?.status}
-                    disabled={!isEditMode || isStatusLocked(selectedUser?.status as Status)}
-                    onChange={(value: Status) => {
-                      if (!selectedUser || !currentStatus) return;
-                      safeApplyStatus(currentStatus, value, isSuperAdmin, () => {
-                        if (isEditMode && value === 'Deactivated') {
-                          setShowStatusWarning(true);
-                        } else {
-                          setSelectedUser({ ...selectedUser, status: value });
-                        }
-                      });
-                    }}
-                    style={{
-                      width: '100%',
-                      marginTop: 4,
-                      background: !isEditMode ? '#eee' : undefined,
-                      height: 44,
-                      fontSize: 14,
-                      borderRadius: !isEditMode ? 8 : undefined,
-                    }}
-                  >
-                    {ALL_STATUSES.map((opt) => (
-                      <Option key={opt} value={opt} disabled={isDisabledStatus(opt)}>
-                        {opt}
-                      </Option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
-              {!isEditMode ? (
-                <Button
-                  type='primary'
-                  style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
-                  onClick={() => setIsEditMode(true)}
-                >
-                  Edit
-                </Button>
-              ) : (
-                <Button
-                  type='primary'
-                  style={{ background: '#e67c3f', borderColor: '#e67c3f' }}
-                  onClick={async () => {
-                    if (!selectedUser) return;
-                    setIsSaving(true);
-                    const statusMap = {
-                      Active: 'active',
-                      Blocked: 'blocked',
-                      Deactivated: 'inactive',
-                      Pending: 'pending',
-                    } as const;
-                    const from =
-                      (accounts.find((a) => a.key === selectedUser.key)?.status as
-                        | Status
-                        | undefined) ?? (selectedUser.status as Status);
-                    if (isStatusLocked(from) && selectedUser.status !== from) {
-                      message.warning(
-                        'This status is managed by the system and cannot be changed.',
-                      );
-                      setIsSaving(false);
-                      return;
-                    }
-                    if (
-                      isDisabledStatus(selectedUser.status as Status) &&
-                      selectedUser.status !== from
-                    ) {
-                      message.warning(
-                        'Pending and Blocked are system-managed and cannot be selected.',
-                      );
-                      setIsSaving(false);
-                      return;
-                    }
-                    if (
-                      isSuperAdmin &&
-                      isForbiddenTransitionForSuperAdmin(from, selectedUser.status as Status)
-                    ) {
-                      message.warning('This status change is not allowed.');
-                      setIsSaving(false);
-                      return;
-                    }
-                    const payload = {
-                      name: selectedUser.name,
-                      job: selectedUser.role,
-                      status:
-                        statusMap[selectedUser.status as keyof typeof statusMap] ||
-                        selectedUser.status,
-                    };
-                    try {
-                      await axios.patch(`/users/${selectedUser.key}`, payload);
-                      setAccounts((prev) =>
-                        prev.map((acc) =>
-                          acc.key === selectedUser.key ? { ...acc, ...selectedUser } : acc,
-                        ),
-                      );
-                      await fetchStats();
-                      setIsEditMode(false);
-                      setIsModalOpen(false);
-                      message.success('User updated successfully');
-                    } catch (err) {
-                      message.error('Failed to update user');
-                    } finally {
-                      setIsSaving(false);
+              >
+                Edit Account
+              </h2>
+              <div style={{ marginBottom: 10 }}>
+                <label htmlFor='edit-account-name' className='font-semibold'>
+                  Name
+                </label>
+                <Input
+                  id='edit-account-name'
+                  value={selectedUser?.name}
+                  onChange={(e) => {
+                    if (selectedUser) {
+                      setSelectedUser({ ...selectedUser, name: e.target.value });
                     }
                   }}
-                  disabled={isSaving}
-                >
-                  {isSaving ? 'Saving...' : 'Save'}
-                </Button>
-              )}
-            </div>
-          </Modal>
+                  disabled={!isEditMode}
+                  style={{
+                    marginTop: 4,
+                    marginBottom: 20,
+                    background: !isEditMode ? '#eee' : undefined,
+                    height: 44,
+                    fontSize: 15,
+                  }}
+                  placeholder='Example'
+                />
+
+                <label htmlFor='edit-account-email' className='font-semibold'>
+                  Email
+                </label>
+                <Input
+                  id='edit-account-email'
+                  value={selectedUser?.email}
+                  disabled
+                  readOnly
+                  style={{
+                    marginTop: 4,
+                    marginBottom: 20,
+                    background: !isEditMode ? '#eee' : undefined,
+                    height: 44,
+                    fontSize: 15,
+                    cursor: 'not-allowed',
+                  }}
+                  placeholder='example@gmail.com'
+                />
+
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor='edit-account-role' className='font-semibold'>
+                      Department
+                    </label>
+                    <Select
+                      id='edit-account-role'
+                      value={selectedUser?.role}
+                      disabled={!isEditMode}
+                      onChange={(value: string) => {
+                        if (selectedUser) {
+                          setSelectedUser({ ...selectedUser, role: value });
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        marginTop: 4,
+                        background: !isEditMode ? '#eee' : undefined,
+                        height: 44,
+                        fontSize: 14,
+                        borderRadius: !isEditMode ? 8 : undefined,
+                      }}
+                    >
+                      {jobRoles.map((role) => (
+                        <Select.Option key={role} value={role}>
+                          {role}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label htmlFor='edit-account-status' className='font-semibold'>
+                      Status
+                    </label>
+                    <Select
+                      id='edit-account-status'
+                      value={selectedUser?.status}
+                      disabled={!isEditMode || isStatusLocked(selectedUser?.status as Status)}
+                      onChange={(value: Status) => {
+                        if (!selectedUser || !currentStatus) return;
+                        safeApplyStatus(currentStatus, value, isSuperAdmin, () => {
+                          if (isEditMode && value === 'Deactivated') {
+                            setShowStatusWarning(true);
+                          } else {
+                            setSelectedUser({ ...selectedUser, status: value });
+                          }
+                        });
+                      }}
+                      style={{
+                        width: '100%',
+                        marginTop: 4,
+                        background: !isEditMode ? '#eee' : undefined,
+                        height: 44,
+                        fontSize: 14,
+                        borderRadius: !isEditMode ? 8 : undefined,
+                      }}
+                    >
+                      {ALL_STATUSES.map((opt) => (
+                        <Option key={opt} value={opt} disabled={isDisabledStatus(opt)}>
+                          {opt}
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+                {!isEditMode ? (
+                  <Button
+                    type='primary'
+                    style={{ background: '#FF7A45', borderColor: '#FF7A45' }}
+                    onClick={() => setIsEditMode(true)}
+                  >
+                    Edit
+                  </Button>
+                ) : (
+                  <Button
+                    type='primary'
+                    style={{ background: '#FF7A45', borderColor: '#FF7A45' }}
+                    onClick={async () => {
+                      if (!selectedUser) return;
+                      setIsSaving(true);
+                      const statusMap = {
+                        Active: 'active',
+                        Blocked: 'blocked',
+                        Deactivated: 'inactive',
+                        Pending: 'pending',
+                      } as const;
+                      const from =
+                        (accounts.find((a) => a.key === selectedUser.key)?.status as
+                          | Status
+                          | undefined) ?? (selectedUser.status as Status);
+                      if (isStatusLocked(from) && selectedUser.status !== from) {
+                        message.warning(
+                          'This status is managed by the system and cannot be changed.',
+                        );
+                        setIsSaving(false);
+                        return;
+                      }
+                      if (
+                        isDisabledStatus(selectedUser.status as Status) &&
+                        selectedUser.status !== from
+                      ) {
+                        message.warning(
+                          'Pending and Blocked are system-managed and cannot be selected.',
+                        );
+                        setIsSaving(false);
+                        return;
+                      }
+                      if (
+                        isSuperAdmin &&
+                        isForbiddenTransitionForSuperAdmin(from, selectedUser.status as Status)
+                      ) {
+                        message.warning('This status change is not allowed.');
+                        setIsSaving(false);
+                        return;
+                      }
+                      const payload = {
+                        name: selectedUser.name,
+                        job: selectedUser.role,
+                        status:
+                          statusMap[selectedUser.status as keyof typeof statusMap] ||
+                          selectedUser.status,
+                      };
+                      try {
+                        await axios.patch(`/users/${selectedUser.key}`, payload);
+                        setAccounts((prev) =>
+                          prev.map((acc) =>
+                            acc.key === selectedUser.key ? { ...acc, ...selectedUser } : acc,
+                          ),
+                        );
+                        await fetchStats();
+                        setIsEditMode(false);
+                        setIsModalOpen(false);
+                        message.success('User updated successfully');
+                      } catch (err) {
+                        message.error('Failed to update user');
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                )}
+              </div>
+            </Modal>
+          </ConfigProvider>
           <Modal
             open={showStatusWarning}
             onCancel={() => setShowStatusWarning(false)}
