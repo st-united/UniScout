@@ -5,8 +5,6 @@ import {
   EyeOutlined,
   DeleteOutlined,
   CloseOutlined,
-  ExclamationCircleFilled,
-  SearchOutlined,
 } from '@ant-design/icons';
 import {
   Table,
@@ -18,29 +16,33 @@ import {
   Row,
   Col,
   Typography,
-  Modal,
   Drawer,
   Badge,
   Tag,
   Checkbox,
-  Input,
   Dropdown,
   Menu,
+  Empty,
+  ConfigProvider,
 } from 'antd';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import PropTypes from 'prop-types';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import DeleteConfirmModal from './modals/DeleteConfirmModal';
 import ExportUniversityModal from './modals/ExportUniversityModal';
 import AdminHeader from '../../components/AdminHeader';
-import AdminSearchbar from '../../components/AdminSearchbar';
+import SearchBar from '../../components/AdminSearchbar';
 import LayoutWrapper from '../../components/LayoutWrapper';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
 const { Title } = Typography;
 
-// Updated interface to match API response
+/**
+ * Types — keep in sync with backend contracts.
+ */
 interface University {
   id: string;
   university: string;
@@ -60,131 +62,534 @@ interface University {
   strength: string;
   description: string;
   exchange: string | null;
-  academicFieldsCommaSeparated: string; // Updated to use academicFieldsCommaSeparated
+  academicFieldsCommaSeparated: string;
   subjectNames: string[];
   size: string;
 }
 
-// API Response interface
 interface UniversityApiResponse {
   message: string;
   data: University[];
   totalCount: number;
 }
 
-// Interface for notification items (imported from AdminNotification)
-interface NotificationItem {
-  id: number;
-  type: 'join_request';
-  title: string;
-  description: string;
-  timestamp: string;
-  isRead: boolean;
-}
-const getSortByLabel = (value: string): string => {
-  const option = sortOptions.find((opt) => opt.value === value);
-  return option?.label || value;
-};
-const sanitizeSearch = (raw: string) => {
-  const cleaned = raw
+type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'search';
+type FiltersState = Record<FilterKey, string[]>;
+type SortValue = 'rank-asc' | 'rank-desc';
+
+/**
+ * Theme & UI constants
+ */
+const PRIMARY = '#ff7a00';
+const PRIMARY_BG_HOVER = '#FFF5EB';
+const PRIMARY_BG_ACTIVE = '#FFE8D6';
+const INTERACTIVE_SELECTOR =
+  'button,a,[role="button"],input,textarea,select,.ant-btn,.ant-dropdown,.ant-select,.ant-checkbox,.ant-pagination';
+
+/**
+ * Static options
+ */
+const sortOptions: { label: string; value: SortValue }[] = [
+  { label: 'Sort by: high to low', value: 'rank-asc' },
+  { label: 'Sort by: low to high', value: 'rank-desc' },
+];
+const COUNTRIES = ['Australia', 'India', 'Japan', 'Korea', 'USA', 'Vietnam'] as const;
+const TYPES = ['public', 'private', 'college', 'academy', 'international'] as const;
+const SIZES = ['small', 'medium', 'large', 'extra large'] as const;
+
+const FIELD_OPTIONS = [
+  { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
+  { value: 'arts_design', label: 'Arts & Design' },
+  { value: 'business_management_law', label: 'Business, Management & Law' },
+  { value: 'education_training', label: 'Education & Training' },
+  { value: 'engineering_technology', label: 'Engineering & Technology' },
+  { value: 'health_medicine', label: 'Health & Medicine' },
+  { value: 'humanities_languages', label: 'Humanities & Languages' },
+  { value: 'ict', label: 'Information & Communication Technology (ICT)' },
+  { value: 'natural_sciences', label: 'Natural Sciences' },
+  { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
+  { value: 'services', label: 'Services' },
+  { value: 'transport_safety_security_military', label: 'Transport, Safety, Security & Military' },
+] as const;
+
+/**
+ * Helpers
+ */
+const getSortByLabel = (value: string): string =>
+  sortOptions.find((opt) => opt.value === value)?.label || value;
+
+const sanitizeSearch = (raw: string) =>
+  raw
     .replace(/[^\p{L}\p{N}\s\-']/gu, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
-  return cleaned.slice(0, 120);
+    .trim()
+    .slice(0, 120);
+
+const getFieldNameLabel = (value: string): string =>
+  FIELD_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
+const parseAcademicFields = (csv: string): string[] =>
+  !csv
+    ? []
+    : csv
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+const buildParams = (params: Record<string, unknown>) => {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (Array.isArray(val)) val.forEach((v) => sp.append(key, String(v)));
+    else if (val !== undefined && val !== null && val !== '') sp.append(key, String(val));
+  });
+  return sp.toString();
 };
 
-// Custom hook for debouncing input values
-export function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+const isInteractiveElement = (el: HTMLElement | null) => !!el?.closest(INTERACTIVE_SELECTOR);
 
+// Debounce hook
+function useDebounce<T>(value: T, delay = 400): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay]);
-
   return debouncedValue;
 }
 
-const sortOptions = [
-  { label: 'Sort by: high to low', value: 'rank-asc' },
-  { label: 'Sort by: low to high', value: 'rank-desc' },
-];
+/**
+ * FilterSection
+ */
+interface FilterSectionProps {
+  filters: FiltersState;
+  onChange: (field: FilterKey, values: string[]) => void;
+  isMobile: boolean;
+  sortBy: SortValue;
+  onSortChange: (val: SortValue) => void;
+  onReset: () => void;
+  showReset: boolean;
+}
 
-type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'search'; // Updated to academicFields
+const FilterSectionComponent: React.FC<FilterSectionProps> = ({
+  filters,
+  onChange,
+  isMobile,
+  sortBy,
+  onSortChange,
+  onReset,
+  showReset,
+}) => {
+  return (
+    <Row gutter={[16, 16]} style={{ marginBottom: 24, width: '100%' }}>
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Country</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.country}
+          onChange={(values) => onChange('country', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Countries'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox checked={filters.country.length === COUNTRIES.length && COUNTRIES.length > 0}>
+              Select All
+            </Checkbox>
+          </Option>
+          {COUNTRIES.map((country) => (
+            <Option key={country} value={country} label={country}>
+              <Checkbox checked={filters.country.includes(country)}>{country}</Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
 
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Type</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.type}
+          onChange={(values) => onChange('type', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Types'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox checked={filters.type.length === TYPES.length && TYPES.length > 0}>
+              Select All
+            </Checkbox>
+          </Option>
+          {TYPES.map((type) => (
+            <Option key={type} value={type} label={type.charAt(0).toUpperCase() + type.slice(1)}>
+              <Checkbox checked={filters.type.includes(type)}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Size</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.size}
+          onChange={(values) => onChange('size', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Sizes'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox checked={filters.size.length === SIZES.length && SIZES.length > 0}>
+              Select All
+            </Checkbox>
+          </Option>
+          {SIZES.map((size) => (
+            <Option key={size} value={size} label={size.charAt(0).toUpperCase() + size.slice(1)}>
+              <Checkbox checked={filters.size.includes(size)}>
+                {size.charAt(0).toUpperCase() + size.slice(1)}
+              </Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Broad Field</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.academicFields}
+          onChange={(values) => onChange('academicFields', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Broad Fields'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                filters.academicFields.length === FIELD_OPTIONS.length && FIELD_OPTIONS.length > 0
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
+          {FIELD_OPTIONS.map((field) => (
+            <Option key={field.value} value={field.value} label={field.label}>
+              <Checkbox checked={filters.academicFields.includes(field.value)}>
+                {field.label}
+              </Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: 14,
+            marginBottom: 4,
+            color: '#666',
+          }}
+        >
+          <span>Sort by</span>
+          {showReset && (
+            <button
+              onClick={onReset}
+              style={{
+                color: '#FF6600',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                outline: 'none',
+              }}
+              type='button'
+            >
+              Reset Filter
+            </button>
+          )}
+        </div>
+        <ConfigProvider theme={{ token: { fontSize: 12 } }}>
+          <Select
+            value={sortBy}
+            onChange={(v) => onSortChange(v as SortValue)}
+            size='large'
+            style={{ width: '100%', fontSize: 12 }}
+            className='!text-xs'
+          >
+            {sortOptions.map((opt) => (
+              <Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Option>
+            ))}
+          </Select>
+        </ConfigProvider>
+      </Col>
+    </Row>
+  );
+};
+
+const FilterSection = React.memo(FilterSectionComponent);
+FilterSection.displayName = 'FilterSection';
+(FilterSection as any).propTypes = {
+  filters: PropTypes.shape({
+    country: PropTypes.arrayOf(PropTypes.string).isRequired,
+    region: PropTypes.arrayOf(PropTypes.string).isRequired,
+    type: PropTypes.arrayOf(PropTypes.string).isRequired,
+    size: PropTypes.arrayOf(PropTypes.string).isRequired,
+    academicFields: PropTypes.arrayOf(PropTypes.string).isRequired,
+    search: PropTypes.arrayOf(PropTypes.string).isRequired,
+  }).isRequired,
+  onChange: PropTypes.func.isRequired,
+  isMobile: PropTypes.bool.isRequired,
+  sortBy: PropTypes.oneOf(['rank-asc', 'rank-desc']).isRequired,
+  onSortChange: PropTypes.func.isRequired,
+  onReset: PropTypes.func.isRequired,
+  showReset: PropTypes.bool.isRequired,
+};
+
+/**
+ * Page component
+ */
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 
-  // State for university data
+  // State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [universityData, setUniversityData] = useState<UniversityApiResponse>();
   const [currentUniversityData, setCurrentUniversityData] = useState<University[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [filters, setFilters] = useState<Record<FilterKey, string[]>>({
+  const [filters, setFilters] = useState<FiltersState>({
     country: [],
     region: [],
     type: [],
     size: [],
-    academicFields: [], // Updated to academicFields
+    academicFields: [],
     search: [],
   });
 
   const debouncedFilters = useDebounce(filters, 400);
-
-  const [sortBy, setSortBy] = useState('Sort by: high to low');
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState(''); // New state for actual search query
+  const [sortBy, setSortBy] = useState<SortValue>('rank-asc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchBarKey, setSearchBarKey] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
 
-  // Add state for the dropdown menu visibility
-  const [dropdownVisible, setDropdownVisible] = useState<boolean>(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [showBatchActions, setShowBatchActions] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteType, setDeleteType] = useState<'single' | 'multiple'>('single');
+  const [universityToDelete, setUniversityToDelete] = useState<University | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
+
+  // Derived
+  const appliedFiltersForExport = useMemo(
+    () => ({ ...filters, search: searchQuery ? [searchQuery] : [] }),
+    [filters, searchQuery],
+  );
+
+  const hasActiveFilters = useMemo(
+    () =>
+      Object.values(filters).some((v) => Array.isArray(v) && v.some((x) => x && x.trim() !== '')) ||
+      searchQuery.trim() !== '',
+    [filters, searchQuery],
+  );
+
+  // Handlers
+  const handleMultiFilterChange = useCallback((field: FilterKey, values: string[]) => {
     let newValues = values;
 
-    // Handle "Select All" logic for each field
     if (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields') {
       const allOptions =
         field === 'country'
-          ? getUniqueCountries()
+          ? [...COUNTRIES]
           : field === 'type'
-          ? getUniqueTypes()
+          ? [...TYPES]
           : field === 'size'
-          ? getUniqueSizes()
-          : getUniqueFields(); // academicFields
+          ? [...SIZES]
+          : FIELD_OPTIONS.map((o) => o.value);
 
       if (values.includes('all')) {
-        // If 'all' is selected and it's the only value, select all options
-        if (values.length === 1) {
-          newValues = allOptions;
-        } else {
-          // If 'all' is selected along with other values, it means "deselect all" was clicked
-          // So, remove 'all' from the selection and keep only specific choices
-          newValues = values.filter((val) => val !== 'all');
-        }
-      } else {
-        // If 'all' is not selected but all other options are, and then one is deselected,
-        // ensure 'all' is no longer conceptually selected (though it wouldn't be in `values`)
-        // This is more for the checkbox rendering, not the actual values.
+        newValues = values.length === 1 ? allOptions : values.filter((v) => v !== 'all');
       }
     }
-
-    setFilters({ ...filters, [field]: newValues });
+    setFilters((prev) => ({ ...prev, [field]: newValues }));
     setCurrentPage(1);
-  };
+  }, []);
 
+  const commitSearch = useCallback((val: string) => {
+    const safe = sanitizeSearch(val);
+    setSearchQuery(safe);
+    setFilters((prev) => ({ ...prev, search: safe ? [safe] : [] }));
+    setCurrentPage(1);
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setFilters({ country: [], region: [], type: [], size: [], academicFields: [], search: [] });
+    setSearchQuery('');
+    setSearchBarKey((k) => k + 1);
+    setCurrentPage(1);
+    setSelectedRowKeys([]);
+  }, []);
+
+  const removeFilter = useCallback((field: FilterKey, value?: string) => {
+    if (field === 'search') {
+      setFilters((prev) => ({ ...prev, search: [] }));
+      setSearchQuery('');
+      setSearchBarKey((k) => k + 1);
+      setCurrentPage(1);
+      return;
+    }
+
+    if (
+      value &&
+      (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields')
+    ) {
+      setFilters((prev) => ({ ...prev, [field]: prev[field].filter((v) => v !== value) }));
+    } else {
+      setFilters((prev) => ({ ...prev, [field]: [] }));
+    }
+    setCurrentPage(1);
+  }, []);
+
+  const showDeleteModal = useCallback((type: 'single' | 'multiple', university?: University) => {
+    setDeleteType(type);
+    setUniversityToDelete(university || null);
+    setDeleteModalVisible(true);
+  }, []);
+
+  const handleEdit = useCallback(
+    (universityId: string) => navigate(`/edit-university/${universityId}`),
+    [navigate],
+  );
+
+  const handleExport = useCallback(async () => {
+    try {
+      const response = await axios.get('/admin/universities/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'universities.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      message.success('Universities exported successfully');
+    } catch (e) {
+      message.error('Export failed');
+      console.error('Export error:', e);
+    }
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    try {
+      if (deleteType === 'single' && universityToDelete) {
+        await axios.delete(`/admin/universities/${universityToDelete.id}`, {
+          data: { confirm_deletion: true },
+          headers: { 'Content-Type': 'application/json' },
+        });
+        setCurrentUniversityData((prev) => prev.filter((u) => u.id !== universityToDelete.id));
+        message.success('University deleted successfully');
+      } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
+        await axios.delete('/universities/admin/bulk', {
+          data: { ids: selectedRowKeys, confirm_deletion: true },
+          headers: { 'Content-Type': 'application/json' },
+        });
+        setCurrentUniversityData((prev) => prev.filter((u) => !selectedRowKeys.includes(u.id)));
+        setSelectedRowKeys([]);
+        message.success(`${selectedRowKeys.length} universities deleted successfully`);
+      }
+    } catch (e) {
+      const msg = axios.isAxiosError(e)
+        ? e.response?.data?.message || 'Delete failed'
+        : 'Delete failed';
+      message.error(msg);
+      console.error('Delete error:', e);
+    } finally {
+      setDeleting(false);
+      setDeleteModalVisible(false);
+      setUniversityToDelete(null);
+    }
+  }, [deleteType, selectedRowKeys, universityToDelete]);
+
+  const handlePaginationChange = useCallback((page: number, size?: number) => {
+    setCurrentPage(page);
+    if (size) setPageSize(size);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Row click support
+  const makeRowHandlers = useCallback(
+    (record: University) => ({
+      onClick: (e: React.MouseEvent<HTMLTableRowElement>) => {
+        const target = e.target as HTMLElement;
+        if (isInteractiveElement(target)) return;
+        handleEdit(record.id);
+      },
+      onKeyDown: (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+        if (
+          (e.key === 'Enter' || e.key === ' ') &&
+          !isInteractiveElement(e.target as HTMLElement)
+        ) {
+          e.preventDefault();
+          handleEdit(record.id);
+        }
+      },
+    }),
+    [handleEdit],
+  );
+
+  // Data fetch
   const fetchUniversities = useCallback(async () => {
     setLoading(true);
     setError(null);
-
     try {
       const safeSearch = sanitizeSearch(searchQuery);
-
       const response = await axios.get<UniversityApiResponse>('/admin/universities', {
         params: {
           search: safeSearch || undefined,
@@ -201,34 +606,22 @@ const UniversityListPage: React.FC = () => {
           sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
           page: currentPage,
         },
-        paramsSerializer: (params) => {
-          const searchParams = new URLSearchParams();
-          Object.keys(params).forEach((key) => {
-            const value = (params as any)[key];
-            if (Array.isArray(value)) {
-              value.forEach((v) => searchParams.append(key, v));
-            } else if (value !== undefined) {
-              searchParams.append(key, value);
-            }
-          });
-          return searchParams.toString();
-        },
+        paramsSerializer: buildParams,
       });
-
       setCurrentUniversityData(response.data.data);
       setUniversityData(response.data);
     } catch (err) {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.message || err.message || '' : '';
-
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.message || (err as any).message || ''
+        : '';
       if (/syntax error/i.test(msg) || /at or near/i.test(msg)) {
         setCurrentUniversityData([]);
         setUniversityData({ message: 'ok', data: [], totalCount: 0 });
-        return;
+      } else {
+        const errorMessage = msg || 'Failed to fetch universities';
+        setError(errorMessage);
+        message.error(errorMessage);
       }
-
-      const errorMessage = msg || 'Failed to fetch universities';
-      setError(errorMessage);
-      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -238,816 +631,225 @@ const UniversityListPage: React.FC = () => {
     fetchUniversities();
   }, [debouncedFilters, sortBy, currentPage, pageSize, fetchUniversities]);
 
-  // Scroll to top when page changes - more robust approach
+  // Responsive flag
   useEffect(() => {
-    const scrollToTop = () => {
-      // Multiple methods for maximum compatibility
-      try {
-        // Method 1: scrollIntoView with top reference
-        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-        // Method 2: window.scrollTo to very top
-        window.scrollTo({ top: -200, behavior: 'smooth' });
-
-        // Method 3: document.documentElement.scrollTop
-        if (document.documentElement) {
-          document.documentElement.scrollTop = 0;
-        }
-
-        // Method 4: document.body.scrollTop
-        if (document.body) {
-          document.body.scrollTop = -200;
-        }
-
-        // Method 5: Force scroll to very top
-        setTimeout(() => {
-          window.scrollTo(0, 0);
-          if (document.documentElement) {
-            document.documentElement.scrollTop = 0;
-          }
-          if (document.body) {
-            document.body.scrollTop = 0;
-          }
-        }, 100);
-      } catch (error) {
-        // Fallback to instant scroll to very top
-        window.scrollTo(0, 0);
-        if (document.documentElement) {
-          document.documentElement.scrollTop = 0;
-        }
-        if (document.body) {
-          document.body.scrollTop = 0;
-        }
-      }
-    };
-
-    // Small delay to ensure DOM is updated
-    const timer = setTimeout(scrollToTop, 50);
-    return () => clearTimeout(timer);
-  }, [currentPage]);
-
-  // Hide delete buttons
-  const [showBatchActions, setShowBatchActions] = useState(false);
-
-  // Multi-select state
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
-  // Delete confirmation modal state
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [deleteType, setDeleteType] = useState<'single' | 'multiple'>('single');
-  const [universityToDelete, setUniversityToDelete] = useState<University | null>(null);
-
-  // Mobile responsive states
-  const [isMobile, setIsMobile] = useState(false);
-  const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
-
-  // Check screen size
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // Handle search from search input
-  const handleSearchSubmit = () => {
-    const safe = sanitizeSearch(searchInput);
-    setSearchInput(safe);
-    setSearchQuery(safe);
-    setCurrentPage(1);
-  };
-
-  // Handle search from AdminSearchbar component (if still used)
-  const handleGlobalSearch = (searchValue: string) => {
-    const safe = sanitizeSearch(searchValue);
-    setSearchInput(safe);
-    setSearchQuery(safe);
-    setCurrentPage(1);
-  };
-
-  // Handle Enter key press in search input
-  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearchSubmit();
-    }
-  };
-
-  // Clear search input
-  const clearSearchInput = () => {
-    setSearchInput('');
-    setSearchQuery('');
-    setCurrentPage(1);
-  };
-
-  const handleNotificationClick = (notification: NotificationItem) => {
-    // Navigate to join request management page or show details
-    message.info(`Viewing join request: ${notification.description}`);
-    // Example: navigate('/admin/join-requests/' + notification.id);
-  };
-
-  // Handle mark all notifications as read
-  const handleMarkAllAsRead = () => {
-    message.success('All notifications marked as read');
-  };
-
-  const handleResetFilters = () => {
-    setFilters({
-      country: [],
-      region: [],
-      type: [],
-      size: [],
-      academicFields: [], // Updated to academicFields
-      search: [],
-    });
-    setSearchInput('');
-    setSearchQuery('');
-    setCurrentPage(1);
-    setSelectedRowKeys([]);
-    // Note: sortBy is NOT reset here, so it maintains the current sort option
-  };
-
-  // Remove individual filter
-  const removeFilter = (field: FilterKey, value?: string) => {
-    if (field === 'search') {
-      setSearchInput('');
-      setSearchQuery('');
-      setCurrentPage(1);
-      return;
-    }
-    if (
-      value &&
-      (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields')
-    ) {
-      // Remove specific value from array
-      const newValues = filters[field].filter((item) => item !== value);
-      setFilters({ ...filters, [field]: newValues });
-    } else {
-      // Remove entire filter
-      setFilters({ ...filters, [field]: [] });
-    }
-    setCurrentPage(1);
-  };
-
-  // Show delete confirmation modal
-  const showDeleteModal = (type: 'single' | 'multiple', university?: University) => {
-    setDeleteType(type);
-    setUniversityToDelete(university || null);
-    setDeleteModalVisible(true);
-  };
-
-  // Handle delete confirmation
-  const handleDeleteConfirm = async () => {
-    try {
-      if (deleteType === 'single' && universityToDelete) {
-        await axios.delete(`/admin/universities/${universityToDelete.id}`, {
-          data: { confirm_deletion: true },
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        setCurrentUniversityData((prev) => prev.filter((uni) => uni.id !== universityToDelete.id));
-        message.success('University deleted successfully');
-      } else if (deleteType === 'multiple' && selectedRowKeys.length > 0) {
-        await axios.delete('/universities/admin/bulk', {
-          data: {
-            ids: selectedRowKeys,
-            confirm_deletion: true,
-          },
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const universitiesToDelete = currentUniversityData.filter((uni) =>
-          selectedRowKeys.includes(uni.id),
-        );
-
-        setCurrentUniversityData((prev) => prev.filter((uni) => !selectedRowKeys.includes(uni.id)));
-        setSelectedRowKeys([]);
-        message.success(`${selectedRowKeys.length} universities deleted successfully`);
+  // Scroll to top on page change (extra guard)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      } catch {
+        window.scrollTo(0, 0);
       }
-    } catch (error) {
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.message || 'Delete failed'
-        : 'Delete failed';
-      message.error(errorMessage);
-      console.error('Delete error:', error);
-    } finally {
-      setDeleteModalVisible(false);
-      setUniversityToDelete(null);
-    }
-  };
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
 
-  const handleEdit = (universityId: string) => {
-    navigate(`/edit-university/${universityId}`);
-  };
+  // Filter + search
+  const filteredUniversities = useMemo(() => {
+    const s = searchQuery.toLowerCase();
+    return currentUniversityData.filter((u) => {
+      const fields = parseAcademicFields(u.academicFieldsCommaSeparated);
+      const searchMatch =
+        !s ||
+        u.university.toLowerCase().includes(s) ||
+        u.abbreviation.toLowerCase().includes(s) ||
+        u.location.toLowerCase().includes(s) ||
+        u.country.toLowerCase().includes(s) ||
+        fields.some((f) => getFieldNameLabel(f).toLowerCase().includes(s));
 
-  const handleExport = async () => {
-    try {
-      const response = await axios.get('/admin/universities/export', {
-        responseType: 'blob',
-      });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'universities.csv');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      message.success('Universities exported successfully');
-    } catch (error) {
-      message.error('Export failed');
-      console.error('Export error:', error);
-    }
-  };
-
-  // Updated academic fields options
-  const fieldNamesOptions = [
-    { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
-    { value: 'arts_design', label: 'Arts & Design' },
-    { value: 'business_management_law', label: 'Business, Management & Law' },
-    { value: 'education_training', label: 'Education & Training' },
-    { value: 'engineering_technology', label: 'Engineering & Technology' },
-    { value: 'health_medicine', label: 'Health & Medicine' },
-    { value: 'humanities_languages', label: 'Humanities & Languages' },
-    { value: 'ict', label: 'Information & Communication Technology (ICT)' },
-    { value: 'natural_sciences', label: 'Natural Sciences' },
-    { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
-    { value: 'services', label: 'Services' },
-    {
-      value: 'transport_safety_security_military',
-      label: 'Transport, Safety, Security & Military',
-    },
-  ];
-
-  // Helper function to get label for academic field value
-  const getFieldNameLabel = (value: string): string => {
-    const field = fieldNamesOptions.find((option) => option.value === value);
-    return field ? field.label : value;
-  };
-
-  // Helper function to parse comma-separated academic fields
-  const parseAcademicFields = (academicFieldsCommaSeparated: string): string[] => {
-    if (!academicFieldsCommaSeparated) return [];
-    return academicFieldsCommaSeparated
-      .split(',')
-      .map((field) => field.trim())
-      .filter((field) => field);
-  };
-
-  // Enhanced filter function to include university name, location, and strength search
-  const filteredUniversities = currentUniversityData.filter((u) => {
-    const searchValue = searchQuery || '';
-    const universityFields = parseAcademicFields(u.academicFieldsCommaSeparated);
-
-    const searchMatch =
-      !searchValue ||
-      u.university.toLowerCase().includes(searchValue.toLowerCase()) ||
-      u.abbreviation.toLowerCase().includes(searchValue.toLowerCase()) || // Add this line for abbreviation search
-      u.location.toLowerCase().includes(searchValue.toLowerCase()) ||
-      u.country.toLowerCase().includes(searchValue.toLowerCase()) ||
-      universityFields.some((field) =>
-        getFieldNameLabel(field).toLowerCase().includes(searchValue.toLowerCase()),
+      return (
+        searchMatch &&
+        (filters.country.length === 0 || filters.country.includes(u.country)) &&
+        (filters.type.length === 0 || filters.type.includes(u.type)) &&
+        (filters.size.length === 0 || filters.size.includes(u.size)) &&
+        (filters.academicFields.length === 0 ||
+          filters.academicFields.some((f) => fields.includes(f)))
       );
+    });
+  }, [currentUniversityData, filters, searchQuery]);
 
-    return (
-      searchMatch &&
-      (filters.country.length === 0 || filters.country.includes(u.country)) &&
-      (filters.type.length === 0 || filters.type.includes(u.type)) &&
-      (filters.size.length === 0 || filters.size.includes(u.size)) &&
-      (filters.academicFields.length === 0 ||
-        filters.academicFields.some((field) => universityFields.includes(field)))
+  const sortedUniversities = useMemo(() => {
+    const clone = [...filteredUniversities];
+    return sortBy === 'rank-asc'
+      ? clone.sort((a, b) => a.rank - b.rank)
+      : sortBy === 'rank-desc'
+      ? clone.sort((a, b) => b.rank - a.rank)
+      : clone;
+  }, [filteredUniversities, sortBy]);
+
+  const getActiveFilters = useCallback(() => {
+    const active: Array<{ key: FilterKey; label: string; value: string; itemValue?: string }> = [];
+    filters.country.forEach((c) =>
+      active.push({ key: 'country', label: 'Country', value: c, itemValue: c }),
     );
-  });
+    filters.type.forEach((t) =>
+      active.push({ key: 'type', label: 'Type', value: t, itemValue: t }),
+    );
+    filters.size.forEach((sz) =>
+      active.push({ key: 'size', label: 'Size', value: sz, itemValue: sz }),
+    );
+    filters.academicFields.forEach((f) =>
+      active.push({
+        key: 'academicFields',
+        label: 'Field',
+        value: getFieldNameLabel(f),
+        itemValue: f,
+      }),
+    );
+    if (searchQuery.trim() !== '')
+      active.push({ key: 'search', label: 'Search', value: searchQuery });
+    return active;
+  }, [filters, searchQuery]);
 
-  const sortedUniversities = [...filteredUniversities].sort((a, b) => {
-    switch (sortBy) {
-      case 'rank-asc':
-        return a.rank - b.rank;
-      case 'rank-desc':
-        return b.rank - a.rank;
-      default:
-        return 0;
-    }
-  });
-
-  // Get unique values for filter options
-  const getUniqueCountries = () => {
-    return ['Australia', 'India', 'Japan', 'Korea', 'USA', 'Vietnam'];
-  };
-
-  const getUniqueTypes = () => {
-    return ['public', 'private', 'college', 'academy', 'international'];
-  };
-
-  const getUniqueSizes = () => {
-    return ['small', 'medium', 'large', 'extra large'];
-  };
-
-  // Updated to always return all academic field options
-  const getUniqueFields = () => {
-    return fieldNamesOptions.map((option) => option.value);
-  };
-
-  // Check if any filters are active
-  const hasActiveFilters =
-    Object.values(filters).some(
-      (value) => Array.isArray(value) && value.some((v) => v && v.trim() !== ''),
-    ) || searchQuery.trim() !== '';
-
-  // Get active filters for floating display - Updated to show individual tags
-  const getActiveFilters = () => {
-    const activeFilters: Array<{
-      key: FilterKey;
-      label: string;
-      value: string;
-      itemValue?: string;
-    }> = [];
-
-    // Individual country filters
-    if (filters.country && filters.country.length > 0) {
-      filters.country.forEach((country) => {
-        activeFilters.push({
-          key: 'country',
-          label: 'Country',
-          value: country,
-          itemValue: country,
-        });
-      });
-    }
-
-    // Individual type filters
-    if (filters.type && filters.type.length > 0) {
-      filters.type.forEach((type) => {
-        activeFilters.push({ key: 'type', label: 'Type', value: type, itemValue: type });
-      });
-    }
-
-    // Individual size filters
-    if (filters.size && filters.size.length > 0) {
-      filters.size.forEach((size) => {
-        activeFilters.push({ key: 'size', label: 'Size', value: size, itemValue: size });
-      });
-    }
-
-    // Individual academic field filters
-    if (filters.academicFields && filters.academicFields.length > 0) {
-      filters.academicFields.forEach((field) => {
-        const fieldLabel = getFieldNameLabel(field);
-        activeFilters.push({
-          key: 'academicFields',
-          label: 'Field',
-          value: fieldLabel,
-          itemValue: field,
-        });
-      });
-    }
-
-    // Search filter
-    if (searchQuery.trim() !== '') {
-      activeFilters.push({ key: 'search', label: 'Search', value: searchQuery });
-    }
-
-    return activeFilters;
-  };
-
-  // Handle pagination change with scroll to top
-  const handlePaginationChange = (page: number, size?: number) => {
-    setCurrentPage(page);
-    if (size) {
-      setPageSize(size);
-    }
-    window.scrollTo({ top: -700, behavior: 'smooth' });
-  };
-
-  // Table columns configuration
-  const columns: ColumnsType<University> = [
-    {
-      title: 'University Name',
-      dataIndex: 'university',
-      key: 'university',
-      width: 400,
-      render: (text: string) => <span>{text}</span>,
-    },
-    {
-      title: 'Rank',
-      dataIndex: 'rank',
-      key: 'rank',
-      width: 80,
-    },
-    {
-      title: 'Country',
-      dataIndex: 'country',
-      key: 'country',
-      width: 120,
-    },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type: string) => (
-        <Tag color={type === 'public' ? 'blue' : 'green'} style={{ fontSize: '14px' }}>
-          {type.charAt(0).toUpperCase() + type.slice(1)}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Size',
-      dataIndex: 'size',
-      key: 'size',
-      width: 100,
-      render: (size: string) => (
-        <Tag
-          color={
-            size === 'small'
-              ? 'orange'
-              : size === 'medium'
-              ? 'yellow'
-              : size === 'large'
-              ? 'blue'
-              : 'purple'
-          }
-          style={{ fontSize: '14px' }}
-        >
-          {size.charAt(0).toUpperCase() + size.slice(1)}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Broad Field',
-      dataIndex: 'academicFieldsCommaSeparated',
-      key: 'academicFieldsCommaSeparated',
-      width: 250,
-      render: (academicFieldsCommaSeparated: string) => {
-        const fields = parseAcademicFields(academicFieldsCommaSeparated);
-        const sortedFields = fields.sort(
-          (a, b) =>
-            fieldNamesOptions.findIndex((opt) => opt.value === a) -
-            fieldNamesOptions.findIndex((opt) => opt.value === b),
-        );
-
-        const fieldLabels = sortedFields.map((field) => getFieldNameLabel(field));
-        const firstFieldLabel = fieldLabels[0];
-        const remainingCount = fieldLabels.length - 1;
-
-        return (
-          <Space direction='vertical' size={4} style={{ alignItems: 'flex-start' }}>
-            {firstFieldLabel && (
-              <Tag
-                color='white' // Background color
-                style={{
-                  fontSize: '14px',
-                  color: '#000000', // Font color
-                  borderColor: '#FF6600', // Border color
-                }}
-              >
-                {firstFieldLabel}
-              </Tag>
-            )}
-            {remainingCount > 0 && (
-              <Tag
-                color='white' // Background color
-                style={{
-                  fontSize: '14px',
-                  color: '#000000', // Font color
-                  borderColor: '#FF6600', // Border color
-                }}
-              >
-                +{remainingCount}
-              </Tag>
-            )}
-          </Space>
-        );
+  // Columns
+  const columns: ColumnsType<University> = useMemo(
+    () => [
+      {
+        title: 'University Name',
+        dataIndex: 'university',
+        key: 'university',
+        width: 400,
+        render: (text: string) => <span>{text}</span>,
       },
-    },
-    {
-      title: (
-        <Space>
-          <strong>Action</strong>
-          <Dropdown
-            trigger={['click']}
-            onOpenChange={(visible) => setDropdownVisible(visible)}
-            open={dropdownVisible}
-            dropdownRender={() => (
-              <Menu
-                onClick={({ key }) => {
-                  if (key === 'multiple-selection') {
-                    setShowBatchActions((prev) => !prev);
-                    setDropdownVisible(false); // Close dropdown after selection
-                  }
-                }}
-              >
-                <Menu.Item key='multiple-selection'>
-                  <Space>Multiple selection</Space>
-                </Menu.Item>
-              </Menu>
-            )}
+      { title: 'Rank', dataIndex: 'rank', key: 'rank', width: 80 },
+      { title: 'Country', dataIndex: 'country', key: 'country', width: 120 },
+      {
+        title: 'Type',
+        dataIndex: 'type',
+        key: 'type',
+        width: 100,
+        render: (type: string) => (
+          <Tag
+            color={type === 'public' ? 'geekblue' : 'cyan'}
+            style={{ fontSize: '12px', border: 'none' }}
           >
-            <Button type='text' icon={<MoreOutlined />} />
-          </Dropdown>
-        </Space>
-      ),
-      key: 'action',
-      width: 120,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type='text'
-            icon={<EyeOutlined style={{ fontSize: '18px' }} />}
-            onClick={() => handleEdit(record.id)}
-            style={{ color: '#ff7a00' }}
-          />
-          <Button
-            type='text'
-            icon={<DeleteOutlined style={{ fontSize: '18px' }} />}
-            onClick={() => showDeleteModal('single', record)}
-            style={{ color: '#ff7a00' }}
-          />
-        </Space>
-      ),
-    },
-  ];
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+          </Tag>
+        ),
+      },
+      {
+        title: 'Size',
+        dataIndex: 'size',
+        key: 'size',
+        width: 100,
+        render: (size: string) => (
+          <Tag
+            color={
+              size === 'small'
+                ? 'magenta'
+                : size === 'medium'
+                ? 'cyan'
+                : size === 'large'
+                ? 'geekblue'
+                : 'purple'
+            }
+            style={{ fontSize: '12px', border: 'none' }}
+          >
+            {size.charAt(0).toUpperCase() + size.slice(1)}
+          </Tag>
+        ),
+      },
+      {
+        title: 'Broad Field',
+        dataIndex: 'academicFieldsCommaSeparated',
+        key: 'academicFieldsCommaSeparated',
+        width: 250,
+        render: (value: string) => {
+          const fields = parseAcademicFields(value);
+          const sortedFields = fields.sort(
+            (a, b) =>
+              FIELD_OPTIONS.findIndex((opt) => opt.value === a) -
+              FIELD_OPTIONS.findIndex((opt) => opt.value === b),
+          );
+          const labels = sortedFields.map(getFieldNameLabel);
+          const first = labels[0];
+          const rest = labels.length - 1;
 
-  // Row selection configuration
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (newSelectedRowKeys: React.Key[]) => {
-      setSelectedRowKeys(newSelectedRowKeys);
-    },
-    onSelectAll: (selected: boolean, selectedRows: University[], changeRows: University[]) => {
-      // Handle select all functionality
-    },
-  };
-
-  // Get confirmation message
-  const getConfirmationMessage = () => {
-    if (deleteType === 'single' && universityToDelete) {
-      return `Are you sure delete ${universityToDelete.university}?`;
-    } else if (deleteType === 'multiple') {
-      return 'Are you sure delete all selected fields?';
-    }
-    return '';
-  };
-
-  // Custom Search Component
-  const CustomSearchBar = () => (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <Input
-        placeholder='Search universities...'
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-        onKeyPress={handleSearchKeyPress}
-        prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-        suffix={
-          searchInput ? (
-            <CloseOutlined
-              style={{
-                color: '#bfbfbf',
-                cursor: 'pointer',
-                padding: '2px',
+          return (
+            <Space direction='horizontal' style={{ display: 'flex', alignItems: 'center' }}>
+              {first && (
+                <p className='flex text-sm !w-fit !text-gray-500 !font-medium !leading-none !whitespace-nowrap'>
+                  {first}
+                </p>
+              )}
+              {rest > 0 && (
+                <Tag
+                  color='white'
+                  style={{ fontSize: '11px', color: '#000', borderColor: '#FF6600' }}
+                >
+                  + {rest}
+                </Tag>
+              )}
+            </Space>
+          );
+        },
+      },
+      {
+        title: (
+          <Space className='flex justify-end text-right'>
+            <Dropdown
+              trigger={['click']}
+              onOpenChange={(v) => setDropdownVisible(v)}
+              open={dropdownVisible}
+              dropdownRender={() => (
+                <Menu
+                  onClick={({ key }) => {
+                    if (key === 'multiple-selection') {
+                      setShowBatchActions((prev) => !prev);
+                      setDropdownVisible(false);
+                    }
+                  }}
+                >
+                  <Menu.Item key='multiple-selection'>
+                    <Space>Multiple selection</Space>
+                  </Menu.Item>
+                </Menu>
+              )}
+            >
+              <Button type='text' icon={<MoreOutlined size={16} />} />
+            </Dropdown>
+          </Space>
+        ),
+        key: 'action',
+        width: 120,
+        render: (_, record) => (
+          <Space>
+            <Button
+              type='text'
+              icon={<EyeOutlined style={{ fontSize: '18px' }} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(record.id);
               }}
-              onClick={clearSearchInput}
+              style={{ color: PRIMARY }}
             />
-          ) : null
-        }
-        style={{
-          paddingRight: searchInput ? '30px' : '11px',
-        }}
-      />
-      <Button
-        type='primary'
-        icon={<SearchOutlined />}
-        onClick={handleSearchSubmit}
-        style={{
-          position: 'absolute',
-          right: '-1px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          backgroundColor: '#ff7a00',
-          borderColor: '#ff7a00',
-          zIndex: 1,
-        }}
-      />
-    </div>
+            <Button
+              type='text'
+              icon={<DeleteOutlined style={{ fontSize: '18px' }} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                showDeleteModal('single', record);
+              }}
+              style={{ color: PRIMARY }}
+            />
+          </Space>
+        ),
+      },
+    ],
+    [dropdownVisible, handleEdit, showDeleteModal],
   );
 
-  // Filter component for desktop with adjusted widths
-  const FilterSection = () => (
-    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-      <Col xs={24} sm={12} md={6} lg={4}>
-        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
-          Country
-        </div>
-        <Select
-          mode='multiple'
-          allowClear
-          value={filters.country}
-          onChange={(values) => handleMultiFilterChange('country', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Countries'
-          optionLabelProp='label'
-          menuItemSelectedIcon={() => null}
-          popupRender={(menu) => (
-            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
-              {menu}
-            </span>
-          )}
-        >
-          {/* Select All for Country */}
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                (filters.country.length === getUniqueCountries().length &&
-                  getUniqueCountries().length > 0 &&
-                  filters.country.includes('all')) ||
-                filters.country.length === getUniqueCountries().length
-              } // Check if all options are selected
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueCountries().map((country) => (
-            <Option key={country} value={country} label={country}>
-              <Checkbox checked={filters.country.includes(country)}>{country}</Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={12} md={6} lg={4}>
-        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
-          Type
-        </div>
-        <Select
-          mode='multiple' // Enable multi-select
-          allowClear
-          value={filters.type}
-          onChange={(values) => handleMultiFilterChange('type', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Types'
-          optionLabelProp='label'
-          menuItemSelectedIcon={() => null}
-          popupRender={(menu) => (
-            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
-              {menu}
-            </span>
-          )}
-        >
-          {/* Select All for Type */}
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                (filters.type.length === getUniqueTypes().length &&
-                  getUniqueTypes().length > 0 &&
-                  filters.type.includes('all')) ||
-                filters.type.length === getUniqueTypes().length
-              }
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueTypes().map((type) => (
-            <Option key={type} value={type} label={type.charAt(0).toUpperCase() + type.slice(1)}>
-              <Checkbox checked={filters.type.includes(type)}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={12} md={6} lg={4}>
-        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
-          Size
-        </div>
-        <Select
-          mode='multiple' // Enable multi-select
-          allowClear
-          value={filters.size}
-          onChange={(values) => handleMultiFilterChange('size', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Size'
-          optionLabelProp='label'
-          menuItemSelectedIcon={() => null}
-          popupRender={(menu) => (
-            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
-              {menu}
-            </span>
-          )}
-        >
-          {/* Select All for Size */}
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                (filters.size.length === getUniqueSizes().length &&
-                  getUniqueSizes().length > 0 &&
-                  filters.size.includes('all')) ||
-                filters.size.length === getUniqueSizes().length
-              }
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueSizes().map((size) => (
-            <Option key={size} value={size} label={size.charAt(0).toUpperCase() + size.slice(1)}>
-              <Checkbox checked={filters.size.includes(size)}>
-                {size.charAt(0).toUpperCase() + size.slice(1)}
-              </Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={12} md={8} lg={7}>
-        <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '7px', color: '#666' }}>
-          Broad Field
-        </div>
-        <Select
-          mode='multiple' // Enable multi-select for Broad Field
-          allowClear
-          value={filters.academicFields}
-          onChange={(values) => handleMultiFilterChange('academicFields', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Broad Fields'
-          optionLabelProp='label'
-          menuItemSelectedIcon={() => null}
-          popupRender={(menu) => (
-            <span role='presentation' onMouseDown={(e) => e.stopPropagation()}>
-              {menu}
-            </span>
-          )}
-        >
-          {/* Select All for Broad Field */}
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                (filters.academicFields.length === getUniqueFields().length &&
-                  getUniqueFields().length > 0 &&
-                  filters.academicFields.includes('all')) ||
-                filters.academicFields.length === getUniqueFields().length
-              }
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueFields().map((field) => (
-            <Option key={field} value={field} label={getFieldNameLabel(field)}>
-              <Checkbox checked={filters.academicFields.includes(field)}>
-                {getFieldNameLabel(field)}
-              </Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={24} md={6} lg={5}>
-        <div
-          style={{
-            fontSize: '12px',
-            marginBottom: '4px',
-            color: '#666',
-            textAlign: isMobile ? 'left' : 'right',
-          }}
-        >
-          <button
-            onClick={handleResetFilters}
-            style={{
-              color: '#ff7a00',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 500,
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              outline: 'none',
-            }}
-            type='button'
-            tabIndex={0}
-          >
-            Reset Filter
-          </button>
-        </div>
-        <Select value={sortBy} onChange={setSortBy} style={{ width: '100%', marginTop: '8px' }}>
-          {sortOptions.map((option) => (
-            <Option key={option.value} value={option.value}>
-              {option.label}
-            </Option>
-          ))}
-        </Select>
-      </Col>
-    </Row>
-  );
-
-  // Error state
+  // Error screen
   if (error && currentUniversityData.length === 0) {
     return (
       <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
@@ -1057,12 +859,12 @@ const UniversityListPage: React.FC = () => {
               <Title level={4} style={{ color: '#ff4d4f' }}>
                 Failed to load universities
               </Title>
-              <p style={{ color: '#666', marginBottom: '20px' }}>{error}</p>
+              <p style={{ color: '#666', marginBottom: 20 }}>{error}</p>
               <Button
                 type='primary'
                 onClick={fetchUniversities}
                 loading={loading}
-                style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+                style={{ backgroundColor: PRIMARY, borderColor: PRIMARY }}
               >
                 Retry
               </Button>
@@ -1077,19 +879,18 @@ const UniversityListPage: React.FC = () => {
     <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
       <AdminHeader />
 
-      {/* Main Content */}
       <LayoutWrapper>
         <div ref={topRef} style={{ padding: isMobile ? '16px' : '24px' }}>
           <Card>
             <div style={{ marginBottom: 16 }}>
               <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                 <Col xs={24} md={12}>
-                  <CustomSearchBar />
+                  <SearchBar key={searchBarKey} placeholder='Search' onSearch={commitSearch} />
                 </Col>
                 <Col xs={24} sm={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
                   <Space
                     direction={isMobile ? 'vertical' : 'horizontal'}
-                    wrap={!isMobile} // Add this prop to allow buttons to wrap on larger screens
+                    wrap={!isMobile}
                     style={{ width: isMobile ? '100%' : 'auto' }}
                   >
                     {selectedRowKeys.length > 0 && (
@@ -1106,9 +907,11 @@ const UniversityListPage: React.FC = () => {
                       icon={<PlusOutlined />}
                       onClick={() => navigate('/create-university')}
                       style={{
-                        backgroundColor: '#ff7a00',
-                        borderColor: '#ff7a00',
+                        backgroundColor: PRIMARY,
+                        borderColor: PRIMARY,
                         width: isMobile ? '100%' : 'auto',
+                        border: `solid 1px ${PRIMARY}`,
+                        height: 36,
                       }}
                     >
                       Create
@@ -1117,10 +920,11 @@ const UniversityListPage: React.FC = () => {
                       icon={<ExportOutlined />}
                       onClick={() => setIsExportModalOpen(true)}
                       style={{
-                        backgroundColor: '#ff7a00',
-                        borderColor: '#ff7a00',
+                        backgroundColor: PRIMARY,
+                        borderColor: PRIMARY,
                         color: 'white',
                         width: isMobile ? '100%' : 'auto',
+                        height: 36,
                       }}
                     >
                       Export
@@ -1129,15 +933,14 @@ const UniversityListPage: React.FC = () => {
                 </Col>
               </Row>
             </div>
-            {/* Mobile Filter Button */}
+
             {isMobile && (
               <Row style={{ marginBottom: 16 }}>
                 <Col span={24}>
                   <Button
                     onClick={() => setFilterDrawerVisible(true)}
                     type='default'
-                    className='w-full flex items-center justify-center h-10 border border-gray-300 rounded-md
-                   transition duration-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-500'
+                    className='w-full flex items-center justify-center h-10 border border-gray-300 rounded-md transition duration-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-500'
                   >
                     <Space>
                       Filters
@@ -1148,30 +951,36 @@ const UniversityListPage: React.FC = () => {
               </Row>
             )}
 
-            {/* Desktop Filter Section */}
-            {!isMobile && <FilterSection />}
+            {!isMobile && (
+              <FilterSection
+                filters={filters}
+                onChange={handleMultiFilterChange}
+                isMobile={isMobile}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                onReset={handleResetFilters}
+                showReset={hasActiveFilters}
+              />
+            )}
 
-            {/* Floating Active Filters */}
             {hasActiveFilters && (
               <Row style={{ marginBottom: 16 }}>
                 <Col span={24}>
                   <Space wrap>
-                    {getActiveFilters().map((filter) => (
+                    {getActiveFilters().map((f) => (
                       <Tag
-                        key={filter.key}
+                        key={`${f.key}-${f.value}`}
                         closable
-                        onClose={() => removeFilter(filter.key, filter.itemValue)}
+                        onClose={() => removeFilter(f.key, f.itemValue)}
                         closeIcon={<CloseOutlined />}
                         style={{
                           background: '#FEF7E6',
                           color: '#FF923E',
                           border: '1px solid #FF923E',
-                          fontSize: '14px',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
+                          fontSize: 12,
                         }}
                       >
-                        {filter.label}: {filter.value}
+                        {f.label}: {f.value}
                       </Tag>
                     ))}
                   </Space>
@@ -1179,170 +988,163 @@ const UniversityListPage: React.FC = () => {
               </Row>
             )}
 
-            {/* Header Section */}
             <Row justify='space-between' align='middle' style={{ marginBottom: 16 }}>
               <Col xs={24} sm={12}>
-                <Title
-                  level={4}
-                  style={{ margin: 0, color: '#333', fontSize: isMobile ? '18px' : '20px' }}
-                >
+                <Title level={4} style={{ margin: 0, color: '#333', fontSize: isMobile ? 18 : 20 }}>
                   List of universities ({universityData?.totalCount || 0})
                 </Title>
               </Col>
             </Row>
 
-            {/* Table */}
-            <Table
-              columns={columns}
-              dataSource={sortedUniversities}
-              rowKey='id'
-              rowSelection={showBatchActions ? rowSelection : undefined}
-              loading={loading}
-              pagination={{
-                current: currentPage,
-                pageSize: pageSize,
-                total: universityData?.totalCount || 0,
-                onChange: handlePaginationChange, // Ensure this correctly references the function
-                showSizeChanger: false,
-                showQuickJumper: false,
-                className: 'custom-pagination',
-                itemRender: (page, type, originalElement) => {
-                  const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
-                  const baseStyle: React.CSSProperties = {
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'color 0.2s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  };
-
-                  const handlePageClick = (newPage: number) => {
-                    setCurrentPage(newPage);
-
-                    // Use multiple scroll methods with delay for consistency
-                    setTimeout(() => {
-                      // Method 1: scrollIntoView with top reference
-                      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                      // Method 2: window.scrollTo to very top
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                      // Method 3: document.documentElement.scrollTop
-                      if (document.documentElement) {
-                        document.documentElement.scrollTop = 0;
-                      }
-
-                      // Method 4: document.body.scrollTop
-                      if (document.body) {
-                        document.body.scrollTop = 0;
-                      }
-
-                      // Method 5: Force scroll to very top
-                      setTimeout(() => {
-                        window.scrollTo(0, 0);
-                        if (document.documentElement) {
-                          document.documentElement.scrollTop = 0;
-                        }
-                        if (document.body) {
-                          document.body.scrollTop = 0;
-                        }
-                      }, 50);
-                    }, 100);
-                  };
-
-                  if (type === 'prev') {
-                    const isDisabled = currentPage === 1;
-                    return (
-                      <span
-                        role='button'
-                        tabIndex={isDisabled ? -1 : 0}
-                        style={{
-                          ...baseStyle,
-                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                          cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        }}
-                        onClick={() => !isDisabled && handlePageClick(currentPage - 1)}
-                        onKeyDown={(e) => {
-                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
-                            e.preventDefault();
-                            handlePageClick(currentPage - 1);
-                          }
-                        }}
-                      >
-                        &lt; Previous
-                      </span>
-                    );
-                  }
-
-                  if (type === 'next') {
-                    const isDisabled = currentPage >= totalPages;
-                    return (
-                      <span
-                        role='button'
-                        tabIndex={isDisabled ? -1 : 0}
-                        style={{
-                          ...baseStyle,
-                          color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                          cursor: isDisabled ? 'not-allowed' : 'pointer',
-                        }}
-                        onClick={() => !isDisabled && handlePageClick(currentPage + 1)}
-                        onKeyDown={(e) => {
-                          if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
-                            e.preventDefault();
-                            handlePageClick(currentPage + 1);
-                          }
-                        }}
-                      >
-                        Next &gt;
-                      </span>
-                    );
-                  }
-
-                  if (type === 'page') {
-                    const isCurrent = page === currentPage;
-                    return (
-                      <span
-                        role='button'
-                        tabIndex={isCurrent ? -1 : 0}
-                        style={{
-                          ...baseStyle,
-                          color: '#ff7a00',
-                          fontWeight: isCurrent ? 'bold' : 500,
-                        }}
-                        onClick={() => !isCurrent && handlePageClick(page)}
-                        onKeyDown={(e) => {
-                          if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
-                            e.preventDefault();
-                            handlePageClick(page);
-                          }
-                        }}
-                      >
-                        {page}
-                      </span>
-                    );
-                  }
-
-                  if (type === 'jump-prev' || type === 'jump-next') {
-                    return <span style={{ color: '#999' }}>•••</span>;
-                  }
-
-                  return originalElement;
-                },
-                style: {
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  width: '100%',
-                  marginTop: '24px',
-                  marginBottom: '16px',
+            <ConfigProvider
+              theme={{
+                components: {
+                  Table: {
+                    headerSplitColor: '#F2F3F5',
+                    fontWeightStrong: 600,
+                    fontSize: 14,
+                  },
                 },
               }}
-              scroll={{ x: 800, scrollToFirstRowOnChange: true }}
-              style={{ marginBottom: 16 }}
-            />
+            >
+              <Table
+                columns={columns}
+                dataSource={sortedUniversities}
+                rowKey='id'
+                onRow={(record) => makeRowHandlers(record)}
+                rowClassName={() => 'clickable-row'}
+                rowSelection={
+                  showBatchActions ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined
+                }
+                loading={loading}
+                pagination={
+                  sortedUniversities.length
+                    ? {
+                        current: currentPage,
+                        pageSize,
+                        total: universityData?.totalCount || 0,
+                        onChange: handlePaginationChange,
+                        showSizeChanger: false,
+                        showQuickJumper: false,
+                        className: 'custom-pagination',
+                        itemRender: (page, type, original) => {
+                          const totalPages = Math.ceil(
+                            (universityData?.totalCount || 0) / pageSize,
+                          );
+                          const baseStyle: React.CSSProperties = {
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'color 0.2s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          };
+                          const clickTo = (newPage: number) => {
+                            setCurrentPage(newPage);
+                            setTimeout(() => {
+                              topRef.current?.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start',
+                              });
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }, 100);
+                          };
+
+                          if (type === 'prev') {
+                            const disabled = currentPage === 1;
+                            return (
+                              <span
+                                role='button'
+                                tabIndex={disabled ? -1 : 0}
+                                style={{ ...baseStyle, color: disabled ? '#d9d9d9' : PRIMARY }}
+                                onClick={() => !disabled && clickTo(currentPage - 1)}
+                                aria-disabled={disabled}
+                                onKeyDown={(e) => {
+                                  if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    clickTo(currentPage - 1);
+                                  }
+                                }}
+                              >
+                                &lt; Previous
+                              </span>
+                            );
+                          }
+                          if (type === 'next') {
+                            const disabled = currentPage >= totalPages;
+                            return (
+                              <span
+                                role='button'
+                                tabIndex={disabled ? -1 : 0}
+                                style={{ ...baseStyle, color: disabled ? '#d9d9d9' : PRIMARY }}
+                                onClick={() => !disabled && clickTo(currentPage + 1)}
+                                aria-disabled={disabled}
+                                onKeyDown={(e) => {
+                                  if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    clickTo(currentPage + 1);
+                                  }
+                                }}
+                              >
+                                Next &gt;
+                              </span>
+                            );
+                          }
+                          if (type === 'page') {
+                            const isCurrent = page === currentPage;
+                            return (
+                              <span
+                                role='button'
+                                tabIndex={isCurrent ? -1 : 0}
+                                style={{
+                                  ...baseStyle,
+                                  color: PRIMARY,
+                                  fontWeight: isCurrent ? 'bold' : 500,
+                                }}
+                                onClick={() => !isCurrent && clickTo(page)}
+                                aria-current={isCurrent ? 'page' : undefined}
+                                onKeyDown={(e) => {
+                                  if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    clickTo(page);
+                                  }
+                                }}
+                              >
+                                {page}
+                              </span>
+                            );
+                          }
+                          if (type === 'jump-prev' || type === 'jump-next') {
+                            return <span style={{ color: '#999' }}>•••</span>;
+                          }
+                          return original;
+                        },
+                        style: {
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          width: '100%',
+                          marginTop: 24,
+                          marginBottom: 16,
+                          fontSize: '12px',
+                        },
+                      }
+                    : false
+                }
+                scroll={{ x: 800, scrollToFirstRowOnChange: true }}
+                style={{ marginBottom: 16 }}
+                locale={{
+                  emptyText: hasActiveFilters ? (
+                    <Empty description='No matching result found' />
+                  ) : (
+                    <Empty description='No data' />
+                  ),
+                }}
+              />
+            </ConfigProvider>
           </Card>
         </div>
+
         {/* Mobile Filter Drawer */}
         <Drawer
           title='Filters'
@@ -1350,51 +1152,62 @@ const UniversityListPage: React.FC = () => {
           height='auto'
           onClose={() => setFilterDrawerVisible(false)}
           open={filterDrawerVisible}
-          bodyStyle={{ padding: '16px' }}
+          bodyStyle={{ padding: 16 }}
         >
           <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-            <FilterSection />
+            <FilterSection
+              filters={filters}
+              onChange={handleMultiFilterChange}
+              isMobile={isMobile}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              onReset={handleResetFilters}
+              showReset={hasActiveFilters}
+            />
           </div>
-          <Space direction='vertical' style={{ width: '100%', marginTop: '16px' }} size='middle'>
-            <Button
-              onClick={handleResetFilters}
-              style={{ color: '#ff7a00', borderColor: '#ff7a00' }}
-            >
-              Reset Filters
-            </Button>
+          <Space direction='vertical' style={{ width: '100%', marginTop: 16 }} size='middle'>
+            {hasActiveFilters && (
+              <Button onClick={handleResetFilters} style={{ color: PRIMARY, borderColor: PRIMARY }}>
+                Reset Filters
+              </Button>
+            )}
             <Button
               type='primary'
               onClick={() => setFilterDrawerVisible(false)}
-              style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+              style={{ backgroundColor: PRIMARY, borderColor: PRIMARY }}
             >
               Apply
             </Button>
           </Space>
         </Drawer>
+
         {/* Delete Confirmation Modal */}
-        <Modal
-          title='Confirm Action'
+        <DeleteConfirmModal
           open={deleteModalVisible}
-          onOk={handleDeleteConfirm}
+          deleteType={deleteType === 'multiple' ? 'bulk' : 'single'}
+          universityToDelete={
+            universityToDelete ? { university: universityToDelete.university } : null
+          }
           onCancel={() => setDeleteModalVisible(false)}
-          okText='Yes'
-          cancelText='No'
-          okButtonProps={{
-            type: 'primary',
-          }}
-        >
-          <div className='flex items-start gap-2'>
-            <ExclamationCircleFilled className='text-yellow-300 text-lg relative -top-0.5' />
-            <p className='text-sm text-gray-700 m-0'>{getConfirmationMessage()}</p>
-          </div>
-        </Modal>
+          onConfirm={handleDeleteConfirm}
+          loading={deleting}
+        />
+
+        {/* Export Modal */}
         <ExportUniversityModal
           open={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
-          appliedFilters={filters}
+          appliedFilters={appliedFiltersForExport}
           sortBy={getSortByLabel(sortBy)}
           sortOrder={sortBy}
         />
+
+        {/* Row hover/active styles */}
+        <style>{`
+          .clickable-row { cursor: pointer; }
+          .clickable-row:hover td { background: ${PRIMARY_BG_HOVER}; }
+          .clickable-row:active td { background: ${PRIMARY_BG_ACTIVE}; }
+        `}</style>
       </LayoutWrapper>
     </div>
   );

@@ -11,7 +11,11 @@ interface UniversityCardProps {
 
 const UniversityCard = ({ university }: UniversityCardProps) => {
   return (
-    <Link to={`/universities/${university.id}`} className='block'>
+    <Link
+      to={`/universities/${university.id}`}
+      className='block'
+      onClick={() => window.scrollTo(0, 0)}
+    >
       <div
         className='bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow flex flex-col justify-between'
         style={{ height: '11rem' }}

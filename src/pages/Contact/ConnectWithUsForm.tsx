@@ -226,14 +226,14 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
       className='connect-form'
       requiredMark={(label, { required }) => (
         <>
+          {label}
           {required && (
             <Asterisk
               size={12}
-              style={{ color: ORANGE, marginInlineEnd: 4, verticalAlign: 'text-top' }}
+              style={{ color: ORANGE, marginInlineStart: 4 }}
               aria-hidden='true'
             />
           )}
-          {label}
         </>
       )}
     >
@@ -255,6 +255,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             placeholder='Enter your university name'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='organization'
           />
         </Form.Item>
 
@@ -267,9 +268,10 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             variant='borderless'
             maxLength={15}
             size='large'
-            placeholder='Enter abbreviation (optional)'
+            placeholder='Enter abbreviation'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='off'
           />
         </Form.Item>
 
@@ -297,6 +299,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             placeholder='Enter your location'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='address-level2'
           />
         </Form.Item>
 
@@ -317,6 +320,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             placeholder='Enter your email'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='email'
           />
         </Form.Item>
 
@@ -337,6 +341,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             onKeyDown={onKeyDownPhone}
             onPaste={onPastePhone}
             allowClear
+            autoComplete='tel'
           />
         </Form.Item>
 
@@ -355,6 +360,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             placeholder='Enter your website'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='url'
           />
         </Form.Item>
 
@@ -386,6 +392,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             onKeyDown={onKeyDownDigits}
             onPaste={onPasteDigits}
             allowClear
+            autoComplete='off'
           />
         </Form.Item>
 
@@ -404,6 +411,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             autoSize={{ minRows: 4, maxRows: 10 }}
             className='placeholder:!text-[#9CA3AF] !pt-2'
             style={{ border: `2px solid ${ORANGE}`, borderRadius: 12 }}
+            autoComplete='off'
           />
         </Form.Item>
       </div>
@@ -424,6 +432,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
           type='primary'
           className='px-10 py-5 font-medium rounded-full shadow-md bg-gradient-to-r from-orange-400 to-orange-600 cursor-pointer hover:shadow-lg hover:scale-105'
           disabled={f.submissionStatus === 'submitting'}
+          loading={f.submissionStatus === 'submitting'}
         >
           {f.submissionStatus === 'submitting' ? 'Sending...' : 'Send'}
         </Button>
@@ -438,14 +447,14 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
       className='connect-form'
       requiredMark={(label, { required }) => (
         <>
+          {label}
           {required && (
             <Asterisk
               size={12}
-              style={{ color: ORANGE, marginInlineEnd: 4, verticalAlign: 'text-top' }}
+              style={{ color: ORANGE, marginInlineStart: 4 }}
               aria-hidden='true'
             />
           )}
-          {label}
         </>
       )}
     >
@@ -467,6 +476,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             placeholder='Enter your representative name'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='name'
           />
         </Form.Item>
 
@@ -484,6 +494,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             placeholder='Enter your university name'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='organization'
           />
         </Form.Item>
 
@@ -503,6 +514,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             placeholder='Enter your email'
             style={underlineStyle(token.colorPrimary)}
             allowClear
+            autoComplete='email'
           />
         </Form.Item>
 
@@ -522,6 +534,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             onKeyDown={onKeyDownPhone}
             onPaste={onPastePhone}
             allowClear
+            autoComplete='tel'
           />
         </Form.Item>
 
@@ -540,6 +553,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             autoSize={{ minRows: 4, maxRows: 10 }}
             className='placeholder:!text-[#9CA3AF] !pt-2'
             style={{ border: `2px solid ${ORANGE}`, borderRadius: 12 }}
+            autoComplete='off'
           />
         </Form.Item>
 
@@ -549,6 +563,7 @@ export default function ConnectWithUsForm({ activeTab }: Props) {
             type='primary'
             className='px-10 py-5 font-medium text-white rounded-full border-none cursor-pointer shadow-md bg-gradient-to-r from-orange-400 to-orange-600 hover:shadow-lg hover:scale-105'
             disabled={f.submissionStatus === 'submitting'}
+            loading={f.submissionStatus === 'submitting'}
           >
             {f.submissionStatus === 'submitting' ? 'Sending...' : 'Send'}
           </Button>

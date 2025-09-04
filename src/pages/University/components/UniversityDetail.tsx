@@ -1,7 +1,7 @@
 // UniversityDetail.tsx
 import { BookOutlined } from '@ant-design/icons';
-import { Skeleton } from 'antd';
-import { ArrowLeft, MapPin, Users, Building2, Contact, Star } from 'lucide-react';
+import { Spin, ConfigProvider } from 'antd';
+import { ArrowLeft, MapPin, Users, Building2, Contact, Star, Image } from 'lucide-react';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -52,7 +52,7 @@ const UniversityDetail: React.FC = () => {
     mappedFields: FieldConfig[];
     readyFields: string[];
   };
-
+  const [logoError, setLogoError] = useState(false);
   const studentSize = useMemo(
     () => toStudentSize(university?.studentPopulation),
     [university?.studentPopulation],
@@ -72,9 +72,11 @@ const UniversityDetail: React.FC = () => {
 
   if (!university) {
     return (
-      <div className='p-8'>
-        <Skeleton active avatar paragraph={{ rows: 2 }} />
-      </div>
+      <ConfigProvider theme={{ token: { colorPrimary: '#FF6600' } }}>
+        <div className='p-8 h-screen'>
+          <Spin size='large' className='absolute left-1/2 top-[calc(50%-10vh)] -translate-x-1/2' />
+        </div>
+      </ConfigProvider>
     );
   }
 
@@ -97,14 +99,26 @@ const UniversityDetail: React.FC = () => {
           >
             <div className='w-full'>
               <div className='flex items-start gap-4'>
-                <img
-                  src={university.logo}
-                  alt={university.university}
-                  className='rounded-lg object-contain bg-white p-1'
-                  style={{ width: 100, height: 100 }}
-                />
+                {university.logo && !logoError ? (
+                  <img
+                    src={university.logo}
+                    alt={`${university.university} logo`}
+                    className='rounded-lg object-contain bg-white p-1'
+                    style={{ width: 100, height: 100 }}
+                    onError={() => setLogoError(true)}
+                  />
+                ) : (
+                  <div
+                    className='rounded-lg bg-blue-50 flex items-center justify-center p-1'
+                    style={{ width: 100, height: 100 }}
+                    aria-label='Logo indisponible'
+                    role='img'
+                  >
+                    <Image className='w-10 h-10 text-blue-900 stroke-2' />
+                  </div>
+                )}
                 <div className='flex-1 min-w-0'>
-                  <h1 className='text-3xl md:text-4xl font-bold text-blue-900 leading-tight'>
+                  <h1 className='mt-2 text-3xl md:text-4xl font-bold text-blue-900 leading-tight'>
                     About {university.university}
                     {university.abbreviation && ` (${university.abbreviation})`}
                   </h1>
@@ -185,41 +199,46 @@ const UniversityDetail: React.FC = () => {
           </div>
 
           <div className='grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'>
-            {mappedFields.map((config, i) => {
-              const hasSubjects = readyFields.includes(config.apiFieldName);
-              const open = () => openField(config);
+            {mappedFields
+              .filter((cfg) => readyFields.includes(cfg.apiFieldName))
+              .map((config, i) => {
+                const hasSubjects = readyFields.includes(config.apiFieldName);
+                const open = () => openField(config);
 
-              return (
-                <div
-                  key={`${config.apiFieldName}-${i}`}
-                  role={hasSubjects ? 'button' : undefined}
-                  tabIndex={hasSubjects ? 0 : -1}
-                  onClick={hasSubjects ? open : undefined}
-                  onKeyDown={
-                    hasSubjects
-                      ? (e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            open();
+                return (
+                  <div
+                    key={`${config.apiFieldName}-${i}`}
+                    role={hasSubjects ? 'button' : undefined}
+                    tabIndex={hasSubjects ? 0 : -1}
+                    onClick={hasSubjects ? open : undefined}
+                    onKeyDown={
+                      hasSubjects
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              open();
+                            }
                           }
-                        }
-                      : undefined
-                  }
-                  aria-disabled={!hasSubjects}
-                  className={`text-center p-4 rounded-xl transition-all shadow-sm h-28 flex flex-col justify-center ${
-                    hasSubjects ? 'group cursor-pointer' : 'cursor-default opacity-60'
-                  }`}
-                  style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}
-                >
-                  <div className='text-3xl mb-2 transform transition-transform duration-200 group-hover:scale-110'>
-                    {config.icon}
+                        : undefined
+                    }
+                    aria-disabled={!hasSubjects}
+                    aria-hidden={!hasSubjects}
+                    className={`text-center p-4 rounded-xl transition-all shadow-sm h-28 flex flex-col justify-center ${
+                      hasSubjects
+                        ? 'group cursor-pointer'
+                        : 'opacity-60 pointer-events-none select-none'
+                    }`}
+                    style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}
+                  >
+                    <div className='text-3xl mb-2 transform transition-transform duration-200 group-hover:scale-110'>
+                      {config.icon}
+                    </div>
+                    <h4 className='font-medium text-sm leading-tight text-blue-900 transition-colors duration-200 group-hover:text-[#FF842B]'>
+                      {config.name}
+                    </h4>
                   </div>
-                  <h4 className='font-medium text-sm leading-tight text-blue-900 transition-colors duration-200 group-hover:text-[#FF842B]'>
-                    {config.name}
-                  </h4>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
 

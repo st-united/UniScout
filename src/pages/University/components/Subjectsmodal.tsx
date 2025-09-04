@@ -54,7 +54,8 @@ const SubjectsModal: React.FC<{
         <div className='text-center'>
           <h2 className='text-[32px] font-extrabold text-orange-500 mb-1'>{field.name}</h2>
           <p className='text-sm' style={{ color: '#787878' }}>
-            Information about the fields of study related to <b>&apos;{field.name}&apos;</b>
+            Information about the fields of study related to <b>&apos;{field.name}&apos;</b> is
+            shown below
           </p>
           <div
             className='mx-auto mt-3 rounded-full'

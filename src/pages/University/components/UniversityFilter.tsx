@@ -43,11 +43,11 @@ const safeList = (x: any): string[] =>
 const capitalizeFirst = (s: string) =>
   s ? s.trim().charAt(0).toUpperCase() + s.trim().slice(1).toLowerCase() : s;
 
-const SIZE_FALLBACK: Option[] = [
-  { label: 'Small', value: 'small' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'Large', value: 'large' },
-  { label: 'Extra Large', value: 'extra large' },
+const SIZE_HINTS = [
+  { label: 'Small', value: 'small', hint: '<20.000' },
+  { label: 'Medium', value: 'medium', hint: '<40.000' },
+  { label: 'Large', value: 'large', hint: '<100.000' },
+  { label: 'Extra Large', value: 'extra large', hint: '>=100.000' },
 ];
 
 /* Main */
@@ -155,7 +155,7 @@ const UniversityFilter: React.FC<UniversityFilterProps> = ({
       <div className='h-3' />
       <MultiCheckSection
         title='Size'
-        options={SIZE_FALLBACK}
+        options={SIZE_HINTS}
         value={filters.size}
         onChange={(v) => update('size', v)}
         columns={2}

@@ -15,6 +15,7 @@ import {
   Checkbox,
   Input,
   Modal,
+  Empty,
 } from 'antd';
 import axios from 'axios';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
@@ -813,7 +814,6 @@ const ManageRequest: React.FC = () => {
                 </Title>
               </Col>
             </Row>
-
             {loading ? (
               <Table
                 columns={columns}
@@ -831,97 +831,116 @@ const ManageRequest: React.FC = () => {
                   onClick: () => handleRowClick(record),
                   style: { cursor: 'pointer' },
                 })}
-                pagination={{
-                  current: currentPage,
-                  pageSize: pageSize,
-                  total: totalCount,
-                  onChange: (page: number) => setCurrentPage(page),
-                  showSizeChanger: false,
-                  showQuickJumper: false,
-                  itemRender: (page: number, type: string, originalElement: React.ReactNode) => {
-                    const totalPages = Math.ceil(totalCount / pageSize);
-                    const baseStyle: React.CSSProperties = {
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      transition: 'color 0.2s ease',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    };
+                pagination={
+                  requestData.length
+                    ? {
+                        current: currentPage,
+                        pageSize: pageSize,
+                        total: totalCount,
+                        onChange: (page: number) => setCurrentPage(page),
+                        showSizeChanger: false,
+                        showQuickJumper: false,
+                        itemRender: (
+                          page: number,
+                          type: string,
+                          originalElement: React.ReactNode,
+                        ) => {
+                          const totalPages = Math.ceil(totalCount / pageSize);
+                          const baseStyle: React.CSSProperties = {
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'color 0.2s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          };
 
-                    if (type === 'prev') {
-                      const isDisabled = currentPage === 1;
-                      return (
-                        <span
-                          style={{
-                            ...baseStyle,
-                            color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                            cursor: isDisabled ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          &lt; Previous
-                        </span>
-                      );
-                    }
+                          if (type === 'prev') {
+                            const isDisabled = currentPage === 1;
+                            return (
+                              <span
+                                style={{
+                                  ...baseStyle,
+                                  color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                &lt; Previous
+                              </span>
+                            );
+                          }
 
-                    if (type === 'next') {
-                      const isDisabled = currentPage >= totalPages;
-                      return (
-                        <span
-                          style={{
-                            ...baseStyle,
-                            color: isDisabled ? '#d9d9d9' : '#ff7a00',
-                            cursor: isDisabled ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          Next &gt;
-                        </span>
-                      );
-                    }
+                          if (type === 'next') {
+                            const isDisabled = currentPage >= totalPages;
+                            return (
+                              <span
+                                style={{
+                                  ...baseStyle,
+                                  color: isDisabled ? '#d9d9d9' : '#ff7a00',
+                                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                Next &gt;
+                              </span>
+                            );
+                          }
 
-                    if (type === 'page') {
-                      const isCurrent = page === currentPage;
-                      return (
-                        <span
-                          style={{
-                            ...baseStyle,
-                            color: '#ff7a00',
-                            fontWeight: isCurrent ? 'bold' : 500,
-                          }}
-                        >
-                          {page}
-                        </span>
-                      );
-                    }
+                          if (type === 'page') {
+                            const isCurrent = page === currentPage;
+                            return (
+                              <span
+                                style={{
+                                  ...baseStyle,
+                                  color: '#ff7a00',
+                                  fontWeight: isCurrent ? 'bold' : 500,
+                                }}
+                              >
+                                {page}
+                              </span>
+                            );
+                          }
 
-                    if (type === 'jump-prev' || type === 'jump-next') {
-                      return <span style={{ color: '#999' }}>•••</span>;
-                    }
+                          if (type === 'jump-prev' || type === 'jump-next') {
+                            return <span style={{ color: '#999' }}>•••</span>;
+                          }
 
-                    return originalElement;
-                  },
-                  style: {
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: '100%',
-                    marginTop: '24px',
-                    marginBottom: '16px',
-                  },
-                }}
+                          return originalElement;
+                        },
+                        style: {
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          width: '100%',
+                          marginTop: '24px',
+                          marginBottom: '16px',
+                        },
+                      }
+                    : false
+                }
                 scroll={{ x: 800 }}
+                locale={{
+                  emptyText: hasActiveFilters ? (
+                    <Empty description='No matching result found' />
+                  ) : (
+                    <Empty description='No data' />
+                  ),
+                }}
               />
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <img
-                  src={noImage}
-                  alt='No matching result found'
-                  style={{ width: 64, height: 64, marginBottom: 16 }}
-                />
-                <Title level={4} style={{ color: '#999' }}>
-                  No matching result found
-                </Title>
-              </div>
+              <Table
+                columns={columns}
+                dataSource={[]}
+                rowKey='id'
+                pagination={false}
+                scroll={{ x: 800 }}
+                locale={{
+                  emptyText: hasActiveFilters ? (
+                    <Empty description='No matching result found' />
+                  ) : (
+                    <Empty description='No data' />
+                  ),
+                }}
+              />
             )}
           </Card>
         </div>

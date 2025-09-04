@@ -99,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className='p-2 bg-white border-none rounded-lg  text-[#FF6600] hover:bg-gray-50'
+            className='p-2 bg-white border-none rounded-lg  text-[#FF6600] hover:bg-gray-50 '
           >
             <Menu className='w-6 h-6' />
           </button>
@@ -151,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                     className={`
                     w-full flex items-center space-x-3 px-4 py-3 text-sm rounded-xl
                     transition-all duration-30 ease-in-out
-                    appearance-none bg-transparent border-none
+                    appearance-none bg-transparent border-none cursor-pointer
                     ${
                       item.action === 'logout'
                         ? 'text-gray-500 hover:text-red-600'
