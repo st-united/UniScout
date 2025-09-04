@@ -5,7 +5,6 @@ import {
   EyeOutlined,
   DeleteOutlined,
   CloseOutlined,
-  ExclamationCircleFilled,
 } from '@ant-design/icons';
 import {
   Table,
@@ -17,7 +16,6 @@ import {
   Row,
   Col,
   Typography,
-  Modal,
   Drawer,
   Badge,
   Tag,
@@ -25,11 +23,14 @@ import {
   Dropdown,
   Menu,
   Empty,
+  ConfigProvider,
 } from 'antd';
 import axios from 'axios';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import PropTypes from 'prop-types';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import DeleteConfirmModal from './modals/DeleteConfirmModal';
 import ExportUniversityModal from './modals/ExportUniversityModal';
 import AdminHeader from '../../components/AdminHeader';
 import SearchBar from '../../components/AdminSearchbar';
@@ -39,7 +40,9 @@ import type { ColumnsType } from 'antd/es/table';
 const { Option } = Select;
 const { Title } = Typography;
 
-// Updated interface to match API response
+/**
+ * Types — keep in sync with backend contracts.
+ */
 interface University {
   id: string;
   university: string;
@@ -70,48 +73,333 @@ interface UniversityApiResponse {
   totalCount: number;
 }
 
-const sortOptions = [
+type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'search';
+type FiltersState = Record<FilterKey, string[]>;
+type SortValue = 'rank-asc' | 'rank-desc';
+
+/**
+ * Theme & UI constants
+ */
+const PRIMARY = '#ff7a00';
+const PRIMARY_BG_HOVER = '#FFF5EB';
+const PRIMARY_BG_ACTIVE = '#FFE8D6';
+const INTERACTIVE_SELECTOR =
+  'button,a,[role="button"],input,textarea,select,.ant-btn,.ant-dropdown,.ant-select,.ant-checkbox,.ant-pagination';
+
+/**
+ * Static options
+ */
+const sortOptions: { label: string; value: SortValue }[] = [
   { label: 'Sort by: high to low', value: 'rank-asc' },
   { label: 'Sort by: low to high', value: 'rank-desc' },
 ];
+const COUNTRIES = ['Australia', 'India', 'Japan', 'Korea', 'USA', 'Vietnam'] as const;
+const TYPES = ['public', 'private', 'college', 'academy', 'international'] as const;
+const SIZES = ['small', 'medium', 'large', 'extra large'] as const;
 
-type FilterKey = 'country' | 'region' | 'type' | 'size' | 'academicFields' | 'search';
+const FIELD_OPTIONS = [
+  { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
+  { value: 'arts_design', label: 'Arts & Design' },
+  { value: 'business_management_law', label: 'Business, Management & Law' },
+  { value: 'education_training', label: 'Education & Training' },
+  { value: 'engineering_technology', label: 'Engineering & Technology' },
+  { value: 'health_medicine', label: 'Health & Medicine' },
+  { value: 'humanities_languages', label: 'Humanities & Languages' },
+  { value: 'ict', label: 'Information & Communication Technology (ICT)' },
+  { value: 'natural_sciences', label: 'Natural Sciences' },
+  { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
+  { value: 'services', label: 'Services' },
+  { value: 'transport_safety_security_military', label: 'Transport, Safety, Security & Military' },
+] as const;
 
-const getSortByLabel = (value: string): string => {
-  const option = sortOptions.find((opt) => opt.value === value);
-  return option?.label || value;
-};
-const sanitizeSearch = (raw: string) => {
-  const cleaned = raw
+/**
+ * Helpers
+ */
+const getSortByLabel = (value: string): string =>
+  sortOptions.find((opt) => opt.value === value)?.label || value;
+
+const sanitizeSearch = (raw: string) =>
+  raw
     .replace(/[^\p{L}\p{N}\s\-']/gu, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
-  return cleaned.slice(0, 120);
+    .trim()
+    .slice(0, 120);
+
+const getFieldNameLabel = (value: string): string =>
+  FIELD_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
+const parseAcademicFields = (csv: string): string[] =>
+  !csv
+    ? []
+    : csv
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+const buildParams = (params: Record<string, unknown>) => {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (Array.isArray(val)) val.forEach((v) => sp.append(key, String(v)));
+    else if (val !== undefined && val !== null && val !== '') sp.append(key, String(val));
+  });
+  return sp.toString();
 };
 
-// Custom hook for debouncing input values
+const isInteractiveElement = (el: HTMLElement | null) => !!el?.closest(INTERACTIVE_SELECTOR);
+
+// Debounce hook
 function useDebounce<T>(value: T, delay = 400): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay]);
-
   return debouncedValue;
 }
 
+/**
+ * FilterSection
+ */
+interface FilterSectionProps {
+  filters: FiltersState;
+  onChange: (field: FilterKey, values: string[]) => void;
+  isMobile: boolean;
+  sortBy: SortValue;
+  onSortChange: (val: SortValue) => void;
+  onReset: () => void;
+  showReset: boolean;
+}
+
+const FilterSectionComponent: React.FC<FilterSectionProps> = ({
+  filters,
+  onChange,
+  isMobile,
+  sortBy,
+  onSortChange,
+  onReset,
+  showReset,
+}) => {
+  return (
+    <Row gutter={[16, 16]} style={{ marginBottom: 24, width: '100%' }}>
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Country</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.country}
+          onChange={(values) => onChange('country', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Countries'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox checked={filters.country.length === COUNTRIES.length && COUNTRIES.length > 0}>
+              Select All
+            </Checkbox>
+          </Option>
+          {COUNTRIES.map((country) => (
+            <Option key={country} value={country} label={country}>
+              <Checkbox checked={filters.country.includes(country)}>{country}</Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Type</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.type}
+          onChange={(values) => onChange('type', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Types'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox checked={filters.type.length === TYPES.length && TYPES.length > 0}>
+              Select All
+            </Checkbox>
+          </Option>
+          {TYPES.map((type) => (
+            <Option key={type} value={type} label={type.charAt(0).toUpperCase() + type.slice(1)}>
+              <Checkbox checked={filters.type.includes(type)}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Size</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.size}
+          onChange={(values) => onChange('size', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Sizes'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox checked={filters.size.length === SIZES.length && SIZES.length > 0}>
+              Select All
+            </Checkbox>
+          </Option>
+          {SIZES.map((size) => (
+            <Option key={size} value={size} label={size.charAt(0).toUpperCase() + size.slice(1)}>
+              <Checkbox checked={filters.size.includes(size)}>
+                {size.charAt(0).toUpperCase() + size.slice(1)}
+              </Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div style={{ fontSize: 14, marginBottom: 4, color: '#666' }}>Broad Field</div>
+        <Select
+          mode='multiple'
+          allowClear
+          size='large'
+          value={filters.academicFields}
+          onChange={(values) => onChange('academicFields', values || [])}
+          style={{ width: '100%', fontSize: 13 }}
+          placeholder='All Broad Fields'
+          optionLabelProp='label'
+          menuItemSelectedIcon={() => null}
+          dropdownRender={(menu) => (
+            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
+              {menu}
+            </div>
+          )}
+        >
+          <Option key='all' value='all' label='Select All'>
+            <Checkbox
+              checked={
+                filters.academicFields.length === FIELD_OPTIONS.length && FIELD_OPTIONS.length > 0
+              }
+            >
+              Select All
+            </Checkbox>
+          </Option>
+          {FIELD_OPTIONS.map((field) => (
+            <Option key={field.value} value={field.value} label={field.label}>
+              <Checkbox checked={filters.academicFields.includes(field.value)}>
+                {field.label}
+              </Checkbox>
+            </Option>
+          ))}
+        </Select>
+      </Col>
+
+      <Col xs={24} flex='1 1 220px' style={{ minWidth: 220 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: 14,
+            marginBottom: 4,
+            color: '#666',
+          }}
+        >
+          <span>Sort by</span>
+          {showReset && (
+            <button
+              onClick={onReset}
+              style={{
+                color: '#FF6600',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                outline: 'none',
+              }}
+              type='button'
+            >
+              Reset Filter
+            </button>
+          )}
+        </div>
+        <ConfigProvider theme={{ token: { fontSize: 12 } }}>
+          <Select
+            value={sortBy}
+            onChange={(v) => onSortChange(v as SortValue)}
+            size='large'
+            style={{ width: '100%', fontSize: 12 }}
+            className='!text-xs'
+          >
+            {sortOptions.map((opt) => (
+              <Option key={opt.value} value={opt.value}>
+                {opt.label}
+              </Option>
+            ))}
+          </Select>
+        </ConfigProvider>
+      </Col>
+    </Row>
+  );
+};
+
+const FilterSection = React.memo(FilterSectionComponent);
+FilterSection.displayName = 'FilterSection';
+(FilterSection as any).propTypes = {
+  filters: PropTypes.shape({
+    country: PropTypes.arrayOf(PropTypes.string).isRequired,
+    region: PropTypes.arrayOf(PropTypes.string).isRequired,
+    type: PropTypes.arrayOf(PropTypes.string).isRequired,
+    size: PropTypes.arrayOf(PropTypes.string).isRequired,
+    academicFields: PropTypes.arrayOf(PropTypes.string).isRequired,
+    search: PropTypes.arrayOf(PropTypes.string).isRequired,
+  }).isRequired,
+  onChange: PropTypes.func.isRequired,
+  isMobile: PropTypes.bool.isRequired,
+  sortBy: PropTypes.oneOf(['rank-asc', 'rank-desc']).isRequired,
+  onSortChange: PropTypes.func.isRequired,
+  onReset: PropTypes.func.isRequired,
+  showReset: PropTypes.bool.isRequired,
+};
+
+/**
+ * Page component
+ */
 const UniversityListPage: React.FC = () => {
   const navigate = useNavigate();
   const topRef = useRef<HTMLDivElement>(null);
 
-  // State for university data
+  // State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [universityData, setUniversityData] = useState<UniversityApiResponse>();
   const [currentUniversityData, setCurrentUniversityData] = useState<University[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [filters, setFilters] = useState<Record<FilterKey, string[]>>({
+  const [filters, setFilters] = useState<FiltersState>({
     country: [],
     region: [],
     type: [],
@@ -121,73 +409,50 @@ const UniversityListPage: React.FC = () => {
   });
 
   const debouncedFilters = useDebounce(filters, 400);
-  const [sortBy, setSortBy] = useState('rank-asc');
+  const [sortBy, setSortBy] = useState<SortValue>('rank-asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchBarKey, setSearchBarKey] = useState(0);
-  const appliedFiltersForExport = React.useMemo(
-    () => ({ ...filters, search: searchQuery ? [searchQuery] : [] }),
-    [filters, searchQuery],
-  );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
 
-  // Add state for the dropdown menu visibility
-  const [dropdownVisible, setDropdownVisible] = useState<boolean>(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
   const [showBatchActions, setShowBatchActions] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteType, setDeleteType] = useState<'single' | 'multiple'>('single');
   const [universityToDelete, setUniversityToDelete] = useState<University | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
 
-  // ---- Helpers for filter options  ----
-  const fieldNamesOptions = [
-    { value: 'agricultural_veterinary_sciences', label: 'Agricultural & Veterinary Sciences' },
-    { value: 'arts_design', label: 'Arts & Design' },
-    { value: 'business_management_law', label: 'Business, Management & Law' },
-    { value: 'education_training', label: 'Education & Training' },
-    { value: 'engineering_technology', label: 'Engineering & Technology' },
-    { value: 'health_medicine', label: 'Health & Medicine' },
-    { value: 'humanities_languages', label: 'Humanities & Languages' },
-    { value: 'ict', label: 'Information & Communication Technology (ICT)' },
-    { value: 'natural_sciences', label: 'Natural Sciences' },
-    { value: 'social_behavioral_sciences', label: 'Social & Behavioral Sciences' },
-    { value: 'services', label: 'Services' },
-    {
-      value: 'transport_safety_security_military',
-      label: 'Transport, Safety, Security & Military',
-    },
-  ];
-  const getFieldNameLabel = (value: string): string =>
-    fieldNamesOptions.find((o) => o.value === value)?.label ?? value;
-  const parseAcademicFields = (csv: string): string[] =>
-    !csv
-      ? []
-      : csv
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean);
+  // Derived
+  const appliedFiltersForExport = useMemo(
+    () => ({ ...filters, search: searchQuery ? [searchQuery] : [] }),
+    [filters, searchQuery],
+  );
 
-  const getUniqueCountries = () => ['Australia', 'India', 'Japan', 'Korea', 'USA', 'Vietnam'];
-  const getUniqueTypes = () => ['public', 'private', 'college', 'academy', 'international'];
-  const getUniqueSizes = () => ['small', 'medium', 'large', 'extra large'];
-  const getUniqueFields = () => fieldNamesOptions.map((o) => o.value);
+  const hasActiveFilters = useMemo(
+    () =>
+      Object.values(filters).some((v) => Array.isArray(v) && v.some((x) => x && x.trim() !== '')) ||
+      searchQuery.trim() !== '',
+    [filters, searchQuery],
+  );
 
-  // ---- Filters change handler ----
-  const handleMultiFilterChange = (field: FilterKey, values: string[]) => {
+  // Handlers
+  const handleMultiFilterChange = useCallback((field: FilterKey, values: string[]) => {
     let newValues = values;
 
     if (field === 'country' || field === 'type' || field === 'size' || field === 'academicFields') {
       const allOptions =
         field === 'country'
-          ? getUniqueCountries()
+          ? [...COUNTRIES]
           : field === 'type'
-          ? getUniqueTypes()
+          ? [...TYPES]
           : field === 'size'
-          ? getUniqueSizes()
-          : getUniqueFields();
+          ? [...SIZES]
+          : FIELD_OPTIONS.map((o) => o.value);
 
       if (values.includes('all')) {
         newValues = values.length === 1 ? allOptions : values.filter((v) => v !== 'all');
@@ -195,88 +460,8 @@ const UniversityListPage: React.FC = () => {
     }
     setFilters((prev) => ({ ...prev, [field]: newValues }));
     setCurrentPage(1);
-  };
-
-  // ---- Data fetch ----
-  const fetchUniversities = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const safeSearch = sanitizeSearch(searchQuery);
-
-      const response = await axios.get<UniversityApiResponse>('/admin/universities', {
-        params: {
-          search: safeSearch || undefined,
-          type:
-            debouncedFilters.type.length > 0
-              ? debouncedFilters.type.map((t) => t.toLowerCase())
-              : undefined,
-          country: debouncedFilters.country.length > 0 ? debouncedFilters.country : undefined,
-          size: debouncedFilters.size.length > 0 ? debouncedFilters.size : undefined,
-          fieldNames:
-            debouncedFilters.academicFields.length > 0
-              ? debouncedFilters.academicFields
-              : undefined,
-          sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
-          page: currentPage,
-        },
-        paramsSerializer: (params) => {
-          const sp = new URLSearchParams();
-          Object.keys(params).forEach((key) => {
-            const val = (params as any)[key];
-            if (Array.isArray(val)) val.forEach((v) => sp.append(key, v));
-            else if (val !== undefined) sp.append(key, val);
-          });
-          return sp.toString();
-        },
-      });
-
-      setCurrentUniversityData(response.data.data);
-      setUniversityData(response.data);
-    } catch (err) {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.message || err.message || '' : '';
-      if (/syntax error/i.test(msg) || /at or near/i.test(msg)) {
-        setCurrentUniversityData([]);
-        setUniversityData({ message: 'ok', data: [], totalCount: 0 });
-      } else {
-        const errorMessage = msg || 'Failed to fetch universities';
-        setError(errorMessage);
-        message.error(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedFilters, sortBy, currentPage, pageSize, searchQuery]);
-
-  useEffect(() => {
-    fetchUniversities();
-  }, [debouncedFilters, sortBy, currentPage, pageSize, fetchUniversities]);
-
-  // ---- Responsive ----
-  useEffect(() => {
-    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
-  // ---- Scroll to top on page change ----
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        if (document.documentElement) document.documentElement.scrollTop = 0;
-        if (document.body) document.body.scrollTop = 0;
-      } catch {
-        window.scrollTo(0, 0);
-      }
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [currentPage]);
-
-  // ---- Search ----
   const commitSearch = useCallback((val: string) => {
     const safe = sanitizeSearch(val);
     setSearchQuery(safe);
@@ -284,23 +469,15 @@ const UniversityListPage: React.FC = () => {
     setCurrentPage(1);
   }, []);
 
-  // ---- Reset / remove filters ----
-  const handleResetFilters = () => {
-    setFilters({
-      country: [],
-      region: [],
-      type: [],
-      size: [],
-      academicFields: [],
-      search: [],
-    });
+  const handleResetFilters = useCallback(() => {
+    setFilters({ country: [], region: [], type: [], size: [], academicFields: [], search: [] });
     setSearchQuery('');
     setSearchBarKey((k) => k + 1);
     setCurrentPage(1);
     setSelectedRowKeys([]);
-  };
+  }, []);
 
-  const removeFilter = (field: FilterKey, value?: string) => {
+  const removeFilter = useCallback((field: FilterKey, value?: string) => {
     if (field === 'search') {
       setFilters((prev) => ({ ...prev, search: [] }));
       setSearchQuery('');
@@ -318,16 +495,38 @@ const UniversityListPage: React.FC = () => {
       setFilters((prev) => ({ ...prev, [field]: [] }));
     }
     setCurrentPage(1);
-  };
+  }, []);
 
-  // ---- Delete actions ----
-  const showDeleteModal = (type: 'single' | 'multiple', university?: University) => {
+  const showDeleteModal = useCallback((type: 'single' | 'multiple', university?: University) => {
     setDeleteType(type);
     setUniversityToDelete(university || null);
     setDeleteModalVisible(true);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleEdit = useCallback(
+    (universityId: string) => navigate(`/edit-university/${universityId}`),
+    [navigate],
+  );
+
+  const handleExport = useCallback(async () => {
+    try {
+      const response = await axios.get('/admin/universities/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'universities.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      message.success('Universities exported successfully');
+    } catch (e) {
+      message.error('Export failed');
+      console.error('Export error:', e);
+    }
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
     try {
       if (deleteType === 'single' && universityToDelete) {
         await axios.delete(`/admin/universities/${universityToDelete.id}`, {
@@ -352,71 +551,143 @@ const UniversityListPage: React.FC = () => {
       message.error(msg);
       console.error('Delete error:', e);
     } finally {
+      setDeleting(false);
       setDeleteModalVisible(false);
       setUniversityToDelete(null);
     }
-  };
+  }, [deleteType, selectedRowKeys, universityToDelete]);
 
-  const handleEdit = (universityId: string) => navigate(`/edit-university/${universityId}`);
+  const handlePaginationChange = useCallback((page: number, size?: number) => {
+    setCurrentPage(page);
+    if (size) setPageSize(size);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
-  const handleExport = async () => {
+  // Row click support
+  const makeRowHandlers = useCallback(
+    (record: University) => ({
+      onClick: (e: React.MouseEvent<HTMLTableRowElement>) => {
+        const target = e.target as HTMLElement;
+        if (isInteractiveElement(target)) return;
+        handleEdit(record.id);
+      },
+      onKeyDown: (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+        if (
+          (e.key === 'Enter' || e.key === ' ') &&
+          !isInteractiveElement(e.target as HTMLElement)
+        ) {
+          e.preventDefault();
+          handleEdit(record.id);
+        }
+      },
+    }),
+    [handleEdit],
+  );
+
+  // Data fetch
+  const fetchUniversities = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const response = await axios.get('/admin/universities/export', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'universities.csv');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      message.success('Universities exported successfully');
-    } catch (e) {
-      message.error('Export failed');
-      console.error('Export error:', e);
+      const safeSearch = sanitizeSearch(searchQuery);
+      const response = await axios.get<UniversityApiResponse>('/admin/universities', {
+        params: {
+          search: safeSearch || undefined,
+          type:
+            debouncedFilters.type.length > 0
+              ? debouncedFilters.type.map((t) => t.toLowerCase())
+              : undefined,
+          country: debouncedFilters.country.length > 0 ? debouncedFilters.country : undefined,
+          size: debouncedFilters.size.length > 0 ? debouncedFilters.size : undefined,
+          fieldNames:
+            debouncedFilters.academicFields.length > 0
+              ? debouncedFilters.academicFields
+              : undefined,
+          sortOrder: sortBy.includes('desc') ? 'DESC' : 'ASC',
+          page: currentPage,
+        },
+        paramsSerializer: buildParams,
+      });
+      setCurrentUniversityData(response.data.data);
+      setUniversityData(response.data);
+    } catch (err) {
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.message || (err as any).message || ''
+        : '';
+      if (/syntax error/i.test(msg) || /at or near/i.test(msg)) {
+        setCurrentUniversityData([]);
+        setUniversityData({ message: 'ok', data: [], totalCount: 0 });
+      } else {
+        const errorMessage = msg || 'Failed to fetch universities';
+        setError(errorMessage);
+        message.error(errorMessage);
+      }
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [debouncedFilters, sortBy, currentPage, pageSize, searchQuery]);
 
-  // ---- Client-side refine for search + filters ----
-  const filteredUniversities = currentUniversityData.filter((u) => {
+  useEffect(() => {
+    fetchUniversities();
+  }, [debouncedFilters, sortBy, currentPage, pageSize, fetchUniversities]);
+
+  // Responsive flag
+  useEffect(() => {
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  // Scroll to top on page change (extra guard)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      } catch {
+        window.scrollTo(0, 0);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
+
+  // Filter + search
+  const filteredUniversities = useMemo(() => {
     const s = searchQuery.toLowerCase();
-    const fields = parseAcademicFields(u.academicFieldsCommaSeparated);
+    return currentUniversityData.filter((u) => {
+      const fields = parseAcademicFields(u.academicFieldsCommaSeparated);
+      const searchMatch =
+        !s ||
+        u.university.toLowerCase().includes(s) ||
+        u.abbreviation.toLowerCase().includes(s) ||
+        u.location.toLowerCase().includes(s) ||
+        u.country.toLowerCase().includes(s) ||
+        fields.some((f) => getFieldNameLabel(f).toLowerCase().includes(s));
 
-    const searchMatch =
-      !s ||
-      u.university.toLowerCase().includes(s) ||
-      u.abbreviation.toLowerCase().includes(s) ||
-      u.location.toLowerCase().includes(s) ||
-      u.country.toLowerCase().includes(s) ||
-      fields.some((f) => getFieldNameLabel(f).toLowerCase().includes(s));
+      return (
+        searchMatch &&
+        (filters.country.length === 0 || filters.country.includes(u.country)) &&
+        (filters.type.length === 0 || filters.type.includes(u.type)) &&
+        (filters.size.length === 0 || filters.size.includes(u.size)) &&
+        (filters.academicFields.length === 0 ||
+          filters.academicFields.some((f) => fields.includes(f)))
+      );
+    });
+  }, [currentUniversityData, filters, searchQuery]);
 
-    return (
-      searchMatch &&
-      (filters.country.length === 0 || filters.country.includes(u.country)) &&
-      (filters.type.length === 0 || filters.type.includes(u.type)) &&
-      (filters.size.length === 0 || filters.size.includes(u.size)) &&
-      (filters.academicFields.length === 0 ||
-        filters.academicFields.some((f) => fields.includes(f)))
-    );
-  });
+  const sortedUniversities = useMemo(() => {
+    const clone = [...filteredUniversities];
+    return sortBy === 'rank-asc'
+      ? clone.sort((a, b) => a.rank - b.rank)
+      : sortBy === 'rank-desc'
+      ? clone.sort((a, b) => b.rank - a.rank)
+      : clone;
+  }, [filteredUniversities, sortBy]);
 
-  const sortedUniversities = [...filteredUniversities].sort((a, b) => {
-    switch (sortBy) {
-      case 'rank-asc':
-        return a.rank - b.rank;
-      case 'rank-desc':
-        return b.rank - a.rank;
-      default:
-        return 0;
-    }
-  });
-
-  // ---- Active filters ----
-  const hasActiveFilters =
-    Object.values(filters).some((v) => Array.isArray(v) && v.some((x) => x && x.trim() !== '')) ||
-    searchQuery.trim() !== '';
-
-  const getActiveFilters = () => {
+  const getActiveFilters = useCallback(() => {
     const active: Array<{ key: FilterKey; label: string; value: string; itemValue?: string }> = [];
     filters.country.forEach((c) =>
       active.push({ key: 'country', label: 'Country', value: c, itemValue: c }),
@@ -435,337 +706,150 @@ const UniversityListPage: React.FC = () => {
         itemValue: f,
       }),
     );
-    if (searchQuery.trim() !== '') {
+    if (searchQuery.trim() !== '')
       active.push({ key: 'search', label: 'Search', value: searchQuery });
-    }
     return active;
-  };
+  }, [filters, searchQuery]);
 
-  // Handle pagination change with scroll to top
-  const handlePaginationChange = (page: number, size?: number) => {
-    setCurrentPage(page);
-    if (size) setPageSize(size);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const columns: ColumnsType<University> = [
-    {
-      title: 'University Name',
-      dataIndex: 'university',
-      key: 'university',
-      width: 400,
-      render: (text: string) => <span>{text}</span>,
-    },
-    { title: 'Rank', dataIndex: 'rank', key: 'rank', width: 80 },
-    { title: 'Country', dataIndex: 'country', key: 'country', width: 120 },
-    {
-      title: 'Type',
-      dataIndex: 'type',
-      key: 'type',
-      width: 100,
-      render: (type: string) => (
-        <Tag color={type === 'public' ? 'blue' : 'green'} style={{ fontSize: '14px' }}>
-          {type.charAt(0).toUpperCase() + type.slice(1)}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Size',
-      dataIndex: 'size',
-      key: 'size',
-      width: 100,
-      render: (size: string) => (
-        <Tag
-          color={
-            size === 'small'
-              ? 'orange'
-              : size === 'medium'
-              ? 'yellow'
-              : size === 'large'
-              ? 'blue'
-              : 'purple'
-          }
-          style={{ fontSize: '14px' }}
-        >
-          {size.charAt(0).toUpperCase() + size.slice(1)}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Broad Field',
-      dataIndex: 'academicFieldsCommaSeparated',
-      key: 'academicFieldsCommaSeparated',
-      width: 250,
-      render: (value: string) => {
-        const fields = parseAcademicFields(value);
-        const sortedFields = fields.sort(
-          (a, b) =>
-            fieldNamesOptions.findIndex((opt) => opt.value === a) -
-            fieldNamesOptions.findIndex((opt) => opt.value === b),
-        );
-        const labels = sortedFields.map(getFieldNameLabel);
-        const first = labels[0];
-        const rest = labels.length - 1;
-
-        return (
-          <Space direction='vertical' size={4} style={{ alignItems: 'flex-start' }}>
-            {first && (
-              <Tag
-                color='white'
-                style={{ fontSize: '14px', color: '#000000', borderColor: '#FF6600' }}
-              >
-                {first}
-              </Tag>
-            )}
-            {rest > 0 && (
-              <Tag
-                color='white'
-                style={{ fontSize: '14px', color: '#000', borderColor: '#FF6600' }}
-              >
-                +{rest}
-              </Tag>
-            )}
-          </Space>
-        );
+  // Columns
+  const columns: ColumnsType<University> = useMemo(
+    () => [
+      {
+        title: 'University Name',
+        dataIndex: 'university',
+        key: 'university',
+        width: 400,
+        render: (text: string) => <span>{text}</span>,
       },
-    },
-    {
-      title: (
-        <Space>
-          <strong>Action</strong>
-          <Dropdown
-            trigger={['click']}
-            onOpenChange={(v) => setDropdownVisible(v)}
-            open={dropdownVisible}
-            dropdownRender={() => (
-              <Menu
-                onClick={({ key }) => {
-                  if (key === 'multiple-selection') {
-                    setShowBatchActions((prev) => !prev);
-                    setDropdownVisible(false);
-                  }
-                }}
-              >
-                <Menu.Item key='multiple-selection'>
-                  <Space>Multiple selection</Space>
-                </Menu.Item>
-              </Menu>
-            )}
+      { title: 'Rank', dataIndex: 'rank', key: 'rank', width: 80 },
+      { title: 'Country', dataIndex: 'country', key: 'country', width: 120 },
+      {
+        title: 'Type',
+        dataIndex: 'type',
+        key: 'type',
+        width: 100,
+        render: (type: string) => (
+          <Tag
+            color={type === 'public' ? 'geekblue' : 'cyan'}
+            style={{ fontSize: '12px', border: 'none' }}
           >
-            <Button type='text' icon={<MoreOutlined />} />
-          </Dropdown>
-        </Space>
-      ),
-      key: 'action',
-      width: 120,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type='text'
-            icon={<EyeOutlined style={{ fontSize: '18px' }} />}
-            onClick={() => handleEdit(record.id)}
-            style={{ color: '#ff7a00' }}
-          />
-          <Button
-            type='text'
-            icon={<DeleteOutlined style={{ fontSize: '18px' }} />}
-            onClick={() => showDeleteModal('single', record)}
-            style={{ color: '#ff7a00' }}
-          />
-        </Space>
-      ),
-    },
-  ];
-
-  // ---- Inline FilterSection (uses parent state via closure) ----
-  const FilterSection = () => (
-    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-      <Col xs={24} sm={12} md={6} lg={4}>
-        <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 7, color: '#666' }}>
-          Country
-        </div>
-        <Select
-          mode='multiple'
-          allowClear
-          value={filters.country}
-          onChange={(values) => handleMultiFilterChange('country', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Countries'
-          optionLabelProp='label'
-          menuItemSelectedIcon={() => null}
-          dropdownRender={(menu) => (
-            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
-              {menu}
-            </div>
-          )}
-        >
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                filters.country.length === getUniqueCountries().length &&
-                getUniqueCountries().length > 0
-              }
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueCountries().map((country) => (
-            <Option key={country} value={country} label={country}>
-              <Checkbox checked={filters.country.includes(country)}>{country}</Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={12} md={6} lg={4}>
-        <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 7, color: '#666' }}>Type</div>
-        <Select
-          mode='multiple'
-          allowClear
-          value={filters.type}
-          onChange={(values) => handleMultiFilterChange('type', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Types'
-          optionLabelProp='label'
-          menuItemSelectedIcon={() => null}
-          dropdownRender={(menu) => (
-            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
-              {menu}
-            </div>
-          )}
-        >
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                filters.type.length === getUniqueTypes().length && getUniqueTypes().length > 0
-              }
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueTypes().map((type) => (
-            <Option key={type} value={type} label={type.charAt(0).toUpperCase() + type.slice(1)}>
-              <Checkbox checked={filters.type.includes(type)}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={12} md={6} lg={4}>
-        <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 7, color: '#666' }}>Size</div>
-        <Select
-          mode='multiple'
-          allowClear
-          value={filters.size}
-          onChange={(values) => handleMultiFilterChange('size', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Sizes'
-          optionLabelProp='label'
-          dropdownRender={(menu) => (
-            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
-              {menu}
-            </div>
-          )}
-        >
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                filters.size.length === getUniqueSizes().length && getUniqueSizes().length > 0
-              }
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueSizes().map((size) => (
-            <Option key={size} value={size} label={size.charAt(0).toUpperCase() + size.slice(1)}>
-              <Checkbox checked={filters.size.includes(size)}>
-                {size.charAt(0).toUpperCase() + size.slice(1)}
-              </Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={12} md={8} lg={7}>
-        <div style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 7, color: '#666' }}>
-          Broad Field
-        </div>
-        <Select
-          mode='multiple'
-          allowClear
-          value={filters.academicFields}
-          onChange={(values) => handleMultiFilterChange('academicFields', values || [])}
-          style={{ width: '100%' }}
-          placeholder='All Broad Fields'
-          optionLabelProp='label'
-          menuItemSelectedIcon={() => null}
-          dropdownRender={(menu) => (
-            <div role='presentation' onPointerDown={(e) => e.preventDefault()}>
-              {menu}
-            </div>
-          )}
-        >
-          <Option key='all' value='all' label='Select All'>
-            <Checkbox
-              checked={
-                filters.academicFields.length === getUniqueFields().length &&
-                getUniqueFields().length > 0
-              }
-            >
-              Select All
-            </Checkbox>
-          </Option>
-          {getUniqueFields().map((field) => (
-            <Option key={field} value={field} label={getFieldNameLabel(field)}>
-              <Checkbox checked={filters.academicFields.includes(field)}>
-                {getFieldNameLabel(field)}
-              </Checkbox>
-            </Option>
-          ))}
-        </Select>
-      </Col>
-
-      <Col xs={24} sm={24} md={6} lg={5}>
-        <div
-          style={{
-            fontSize: 12,
-            marginBottom: 4,
-            color: '#666',
-            textAlign: isMobile ? 'left' : 'right',
-          }}
-        >
-          <button
-            onClick={handleResetFilters}
-            style={{
-              color: '#ff7a00',
-              cursor: 'pointer',
-              fontSize: 14,
-              fontWeight: 500,
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              outline: 'none',
-            }}
-            type='button'
-            tabIndex={0}
+            {type.charAt(0).toUpperCase() + type.slice(1)}
+          </Tag>
+        ),
+      },
+      {
+        title: 'Size',
+        dataIndex: 'size',
+        key: 'size',
+        width: 100,
+        render: (size: string) => (
+          <Tag
+            color={
+              size === 'small'
+                ? 'magenta'
+                : size === 'medium'
+                ? 'cyan'
+                : size === 'large'
+                ? 'geekblue'
+                : 'purple'
+            }
+            style={{ fontSize: '12px', border: 'none' }}
           >
-            Reset Filter
-          </button>
-        </div>
-        <Select value={sortBy} onChange={setSortBy} style={{ width: '100%', marginTop: 8 }}>
-          {sortOptions.map((opt) => (
-            <Option key={opt.value} value={opt.value}>
-              {opt.label}
-            </Option>
-          ))}
-        </Select>
-      </Col>
-    </Row>
+            {size.charAt(0).toUpperCase() + size.slice(1)}
+          </Tag>
+        ),
+      },
+      {
+        title: 'Broad Field',
+        dataIndex: 'academicFieldsCommaSeparated',
+        key: 'academicFieldsCommaSeparated',
+        width: 250,
+        render: (value: string) => {
+          const fields = parseAcademicFields(value);
+          const sortedFields = fields.sort(
+            (a, b) =>
+              FIELD_OPTIONS.findIndex((opt) => opt.value === a) -
+              FIELD_OPTIONS.findIndex((opt) => opt.value === b),
+          );
+          const labels = sortedFields.map(getFieldNameLabel);
+          const first = labels[0];
+          const rest = labels.length - 1;
+
+          return (
+            <Space direction='horizontal' style={{ display: 'flex', alignItems: 'center' }}>
+              {first && (
+                <p className='flex text-sm !w-fit !text-gray-500 !font-medium !leading-none !whitespace-nowrap'>
+                  {first}
+                </p>
+              )}
+              {rest > 0 && (
+                <Tag
+                  color='white'
+                  style={{ fontSize: '11px', color: '#000', borderColor: '#FF6600' }}
+                >
+                  + {rest}
+                </Tag>
+              )}
+            </Space>
+          );
+        },
+      },
+      {
+        title: (
+          <Space className='flex justify-end text-right'>
+            <Dropdown
+              trigger={['click']}
+              onOpenChange={(v) => setDropdownVisible(v)}
+              open={dropdownVisible}
+              dropdownRender={() => (
+                <Menu
+                  onClick={({ key }) => {
+                    if (key === 'multiple-selection') {
+                      setShowBatchActions((prev) => !prev);
+                      setDropdownVisible(false);
+                    }
+                  }}
+                >
+                  <Menu.Item key='multiple-selection'>
+                    <Space>Multiple selection</Space>
+                  </Menu.Item>
+                </Menu>
+              )}
+            >
+              <Button type='text' icon={<MoreOutlined size={16} />} />
+            </Dropdown>
+          </Space>
+        ),
+        key: 'action',
+        width: 120,
+        render: (_, record) => (
+          <Space>
+            <Button
+              type='text'
+              icon={<EyeOutlined style={{ fontSize: '18px' }} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(record.id);
+              }}
+              style={{ color: PRIMARY }}
+            />
+            <Button
+              type='text'
+              icon={<DeleteOutlined style={{ fontSize: '18px' }} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                showDeleteModal('single', record);
+              }}
+              style={{ color: PRIMARY }}
+            />
+          </Space>
+        ),
+      },
+    ],
+    [dropdownVisible, handleEdit, showDeleteModal],
   );
 
-  // ---- Error screen ----
+  // Error screen
   if (error && currentUniversityData.length === 0) {
     return (
       <div style={{ backgroundColor: '#FFFDF9', minHeight: '100vh' }}>
@@ -780,7 +864,7 @@ const UniversityListPage: React.FC = () => {
                 type='primary'
                 onClick={fetchUniversities}
                 loading={loading}
-                style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+                style={{ backgroundColor: PRIMARY, borderColor: PRIMARY }}
               >
                 Retry
               </Button>
@@ -801,11 +885,7 @@ const UniversityListPage: React.FC = () => {
             <div style={{ marginBottom: 16 }}>
               <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                 <Col xs={24} md={12}>
-                  <SearchBar
-                    key={searchBarKey}
-                    placeholder='Search universities...'
-                    onSearch={commitSearch}
-                  />
+                  <SearchBar key={searchBarKey} placeholder='Search' onSearch={commitSearch} />
                 </Col>
                 <Col xs={24} sm={12} style={{ textAlign: isMobile ? 'left' : 'right' }}>
                   <Space
@@ -827,9 +907,10 @@ const UniversityListPage: React.FC = () => {
                       icon={<PlusOutlined />}
                       onClick={() => navigate('/create-university')}
                       style={{
-                        backgroundColor: '#ff7a00',
-                        borderColor: '#ff7a00',
+                        backgroundColor: PRIMARY,
+                        borderColor: PRIMARY,
                         width: isMobile ? '100%' : 'auto',
+                        border: `solid 1px ${PRIMARY}`,
                         height: 36,
                       }}
                     >
@@ -839,8 +920,8 @@ const UniversityListPage: React.FC = () => {
                       icon={<ExportOutlined />}
                       onClick={() => setIsExportModalOpen(true)}
                       style={{
-                        backgroundColor: '#ff7a00',
-                        borderColor: '#ff7a00',
+                        backgroundColor: PRIMARY,
+                        borderColor: PRIMARY,
                         color: 'white',
                         width: isMobile ? '100%' : 'auto',
                         height: 36,
@@ -870,7 +951,17 @@ const UniversityListPage: React.FC = () => {
               </Row>
             )}
 
-            {!isMobile && <FilterSection />}
+            {!isMobile && (
+              <FilterSection
+                filters={filters}
+                onChange={handleMultiFilterChange}
+                isMobile={isMobile}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                onReset={handleResetFilters}
+                showReset={hasActiveFilters}
+              />
+            )}
 
             {hasActiveFilters && (
               <Row style={{ marginBottom: 16 }}>
@@ -878,7 +969,7 @@ const UniversityListPage: React.FC = () => {
                   <Space wrap>
                     {getActiveFilters().map((f) => (
                       <Tag
-                        key={`${f.key}-${f.value}`} // ✅ unique key per tag
+                        key={`${f.key}-${f.value}`}
                         closable
                         onClose={() => removeFilter(f.key, f.itemValue)}
                         closeIcon={<CloseOutlined />}
@@ -886,9 +977,7 @@ const UniversityListPage: React.FC = () => {
                           background: '#FEF7E6',
                           color: '#FF923E',
                           border: '1px solid #FF923E',
-                          fontSize: 14,
-                          padding: '4px 8px',
-                          borderRadius: 6,
+                          fontSize: 12,
                         }}
                       >
                         {f.label}: {f.value}
@@ -907,134 +996,155 @@ const UniversityListPage: React.FC = () => {
               </Col>
             </Row>
 
-            <Table
-              columns={columns}
-              dataSource={sortedUniversities}
-              rowKey='id'
-              rowSelection={
-                showBatchActions ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined
-              }
-              loading={loading}
-              pagination={
-                sortedUniversities.length
-                  ? {
-                      current: currentPage,
-                      pageSize,
-                      total: universityData?.totalCount || 0,
-                      onChange: handlePaginationChange,
-                      showSizeChanger: false,
-                      showQuickJumper: false,
-                      className: 'custom-pagination',
-                      itemRender: (page, type, original) => {
-                        const totalPages = Math.ceil((universityData?.totalCount || 0) / pageSize);
-                        const baseStyle: React.CSSProperties = {
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          transition: 'color 0.2s ease',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                        };
-                        const handlePageClick = (newPage: number) => {
-                          setCurrentPage(newPage);
-                          setTimeout(() => {
-                            topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }, 100);
-                        };
-
-                        if (type === 'prev') {
-                          const disabled = currentPage === 1;
-                          return (
-                            <span
-                              role='button'
-                              tabIndex={disabled ? -1 : 0}
-                              style={{ ...baseStyle, color: disabled ? '#d9d9d9' : '#ff7a00' }}
-                              onClick={() => !disabled && handlePageClick(currentPage - 1)}
-                              aria-disabled={disabled}
-                              onKeyDown={(e) => {
-                                if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
-                                  e.preventDefault();
-                                  handlePageClick(currentPage - 1);
-                                }
-                              }}
-                            >
-                              &lt; Previous
-                            </span>
-                          );
-                        }
-                        if (type === 'next') {
-                          const disabled = currentPage >= totalPages;
-                          return (
-                            <span
-                              role='button'
-                              tabIndex={disabled ? -1 : 0}
-                              style={{ ...baseStyle, color: disabled ? '#d9d9d9' : '#ff7a00' }}
-                              onClick={() => !disabled && handlePageClick(currentPage + 1)}
-                              aria-disabled={disabled}
-                              onKeyDown={(e) => {
-                                if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
-                                  e.preventDefault();
-                                  handlePageClick(currentPage + 1);
-                                }
-                              }}
-                            >
-                              Next &gt;
-                            </span>
-                          );
-                        }
-                        if (type === 'page') {
-                          const isCurrent = page === currentPage;
-                          return (
-                            <span
-                              role='button'
-                              tabIndex={isCurrent ? -1 : 0}
-                              style={{
-                                ...baseStyle,
-                                color: '#ff7a00',
-                                fontWeight: isCurrent ? 'bold' : 500,
-                              }}
-                              onClick={() => !isCurrent && handlePageClick(page)}
-                              aria-current={isCurrent ? 'page' : undefined}
-                              onKeyDown={(e) => {
-                                if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
-                                  e.preventDefault();
-                                  handlePageClick(page);
-                                }
-                              }}
-                            >
-                              {page}
-                            </span>
-                          );
-                        }
-                        if (type === 'jump-prev' || type === 'jump-next') {
-                          return <span style={{ color: '#999' }}>•••</span>;
-                        }
-                        return original;
-                      },
-                      style: {
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        width: '100%',
-                        marginTop: 24,
-                        marginBottom: 16,
-                      },
-                    }
-                  : false
-              }
-              scroll={{ x: 800, scrollToFirstRowOnChange: true }}
-              style={{ marginBottom: 16 }}
-              locale={{
-                emptyText: hasActiveFilters ? (
-                  <Empty description='No matching result found' />
-                ) : (
-                  <Empty description='No data' />
-                ),
+            <ConfigProvider
+              theme={{
+                components: {
+                  Table: {
+                    headerSplitColor: '#F2F3F5',
+                    fontWeightStrong: 600,
+                    fontSize: 14,
+                  },
+                },
               }}
-            />
+            >
+              <Table
+                columns={columns}
+                dataSource={sortedUniversities}
+                rowKey='id'
+                onRow={(record) => makeRowHandlers(record)}
+                rowClassName={() => 'clickable-row'}
+                rowSelection={
+                  showBatchActions ? { selectedRowKeys, onChange: setSelectedRowKeys } : undefined
+                }
+                loading={loading}
+                pagination={
+                  sortedUniversities.length
+                    ? {
+                        current: currentPage,
+                        pageSize,
+                        total: universityData?.totalCount || 0,
+                        onChange: handlePaginationChange,
+                        showSizeChanger: false,
+                        showQuickJumper: false,
+                        className: 'custom-pagination',
+                        itemRender: (page, type, original) => {
+                          const totalPages = Math.ceil(
+                            (universityData?.totalCount || 0) / pageSize,
+                          );
+                          const baseStyle: React.CSSProperties = {
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'color 0.2s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          };
+                          const clickTo = (newPage: number) => {
+                            setCurrentPage(newPage);
+                            setTimeout(() => {
+                              topRef.current?.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start',
+                              });
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }, 100);
+                          };
+
+                          if (type === 'prev') {
+                            const disabled = currentPage === 1;
+                            return (
+                              <span
+                                role='button'
+                                tabIndex={disabled ? -1 : 0}
+                                style={{ ...baseStyle, color: disabled ? '#d9d9d9' : PRIMARY }}
+                                onClick={() => !disabled && clickTo(currentPage - 1)}
+                                aria-disabled={disabled}
+                                onKeyDown={(e) => {
+                                  if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    clickTo(currentPage - 1);
+                                  }
+                                }}
+                              >
+                                &lt; Previous
+                              </span>
+                            );
+                          }
+                          if (type === 'next') {
+                            const disabled = currentPage >= totalPages;
+                            return (
+                              <span
+                                role='button'
+                                tabIndex={disabled ? -1 : 0}
+                                style={{ ...baseStyle, color: disabled ? '#d9d9d9' : PRIMARY }}
+                                onClick={() => !disabled && clickTo(currentPage + 1)}
+                                aria-disabled={disabled}
+                                onKeyDown={(e) => {
+                                  if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    clickTo(currentPage + 1);
+                                  }
+                                }}
+                              >
+                                Next &gt;
+                              </span>
+                            );
+                          }
+                          if (type === 'page') {
+                            const isCurrent = page === currentPage;
+                            return (
+                              <span
+                                role='button'
+                                tabIndex={isCurrent ? -1 : 0}
+                                style={{
+                                  ...baseStyle,
+                                  color: PRIMARY,
+                                  fontWeight: isCurrent ? 'bold' : 500,
+                                }}
+                                onClick={() => !isCurrent && clickTo(page)}
+                                aria-current={isCurrent ? 'page' : undefined}
+                                onKeyDown={(e) => {
+                                  if (!isCurrent && (e.key === 'Enter' || e.key === ' ')) {
+                                    e.preventDefault();
+                                    clickTo(page);
+                                  }
+                                }}
+                              >
+                                {page}
+                              </span>
+                            );
+                          }
+                          if (type === 'jump-prev' || type === 'jump-next') {
+                            return <span style={{ color: '#999' }}>•••</span>;
+                          }
+                          return original;
+                        },
+                        style: {
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          width: '100%',
+                          marginTop: 24,
+                          marginBottom: 16,
+                          fontSize: '12px',
+                        },
+                      }
+                    : false
+                }
+                scroll={{ x: 800, scrollToFirstRowOnChange: true }}
+                style={{ marginBottom: 16 }}
+                locale={{
+                  emptyText: hasActiveFilters ? (
+                    <Empty description='No matching result found' />
+                  ) : (
+                    <Empty description='No data' />
+                  ),
+                }}
+              />
+            </ConfigProvider>
           </Card>
         </div>
+
         {/* Mobile Filter Drawer */}
         <Drawer
           title='Filters'
@@ -1045,43 +1155,45 @@ const UniversityListPage: React.FC = () => {
           bodyStyle={{ padding: 16 }}
         >
           <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-            <FilterSection />
+            <FilterSection
+              filters={filters}
+              onChange={handleMultiFilterChange}
+              isMobile={isMobile}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              onReset={handleResetFilters}
+              showReset={hasActiveFilters}
+            />
           </div>
           <Space direction='vertical' style={{ width: '100%', marginTop: 16 }} size='middle'>
-            <Button
-              onClick={handleResetFilters}
-              style={{ color: '#ff7a00', borderColor: '#ff7a00' }}
-            >
-              Reset Filters
-            </Button>
+            {hasActiveFilters && (
+              <Button onClick={handleResetFilters} style={{ color: PRIMARY, borderColor: PRIMARY }}>
+                Reset Filters
+              </Button>
+            )}
             <Button
               type='primary'
               onClick={() => setFilterDrawerVisible(false)}
-              style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+              style={{ backgroundColor: PRIMARY, borderColor: PRIMARY }}
             >
               Apply
             </Button>
           </Space>
         </Drawer>
+
         {/* Delete Confirmation Modal */}
-        <Modal
-          title='Confirm Action'
+        <DeleteConfirmModal
           open={deleteModalVisible}
-          onOk={handleDeleteConfirm}
+          deleteType={deleteType === 'multiple' ? 'bulk' : 'single'}
+          universityToDelete={
+            universityToDelete ? { university: universityToDelete.university } : null
+          }
           onCancel={() => setDeleteModalVisible(false)}
-          okText='Yes'
-          cancelText='No'
-          okButtonProps={{ type: 'primary' }}
-        >
-          <div className='flex items-start gap-2'>
-            <ExclamationCircleFilled className='text-yellow-300 text-lg relative -top-0.5' />
-            <p className='text-sm text-gray-700 m-0'>
-              {deleteType === 'single' && universityToDelete
-                ? `Are you sure delete ${universityToDelete.university}?`
-                : 'Are you sure delete all selected fields?'}
-            </p>
-          </div>
-        </Modal>
+          onConfirm={handleDeleteConfirm}
+          loading={deleting}
+        />
+
+        {/* Export Modal */}
         <ExportUniversityModal
           open={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
@@ -1089,6 +1201,13 @@ const UniversityListPage: React.FC = () => {
           sortBy={getSortByLabel(sortBy)}
           sortOrder={sortBy}
         />
+
+        {/* Row hover/active styles */}
+        <style>{`
+          .clickable-row { cursor: pointer; }
+          .clickable-row:hover td { background: ${PRIMARY_BG_HOVER}; }
+          .clickable-row:active td { background: ${PRIMARY_BG_ACTIVE}; }
+        `}</style>
       </LayoutWrapper>
     </div>
   );
